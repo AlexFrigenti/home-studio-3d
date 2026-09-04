@@ -72,27 +72,33 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.09 — Crear la habitación sintética mínima
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04
 - **Objetivo:** crear suelo, paredes, puerta, ventana, `sofa_proxy`, cámara y luz con el volumen interior `X 0.00..5.00 m`, `Y 0.00..4.00 m`, `Z 0.00..2.50 m`.
 - **Evidencia esperada:** escena determinista en `blender/scenes/tests/001-foundation-room.blend` o área equivalente, con `door` de `0.90 × 0.05 × 2.10 m` en `(1.45, -0.025, 1.05) m`, `window` de `0.05 × 1.20 × 1.00 m` en `(5.025, 2.00, 1.50) m` y `sofa_proxy` de `1.80 × 0.80 × 0.90 m` en `(2.50, 2.00, 0.45) m`, rotación cero.
 - **Validación:** caras interiores exactas, grosor hacia fuera sin alterar el volumen, escena recreable con las mismas constantes en ambos equipos, abrible/guardable, sin assets externos y sin sobrescribir escenas canónicas.
 - **Autorización del usuario:** sí antes de crear y guardar la escena de aceptación.
 
+**Resultado T2.09:** se creó la colección `HS3D_T2_09_FOUNDATION_ROOM` con `floor`, `wall_south`, `wall_north`, `wall_west`, `wall_east`, `door`, `window`, `sofa_proxy`, `HS3D_TEST_CAMERA` y `HS3D_TEST_LIGHT`. La escena usa `METRIC` y `scale_length = 1.0`, y se guardó en `blender/scenes/tests/001-foundation-room.blend` con tamaño `103358` bytes. Los objetos iniciales `Cube`, `Camera` y `Light` fueron confirmados como la escena por defecto y retirados; no se añadieron materiales ni assets externos. Se obtuvo una captura rápida de viewport sin render; la validación geométrica exhaustiva queda para T2.10 y la inspección visual formal para T2.11.
+
 ## T2.10 — Validar dimensiones y transformaciones
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04
 - **Objetivo:** comprobar largo, ancho, altura, caras interiores y dimensiones/posiciones sintéticas de puerta, ventana y `sofa_proxy`.
 - **Evidencia esperada:** valores numéricos registrados con unidad metros, incluida la posición y tamaño del `sofa_proxy`.
 - **Validación:** contraste con `X 0.00..5.00`, `Y 0.00..4.00`, `Z 0.00..2.50`, el contrato de aperturas y las transformaciones documentadas; comprobación de unidades y tolerancias del test.
 - **Autorización del usuario:** no adicional si la tarea T2.09 fue aprobada; sí si aparece una discrepancia que requiera cambiar el contrato.
 
+**Resultado T2.10:** se corrigió exclusivamente `sofa_proxy`, recenterizando su geometría respecto al origen y fijando `location = (2.50, 2.00, 0.45)`, sin cambiar el contrato ni los demás objetos. La validación completa pasó con tolerancia `1e-6 m`: caras interiores `5.00 × 4.00 × 2.50 m`, espesores y orientación exterior correctos, `door`, `window` y `sofa_proxy` dentro de contrato, cámara activa y luz correctas, rotaciones cero y escalas aplicadas. El fixture se guardó en `blender/scenes/tests/001-foundation-room.blend`, se reabrió con éxito y todos los valores persistieron; la escena quedó sin cambios pendientes. Seguridad post validada: listener loopback, sin conexiones externas atribuibles, safe mode activo, telemetría deshabilitada e integraciones externas deshabilitadas.
+
 ## T2.11 — Obtener e inspeccionar evidencia visual
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04
 - **Objetivo:** producir una captura de viewport o render preview y revisar la escena.
 - **Evidencia esperada:** captura/render identificable de la habitación sintética.
 - **Validación:** inspección visual explícita de suelo, paredes, puerta, ventana, sofá, cámara y luz; sin render final pesado.
 - **Autorización del usuario:** sí antes de conservar capturas o iniciar una operación costosa.
+
+**Resultado T2.11:** se conservaron capturas MCP de viewport y un preview Workbench ligero en `renders/previews/001-foundation-room/viewport-overview.png` (`800 × 600`, `297438` bytes). La inspección visual confirmó volumen de habitación coherente, suelo alineado, cuatro paredes, `door` en pared sur, `window` en pared este, `sofa_proxy` dentro del volumen y sin artefactos graves ni objetos residuales. El encuadre elevado y la vista de cámara usados para la evidencia fueron temporales; el fixture se reabrió y quedó limpio, sin cambios persistentes de cámara, render o geometría. No se usaron Cycles, HDRI, assets externos ni texturas externas.
 
 ## T2.12 — Documentar la réplica en sobremesa
 
