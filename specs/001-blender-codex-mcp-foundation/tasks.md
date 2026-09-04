@@ -23,15 +23,15 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 ## T2.03 — Fijar la distribución de Blender
 
 - **Estado:** `[ ]`
-- **Objetivo:** confirmar Blender 5.2 LTS, fuente aprobada, versión y ruta reproducible.
-- **Evidencia esperada:** fuente, versión, hash cuando sea posible y decisión de ruta.
-- **Validación:** revisión de procedencia y compatibilidad con el portátil.
+- **Objetivo:** confirmar Blender 5.2.1 LTS, fuente aprobada, ruta reproducible y modalidad de distribución para Windows.
+- **Evidencia esperada:** comparación del instalador tradicional y ZIP portable oficial; fuente, versión, hash cuando sea posible, criterios aplicados y decisión registrada antes de descargar o instalar.
+- **Validación:** revisión de procedencia y compatibilidad con el portátil; preferir ZIP portable si cumple funcionamiento, ausencia de cambios globales innecesarios y rollback/reproducibilidad, sin decidirlo por adelantado.
 - **Autorización del usuario:** sí antes de descargar o instalar.
 
 ## T2.04 — Instalar y verificar Blender
 
 - **Estado:** `[ ]`
-- **Objetivo:** instalar Blender 5.2 LTS en el portátil.
+- **Objetivo:** instalar Blender 5.2.1 LTS en el portátil usando la modalidad aprobada en T2.03.
 - **Evidencia esperada:** Blender inicia, muestra la versión esperada y guarda una escena vacía en el área de pruebas.
 - **Validación:** smoke de apertura/guardado y comprobación de no exposición de servicios no solicitados.
 - **Autorización del usuario:** sí.
@@ -39,9 +39,9 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 ## T2.05 — Revisar el MCP candidato
 
 - **Estado:** `[ ]`
-- **Objetivo:** inspeccionar `ahujasid/blender-mcp` y contrastar su integración con la referencia `webita/blender-codex-mcp`.
-- **Evidencia esperada:** procedencia, licencia, versión/commit, permisos, transporte y compatibilidad documentados.
-- **Validación:** revisión del código y de la configuración; no ejecutar código externo sin inspección.
+- **Objetivo:** inspeccionar `ahujasid/blender-mcp` y contrastar su integración con la referencia `webita/blender-codex-mcp`, sin aceptar una rama mutable sin pin.
+- **Evidencia esperada:** procedencia, licencia, versión/tag/commit exacto aprobado, permisos, transporte y compatibilidad documentados antes de instalar.
+- **Validación:** revisión del código y de la configuración; no ejecutar código externo sin inspección; cualquier actualización posterior repite smoke y aceptación.
 - **Autorización del usuario:** sí antes de instalar o ejecutar el MCP.
 
 ## T2.06 — Configurar el MCP solo en localhost
@@ -49,7 +49,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Estado:** `[ ]`
 - **Objetivo:** arrancar el MCP candidato con una frontera de red local.
 - **Evidencia esperada:** configuración local, telemetría opcional deshabilitada si procede y puerto identificado.
-- **Validación:** handshake real y comprobación de binding solo en `localhost`/loopback; rechazo de LAN/Internet.
+- **Validación:** handshake real y comprobación de binding solo en `localhost`/loopback; rechazo de LAN/Internet; revisión de la evidencia técnica disponible sobre rutas/permisos, sin declarar sandbox del workspace por la sola política.
 - **Autorización del usuario:** sí antes de abrir el servicio local.
 
 ## T2.07 — Integrar Codex CLI desde el repo
@@ -62,26 +62,28 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.08 — Ejecutar el smoke técnico
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** probar la cadena Codex CLI → MCP local → Blender con una escena vacía/desechable.
-- **Evidencia esperada:** información de escena, una operación `bpy` simple y archivo de smoke guardado.
-- **Validación:** apertura/guardado, operación reversible, rutas dentro del workspace y diff/artefactos revisados.
+- **Evidencia esperada:** primera operación `bpy` de solo lectura (nombre de escena y/o número de objetos), una operación de escena simple y reversible y archivo de smoke guardado.
+- **Validación:** la primera operación no usa filesystem, red ni procesos externos; el guardado posterior es explícito dentro del workspace; apertura/guardado, operación reversible, rutas/permisos observables y diff/artefactos revisados. La ausencia de sandbox técnico se registra como limitación, no como PASS.
 - **Autorización del usuario:** sí antes de ejecutar `execute_blender_code`/`bpy`.
+
+**Resultado T2.08:** `get_addon_status` permanece como `DEUDA CONOCIDA NO BLOQUEANTE PARA EL SMOKE`: `src/blender_mcp/config.py` no existe en el pin y la tool no se usa para validar telemetría. El precheck live, handshake, lectura inicial, primera llamada `bpy` read-only, creación/verificación/eliminación del cubo temporal, captura de viewport y validación independiente de red resultaron PASS. No se creó ningún `.blend`, no se modificó código upstream y T2.09 no se inició.
 
 ## T2.09 — Crear la habitación sintética mínima
 
 - **Estado:** `[ ]`
-- **Objetivo:** crear suelo, paredes, puerta, ventana, `sofa_proxy`, cámara y luz con `5.00 × 4.00 × 2.50 m`.
-- **Evidencia esperada:** escena en `blender/scenes/tests/001-foundation-room.blend` o área equivalente.
-- **Validación:** escena abrible/guardable, sin assets externos y sin sobrescribir escenas canónicas.
+- **Objetivo:** crear suelo, paredes, puerta, ventana, `sofa_proxy`, cámara y luz con el volumen interior `X 0.00..5.00 m`, `Y 0.00..4.00 m`, `Z 0.00..2.50 m`.
+- **Evidencia esperada:** escena determinista en `blender/scenes/tests/001-foundation-room.blend` o área equivalente, con `door` de `0.90 × 0.05 × 2.10 m` en `(1.45, -0.025, 1.05) m`, `window` de `0.05 × 1.20 × 1.00 m` en `(5.025, 2.00, 1.50) m` y `sofa_proxy` de `1.80 × 0.80 × 0.90 m` en `(2.50, 2.00, 0.45) m`, rotación cero.
+- **Validación:** caras interiores exactas, grosor hacia fuera sin alterar el volumen, escena recreable con las mismas constantes en ambos equipos, abrible/guardable, sin assets externos y sin sobrescribir escenas canónicas.
 - **Autorización del usuario:** sí antes de crear y guardar la escena de aceptación.
 
 ## T2.10 — Validar dimensiones y transformaciones
 
 - **Estado:** `[ ]`
-- **Objetivo:** comprobar largo, ancho, altura, posición y tamaño del `sofa_proxy`.
-- **Evidencia esperada:** valores numéricos registrados con unidad metros.
-- **Validación:** contraste con los criterios de aceptación y comprobación de unidades/transformaciones.
+- **Objetivo:** comprobar largo, ancho, altura, caras interiores y dimensiones/posiciones sintéticas de puerta, ventana y `sofa_proxy`.
+- **Evidencia esperada:** valores numéricos registrados con unidad metros, incluida la posición y tamaño del `sofa_proxy`.
+- **Validación:** contraste con `X 0.00..5.00`, `Y 0.00..4.00`, `Z 0.00..2.50`, el contrato de aperturas y las transformaciones documentadas; comprobación de unidades y tolerancias del test.
 - **Autorización del usuario:** no adicional si la tarea T2.09 fue aprobada; sí si aparece una discrepancia que requiera cambiar el contrato.
 
 ## T2.11 — Obtener e inspeccionar evidencia visual
