@@ -1,0 +1,46 @@
+# Blender: backups, autosaves y temporales generados
+*.blend1
+*.blend2
+*.blend3
+*.blend4
+*.blend5
+*.blend~
+blender/**/autosave/
+blender/**/cache/
+blender/**/.cache/
+blender/**/tmp/
+
+# Python: caches y entornos locales
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Temporales del sistema y del IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Renders temporales o incompletos; los previews y finals normales se conservan
+renders/**/.tmp/
+renders/**/*.tmp
+renders/**/*.partial
+renders/**/*.log
+
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+*.local
+config.local.*
+secrets/
