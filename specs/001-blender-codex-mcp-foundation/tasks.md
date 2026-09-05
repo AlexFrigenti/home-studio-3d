@@ -1,12 +1,12 @@
 # Tareas: Blender + Codex + MCP Foundation
 
-Todas las tareas están pendientes porque este slice documenta primero el cambio T2. Cada tarea debe ejecutarse en orden cuando exista autorización para comenzar la instalación. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
+Las tareas siguientes registran el estado validado del slice T2. La evidencia operativa queda en los inventarios, decisiones y validaciones enlazados en cada tarea. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.01 — Aprobar alcance y contrato
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-06.
 - **Objetivo:** confirmar que `spec.md`, `plan.md` y `tasks.md` reflejan un único objetivo y todos los límites T2.
 - **Evidencia esperada:** aprobación del alcance, exclusiones, criterios, riesgos e invariantes.
 - **Validación:** revisión cruzada de los tres artefactos y del diff completo.
@@ -14,7 +14,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.02 — Inventariar el portátil
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** registrar sistema, hardware, rutas y componentes existentes sin cambiar el entorno.
 - **Evidencia esperada:** inventario reproducible sin secretos ni rutas privadas innecesarias.
 - **Validación:** comprobación de versiones, rutas y ausencia/presencia documentada; `NO APLICA` para componentes no instalados.
@@ -22,7 +22,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.03 — Fijar la distribución de Blender
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** confirmar Blender 5.2.1 LTS, fuente aprobada, ruta reproducible y modalidad de distribución para Windows.
 - **Evidencia esperada:** comparación del instalador tradicional y ZIP portable oficial; fuente, versión, hash cuando sea posible, criterios aplicados y decisión registrada antes de descargar o instalar.
 - **Validación:** revisión de procedencia y compatibilidad con el portátil; preferir ZIP portable si cumple funcionamiento, ausencia de cambios globales innecesarios y rollback/reproducibilidad, sin decidirlo por adelantado.
@@ -30,7 +30,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.04 — Instalar y verificar Blender
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** instalar Blender 5.2.1 LTS en el portátil usando la modalidad aprobada en T2.03.
 - **Evidencia esperada:** Blender inicia, muestra la versión esperada y guarda una escena vacía en el área de pruebas.
 - **Validación:** smoke de apertura/guardado y comprobación de no exposición de servicios no solicitados.
@@ -38,7 +38,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.05 — Revisar el MCP candidato
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** inspeccionar `ahujasid/blender-mcp` y contrastar su integración con la referencia `webita/blender-codex-mcp`, sin aceptar una rama mutable sin pin.
 - **Evidencia esperada:** procedencia, licencia, versión/tag/commit exacto aprobado, permisos, transporte y compatibilidad documentados antes de instalar.
 - **Validación:** revisión del código y de la configuración; no ejecutar código externo sin inspección; cualquier actualización posterior repite smoke y aceptación.
@@ -46,7 +46,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.06 — Configurar el MCP solo en localhost
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** arrancar el MCP candidato con una frontera de red local.
 - **Evidencia esperada:** configuración local, telemetría opcional deshabilitada si procede y puerto identificado.
 - **Validación:** handshake real y comprobación de binding solo en `localhost`/loopback; rechazo de LAN/Internet; revisión de la evidencia técnica disponible sobre rutas/permisos, sin declarar sandbox del workspace por la sola política.
@@ -54,7 +54,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.07 — Integrar Codex CLI desde el repo
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** permitir que Codex opere desde el workspace y conecte con el MCP local.
 - **Evidencia esperada:** configuración reproducible y separada de credenciales/globales.
 - **Validación:** Codex obtiene información de la escena y no requiere GPT-6 Astra para funcionar.
@@ -78,7 +78,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Validación:** caras interiores exactas, grosor hacia fuera sin alterar el volumen, escena recreable con las mismas constantes en ambos equipos, abrible/guardable, sin assets externos y sin sobrescribir escenas canónicas.
 - **Autorización del usuario:** sí antes de crear y guardar la escena de aceptación.
 
-**Resultado T2.09:** se creó la colección `HS3D_T2_09_FOUNDATION_ROOM` con `floor`, `wall_south`, `wall_north`, `wall_west`, `wall_east`, `door`, `window`, `sofa_proxy`, `HS3D_TEST_CAMERA` y `HS3D_TEST_LIGHT`. La escena usa `METRIC` y `scale_length = 1.0`, y se guardó en `blender/scenes/tests/001-foundation-room.blend` con tamaño `103358` bytes. Los objetos iniciales `Cube`, `Camera` y `Light` fueron confirmados como la escena por defecto y retirados; no se añadieron materiales ni assets externos. Se obtuvo una captura rápida de viewport sin render; la validación geométrica exhaustiva queda para T2.10 y la inspección visual formal para T2.11.
+**Resultado T2.09:** se creó la colección `HS3D_T2_09_FOUNDATION_ROOM` con `floor`, `wall_south`, `wall_north`, `wall_west`, `wall_east`, `door`, `window`, `sofa_proxy`, `HS3D_TEST_CAMERA` y `HS3D_TEST_LIGHT`. La escena usa `METRIC` y `scale_length = 1.0`, y se guardó inicialmente en `blender/scenes/tests/001-foundation-room.blend` con tamaño `103358` bytes; el fixture versionado final tras T2.10 tiene `103445` bytes. Los objetos iniciales `Cube`, `Camera` y `Light` fueron confirmados como la escena por defecto y retirados; no se añadieron materiales ni assets externos. Se obtuvo una captura rápida de viewport sin render; la validación geométrica exhaustiva queda para T2.10 y la inspección visual formal para T2.11.
 
 ## T2.10 — Validar dimensiones y transformaciones
 
@@ -102,16 +102,20 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.12 — Documentar la réplica en sobremesa
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-05.
 - **Objetivo:** documentar versiones, fuentes, rutas variables, orden de arranque y diferencias entre equipos.
 - **Evidencia esperada:** procedimiento que otra persona pueda seguir sin secretos ni rutas absolutas personales.
 - **Validación:** revisión de reproducibilidad y lista de controles que deben repetirse en el PC.
 - **Autorización del usuario:** no para documentar; sí antes de instalar o ejecutar el procedimiento en el sobremesa.
 
+**Resultado T2.12:** `docs/setup/desktop-environment-inventory.md` documenta Blender 5.2.1 LTS, RTX 3080, el pin exacto de `ahujasid/blender-mcp`, Codex CLI, safe mode, telemetría, loopback, integraciones deshabilitadas, handshake, `get_scene_info`, validación cross-machine, rollback de `approval_mode`, snapshot de configuración, la deuda conocida de `get_addon_status` y el clon activo fuera de OneDrive. Las rutas personales y los secretos quedan sanitizados o excluidos.
+
 ## T2.13 — Cierre del T2 y PR
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-06.
 - **Objetivo:** cerrar la fundación con evidencia, riesgos, limitaciones y documentación alineadas.
 - **Evidencia esperada:** checklist de aceptación, resultados reales, evidencia visual y diff completo.
 - **Validación:** todos los gates aplicables en `PASS`; el resto marcado como `NO APLICA`, `PENDIENTE DE INFRAESTRUCTURA` o `NO EJECUTADO` con explicación.
 - **Autorización del usuario:** sí para abrir PR, merge, instalación posterior y cualquier cambio de política.
+
+**Resultado T2.13:** revisión final contra `.quality/QUALITY.md` y `CONTRIBUTING.md` completada; los 13 criterios de aceptación tienen evidencia PASS, la deuda de `get_addon_status` permanece explícita y el diff queda limitado al slice. El cierre se publica mediante PR hacia `main`; el merge queda fuera de alcance y requiere autorización explícita.
