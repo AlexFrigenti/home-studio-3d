@@ -2,7 +2,7 @@
 
 Fecha de inventario: 2026-09-04.
 
-Este inventario corresponde a T2.02, T2.03 y T2.04. Se obtuvo mediante comprobaciones de lectura, salvo la descarga y extracción autorizadas del artefacto de T2.03/T2.04 y los arranques controlados de Blender. No se guardó ninguna escena `.blend`, no se instaló ningún addon o paquete, no se modificó PATH ni se configuraron MCP/Codex. Las rutas se expresan con variables sanitizadas para no registrar nombres de usuario ni rutas personales innecesarias.
+Este inventario corresponde a T2.02, T2.03 y T2.04. Su baseline inicial se obtuvo mediante comprobaciones de lectura, salvo la descarga y extracción autorizadas del artefacto de T2.03/T2.04 y los arranques controlados de Blender. En fases posteriores se instalaron el addon y el servidor MCP, y se añadió la entrada local de Blender a Codex; esas configuraciones permanecen fuera del repositorio. Las rutas se expresan con variables sanitizadas para no registrar nombres de usuario ni rutas personales innecesarias.
 
 ## Clasificación resumida
 
@@ -16,9 +16,9 @@ Este inventario corresponde a T2.02, T2.03 y T2.04. Se obtuvo mediante comprobac
 | Python Launcher (`py`) | NO DISPONIBLE | `py --version` y `where py` no encuentran el comando. |
 | Python embebido de Blender | DISPONIBLE | Python 3.13.13 incluido en el portable; no se instalaron paquetes. |
 | `uv` / `uvx` | DISPONIBLE | Versión 0.12.4 en ambos comandos; no se instalaron ni actualizaron. |
-| Codex CLI | PRESENTE PERO NO VALIDADO | Hay launchers, pero `--version` no pudo validarse por el entorno de ejecución. |
-| Configuración de Codex | PRESENTE PERO NO VALIDADO | Existe configuración con MCP de otros proyectos; no se identificó una entrada de Blender. |
-| Blender MCP | NO DISPONIBLE | No se identificó instalación, addon o proceso de Blender MCP. |
+| Codex CLI | OPERATIVO | La versión observada durante T2.07/T2.08 fue `0.153.1`; la comunicación con Blender MCP quedó validada en esas tareas. |
+| Configuración de Codex | CONFIGURADA LOCALMENTE | La entrada lógica `blender` quedó añadida fuera del repositorio; las entradas previas permanecieron intactas. |
+| Blender MCP | INSTALADO Y OPERATIVO | Pin `5866814479b4e2ca674d8d44969a9a2a78fdc8bb`, addon instalado y listener validado en `127.0.0.1:9876`. |
 | Git | DISPONIBLE | Git 2.55.0.windows.3. |
 | Git LFS | DISPONIBLE | Git LFS 3.7.1; no se inicializó ni configuró. |
 | Herramientas de listeners locales | DISPONIBLE | `Get-NetTCPConnection` y `netstat.exe` están disponibles. |
@@ -53,7 +53,7 @@ Este inventario corresponde a T2.02, T2.03 y T2.04. Se obtuvo mediante comprobac
 ## T2.04 — Despliegue portable y validación
 
 - El destino no existía antes de extraer y no se sobrescribió ninguna instalación previa.
-- La extracción creó `<BLENDER_HOME>` fuera del repositorio. No se creó la carpeta propuesta `<BLENDER_HOME>` dentro del repo.
+- La extracción creó `<BLENDER_HOME>` fuera del repositorio y no creó ninguna instalación dentro del repo.
 - Python embebido: `3.13.13 (MSC v.1944 64 bit (AMD64))`, runtime bajo `<BLENDER_HOME>\blender-5.2.1-windows-x64\5.2\python`; `sys.executable` es el `python.exe` embebido de esa distribución. El Python global del portátil sigue siendo `3.14.6` en `<USERPROFILE>\AppData\Local\Python\bin\python.exe`.
 - Smoke headless: exit code `0`; `bpy.app.version_string=5.2.1 LTS`, escena activa `Scene`, unidades `METRIC`, escala `1.0`; no se guardó ningún `.blend`.
 - Primer arranque GUI: una única ventana `(Unsaved) - Blender 5.2.1 LTS`, con handle de ventana y respuesta positiva; se cerró dentro de 10 segundos. No se interactuó con diálogos ni se cambiaron preferencias. No se obtuvo captura pixel-level; la evidencia GUI es de proceso/ventana y el viewport no se marca como inspección visual independiente.
@@ -71,11 +71,11 @@ La comparación se limita a los artefactos oficiales Windows x64 de Blender 5.2.
 | Opción | Artefacto y tamaño publicado | Privilegios/cambios globales | Rollback y reproducibilidad | Adecuación provisional |
 | --- | --- | --- | --- | --- |
 | MSI/Installer | `blender-5.2.1-windows-x64.msi`; `365113344` bytes (aprox. 348 MiB) | El instalador puede requerir privilegios administrativos y puede registrar instalación, desinstalación y asociaciones de `.blend` según opciones de Windows; debe confirmarse antes de ejecutar. | Desinstalación disponible, pero con más estado global y rutas dependientes del instalador. | Válido si se requiere integración de Windows y se acepta ese impacto. |
-| Portable ZIP | `blender-5.2.1-windows-x64.zip`; `404851964` bytes (aprox. 386 MiB) | No requiere instalador ni privilegios administrativos para una carpeta escribible por el usuario; no crea asociaciones de `.blend` por sí solo. Cualquier asociación o acceso directo sería una decisión posterior. | Rollback simple eliminando o sustituyendo la carpeta versionada; facilita repetir la misma carpeta y versión en el sobremesa. | **Opción propuesta** para Home Studio 3D por menor impacto global y mejor pin de versión. |
+| Portable ZIP | `blender-5.2.1-windows-x64.zip`; `404851964` bytes (aprox. 386 MiB) | No requiere instalador ni privilegios administrativos para una carpeta escribible por el usuario; no crea asociaciones de `.blend` por sí solo. | Rollback simple eliminando o sustituyendo la carpeta versionada; facilita repetir la misma carpeta y versión en el sobremesa. | **Opción adoptada y validada** para Home Studio 3D por menor impacto global y mejor pin de versión. |
 
-Artefacto objetivo propuesto: `blender-5.2.1-windows-x64.zip`.
+Artefacto objetivo y adoptado: `blender-5.2.1-windows-x64.zip`.
 
-- URL canónica propuesta: `https://download.blender.org/release/Blender5.2/blender-5.2.1-windows-x64.zip`.
+- URL canónica: `https://download.blender.org/release/Blender5.2/blender-5.2.1-windows-x64.zip`.
 - Fichero oficial de checksums: `https://download.blender.org/release/Blender5.2/blender-5.2.1.sha256`.
 - SHA-256 local: `0e631dad7d0cad6d5d18abdd2e2550f6c0213215334eda00ddbd3d22b96ecb2c`.
 - Entrada relevante del checksum oficial: `0e631dad7d0cad6d5d18abdd2e2550f6c0213215334eda00ddbd3d22b96ecb2c  blender-5.2.1-windows-x64.zip`.
@@ -83,9 +83,9 @@ Artefacto objetivo propuesto: `blender-5.2.1-windows-x64.zip`.
 - Tamaño descargado: `404851964` bytes; coincide con el tamaño esperado.
 - Resultado: **PASS** para procedencia, nombre, tamaño, hash local, hash oficial y hash de referencia.
 - Ubicación sanitizada del ZIP: `<T2_03_DOWNLOAD_DIR>\blender-5.2.1-windows-x64.zip`.
-- El ZIP se conserva sin extraer. La extracción y ejecución requieren autorización separada.
+- El ZIP fue extraído y ejecutado en T2.04 con autorización separada; la validación de Blender 5.2.1 quedó registrada allí.
 
-Ubicación portable propuesta, aún no creada: `<LOCALAPPDATA>\Programs\Blender\5.2.1`, documentada operacionalmente como `<BLENDER_HOME>`. Debe quedar fuera de `<REPO_ROOT>`, sin versionarse y con la misma convención de variable en el sobremesa.
+Ubicación portable efectiva: `<LOCALAPPDATA>\Programs\Blender\5.2.1`, documentada operacionalmente como `<BLENDER_HOME>`. Queda fuera de `<REPO_ROOT>`, no se versiona y la misma convención de variable se usa al documentar la réplica en el sobremesa.
 
 ## Python y herramientas auxiliares
 
@@ -100,20 +100,20 @@ Ubicación portable propuesta, aún no creada: `<LOCALAPPDATA>\Programs\Blender\
 
 La presencia de Python o `uv` es un dato del entorno actual, no una autorización ni una decisión de instalación para T2.03.
 
-## Codex CLI y configuración MCP existente
+## Baseline T2.02 — Codex CLI y configuración MCP existente
 
-- El launcher `codex` está presente en `<CODEX_BIN>\codex.ps1`.
-- `codex --version` no pudo ejecutarse porque la política de PowerShell impide cargar el script `.ps1`.
-- También existe `<CODEX_BIN>\codex.cmd`; `codex.cmd --version` no devolvió una versión y mostró un aviso del launcher sobre la imposibilidad de crear aliases PATH por no encontrar el home directory.
+- En el inventario inicial, el launcher `codex` estaba presente en `<CODEX_BIN>\codex.ps1`.
+- En ese snapshot, `codex --version` no pudo ejecutarse porque la política de PowerShell impedía cargar el script `.ps1`.
+- También existía `<CODEX_BIN>\codex.cmd`; el intento inicial de `codex.cmd --version` no devolvió una versión y mostró un aviso del launcher sobre la imposibilidad de crear aliases PATH por no encontrar el home directory. La operación efectiva de Codex CLI se validó posteriormente en T2.07/T2.08.
 - Existe `<USERPROFILE>\.codex\config.toml`. Se inspeccionó únicamente su estructura; no se mostraron ni registraron valores.
-- Se identificaron las secciones MCP existentes `[mcp_servers.node_repl]` y `[mcp_servers.unity]`, junto con sus secciones de herramientas. No se identificó una sección `mcp_servers` de Blender.
-- La configuración no se modificó. La integración de un MCP local de Blender requerirá una decisión separada y autorización explícita.
+- En el snapshot T2.02 se identificaron las secciones MCP existentes `[mcp_servers.node_repl]` y `[mcp_servers.unity]`, junto con sus secciones de herramientas; todavía no había una sección `mcp_servers` de Blender.
+- Durante ese inventario no se modificó la configuración. La integración local de Blender se decidió, autorizó y ejecutó posteriormente en T2.07; su estado actual figura en la tabla de clasificación y en la decisión 002.
 
-## MCP, procesos y listeners
+## Baseline T2.02 — MCP, procesos y listeners
 
-- No se identificaron procesos cuyo nombre indicase MCP o Blender.
+- En el inventario inicial no se identificaron procesos cuyo nombre indicase MCP o Blender.
 - No se identificaron archivos de configuración MCP en el repositorio.
-- El addon MCP de Blender no puede validarse sin iniciar Blender y, al no estar Blender instalado, queda `NO APLICA`.
+- El addon MCP de Blender no estaba validable durante el inventario inicial; la validación posterior se documenta en la decisión 002.
 - Se observaron 27 listeners TCP en loopback durante la consulta local; no se registraron puertos ni PIDs y ninguno pudo atribuirse a Blender MCP porque no hay instalación/proceso/configuración identificados.
 - No se abrió ningún puerto ni se probó conectividad externa.
 - Había una interfaz activa de categoría `Native 802.11`; no se recopilaron direcciones, MAC ni otros identificadores.
@@ -123,7 +123,13 @@ Para la validación futura de localhost se podrán usar, en modo read-only:
 - `Get-NetTCPConnection -State Listen`, filtrando `LocalAddress` a `127.0.0.1` y `::1`;
 - `netstat.exe -ano`, filtrando endpoints loopback y relacionando un PID solo cuando sea necesario.
 
-La comprobación de listeners demuestra bindings observables en ese momento. No demuestra por sí sola que el código de Blender/Python esté técnicamente sandboxeado respecto al filesystem; esa garantía depende de permisos, sandbox o auditoría disponibles, además de la política del proyecto.
+La comprobación de listeners demuestra bindings observables en ese momento. La validación posterior confirmó el listener de Blender MCP en `127.0.0.1:9876`; esto no demuestra por sí solo que el código de Blender/Python esté técnicamente sandboxeado respecto al filesystem.
+
+## Estado validado posteriormente
+
+- Blender 5.2.1 LTS, Blender MCP y Codex CLI quedaron instalados y operativos en el portátil.
+- La comunicación live `Codex → Blender MCP → Blender` quedó validada mediante `get_scene_info`.
+- El fixture `blender/scenes/tests/001-foundation-room.blend` quedó validado y fue probado entre portátil y sobremesa. No se registran rutas ni inventario adicionales del sobremesa en este documento.
 
 ## Git y Git LFS
 
@@ -134,8 +140,8 @@ La comprobación de listeners demuestra bindings observables en ese momento. No 
 
 ## Límites y decisiones pendientes
 
-- T2.03 queda documentado con la opción portable ZIP como distribución verificada; la extracción y ejecución requieren autorización separada.
+- T2.03/T2.04 quedan documentados con la distribución portable ZIP adoptada y validada.
 - La discrepancia entre la resolución de `python` en PowerShell y `where python` queda caracterizada: PowerShell resuelve el ejecutable real `<USERPROFILE>\AppData\Local\Python\bin\python.exe` (Python 3.14.6), sin alias de PowerShell, shim de WindowsApps ni `py`; `where.exe` no devuelve una ruta en este entorno. No se modificó PATH.
-- La versión efectiva de Codex CLI no quedó validada por ejecución: el paquete local declara `@openai/codex` `0.153.1`, pero el launcher PowerShell está bloqueado por ExecutionPolicy y el `.cmd` no completó la prueba por una incidencia de entorno/home. No se modificaron ExecutionPolicy, PATH ni configuración.
-- El pin exacto de `ahujasid/blender-mcp` sigue pendiente de T2.05; no se ha instalado ningún MCP.
-- Las comprobaciones de apertura de Blender, ejecución `bpy`, handshake MCP, addon, escena, dimensiones, captura visual y rendimiento quedan pendientes de infraestructura y de autorización para las siguientes tareas.
+- El launcher PowerShell mantiene la limitación histórica de ExecutionPolicy; la operación efectiva de Codex CLI se validó mediante el launcher `.cmd` en T2.07/T2.08, sin modificar ExecutionPolicy ni PATH.
+- El pin exacto de `ahujasid/blender-mcp`, el addon y el listener local están instalados y validados; la deuda conocida de `get_addon_status` se conserva en `docs/decisions/002-blender-mcp-selection.md`.
+- No se registra aquí un inventario completo del sobremesa; solo queda documentada la prueba cruzada del fixture.

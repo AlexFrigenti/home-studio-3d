@@ -22,7 +22,7 @@ Todo cambio debe ser trazable, comprobable y reversible en la medida razonable. 
 
 ## Perfil y límites actuales
 
-El proyecto trabaja con escenas Blender, scripts Python/`bpy`, medidas estructuradas, assets, materiales, texturas, renders y exports cuando existan. En este momento no hay Blender, MCP, dependencias ni infraestructura de validación instalados. Esa ausencia se registra como `Pendiente de infraestructura` o `No aplica` según el caso; no se simula una validación.
+El proyecto trabaja con escenas Blender, scripts Python/`bpy`, medidas estructuradas, assets, materiales, texturas, renders y exports cuando existan. La foundation ya dispone de Blender 5.2.1, Blender MCP y Codex CLI instalados, y la comunicación live `Codex → Blender MCP → Blender` está validada. Los controles que sigan sin evidencia se registran como `Pendiente de infraestructura`, `No ejecutado` o `No aplica` según corresponda; no se simula una validación.
 
 No se instalarán herramientas, dependencias, addons, servicios ni Git LFS solo para satisfacer una plantilla de calidad. Los workflows de Node/web del estándar común no se copian en este repositorio.
 

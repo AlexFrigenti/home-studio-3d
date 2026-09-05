@@ -1,12 +1,12 @@
-# Decisión propuesta: distribución de Blender
+# Decisión: distribución de Blender
 
-Estado: distribución propuesta, artefacto descargado/verificado en T2.03 y portable desplegado/validado en T2.04; MCP aún no configurado.
+Estado: distribución adoptada y validada en el portátil. Blender 5.2.1 LTS Portable ZIP se desplegó fuera del repositorio y su ejecución quedó validada; la conexión con Blender MCP también está validada en loopback.
 
 ## Decisión
 
-Adoptar como distribución inicial propuesta **Blender 5.2.1 LTS Windows x64 Portable ZIP** para el portátil y su posterior reproducción en el sobremesa.
+Adoptar como distribución inicial **Blender 5.2.1 LTS Windows x64 Portable ZIP** para el portátil y su posterior reproducción en el sobremesa.
 
-La decisión mantiene Blender 5.2 LTS como línea de soporte, pero fija `5.2.1 LTS` como versión inicial objetivo. No depende de GPT-6 Astra ni autoriza ninguna instalación.
+La decisión mantiene Blender 5.2 LTS como línea de soporte y fija `5.2.1 LTS` como versión inicial. No depende de GPT-6 Astra; cualquier instalación o cambio posterior requiere su autorización correspondiente.
 
 ## Motivos
 
@@ -32,7 +32,7 @@ Fuentes oficiales: [página de descargas de Blender](https://www.blender.org/dow
 - Resultado de comparación: **PASS**; el hash local coincide con el oficial y con la referencia autorizada. El tamaño local es `404851964` bytes y también coincide.
 - Ubicación sanitizada del ZIP descargado: `<T2_03_DOWNLOAD_DIR>\blender-5.2.1-windows-x64.zip`.
 
-Antes de extraer o ejecutar, el procedimiento autorizado deberá:
+El procedimiento autorizado para T2.03/T2.04 fue:
 
 1. descargar exclusivamente desde la URL canónica;
 2. obtener el checksum oficial;
@@ -40,15 +40,15 @@ Antes de extraer o ejecutar, el procedimiento autorizado deberá:
 4. rechazar el artefacto ante cualquier discrepancia;
 5. registrar versión, URL, tamaño y hash aceptado.
 
-Estos pasos se ejecutaron en T2.03 y resultaron PASS. El ZIP no se ha extraído ni ejecutado.
+Estos pasos se ejecutaron en T2.03 y resultaron PASS. El ZIP se extrajo y se ejecutó posteriormente en T2.04; Blender reportó `5.2.1 LTS` y quedó disponible para la validación live con el MCP.
 
 ## Ubicación
 
-No se creará la carpeta durante T2.03. La ubicación propuesta es:
+La ubicación efectiva de la instalación portable es:
 
 `<LOCALAPPDATA>\Programs\Blender\5.2.1`
 
-En la documentación operativa se referenciará como `<BLENDER_HOME>`. Queda fuera de `<REPO_ROOT>`, no se versiona y puede reproducirse en el sobremesa estableciendo la misma variable lógica, sin registrar una ruta personal absoluta.
+En la documentación operativa se referencia como `<BLENDER_HOME>`. Queda fuera de `<REPO_ROOT>`, no se versiona y puede reproducirse en el sobremesa estableciendo la misma variable lógica, sin registrar una ruta personal absoluta.
 
 ## Comparativa resumida
 
@@ -60,10 +60,10 @@ En la documentación operativa se referenciará como `<BLENDER_HOME>`. Queda fue
 | Rollback | Desinstalar y revisar estado residual | Retirar o sustituir la carpeta versionada |
 | Segundo equipo | Repetir instalador y decisiones de ruta/asociación | Repetir artefacto, hash y convención `<BLENDER_HOME>` |
 
-Las propiedades operativas de instalación y asociaciones se validarán durante la ejecución autorizada; no se ha ejecutado Blender ni el instalador.
+La ejecución portable se validó en T2.04. No se crearon asociaciones de `.blend` ni se modificaron configuraciones globales como parte de esta foundation.
 
 ## Límites
 
-- No se extrae ni ejecuta Blender como parte de T2.03; la descarga autorizada quedó verificada y conservada en una ubicación temporal.
-- No se modifica PATH, ExecutionPolicy, configuración de Codex, configuración de Blender ni Git LFS.
-- No se fija aún el commit de `ahujasid/blender-mcp`; corresponde a T2.05.
+- En T2.03 no se extrajo ni ejecutó Blender; la descarga quedó verificada y conservada fuera del repositorio. T2.04 cubrió la extracción y ejecución autorizadas.
+- T2.03/T2.04 no modificaron PATH, ExecutionPolicy, configuración de Blender ni Git LFS. La configuración local de Codex se integró posteriormente en T2.07 y se documenta en la decisión 002.
+- El pin de `ahujasid/blender-mcp` y su validación están documentados en `docs/decisions/002-blender-mcp-selection.md`.

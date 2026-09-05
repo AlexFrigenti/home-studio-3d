@@ -1,6 +1,6 @@
 # Tareas: Blender + Codex + MCP Foundation
 
-Todas las tareas están pendientes porque este slice documenta primero el cambio T2. Cada tarea debe ejecutarse en orden cuando exista autorización para comenzar la instalación. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
+Las tareas reflejan el estado real de ejecución de este slice. T2.02–T2.03, T2.05–T2.07 y T2.09–T2.12 están completadas con la evidencia documentada. T2.01, T2.04, T2.08 y T2.13 quedan pendientes por las limitaciones o cierres indicados en cada tarea. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -12,9 +12,11 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Validación:** revisión cruzada de los tres artefactos y del diff completo.
 - **Autorización del usuario:** sí, aprobación de la especificación antes de instalar o configurar.
 
+**Pendiente:** falta únicamente la aprobación formal independiente del alcance y contrato; el trabajo técnico posterior se conserva.
+
 ## T2.02 — Inventariar el portátil
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** registrar sistema, hardware, rutas y componentes existentes sin cambiar el entorno.
 - **Evidencia esperada:** inventario reproducible sin secretos ni rutas privadas innecesarias.
 - **Validación:** comprobación de versiones, rutas y ausencia/presencia documentada; `NO APLICA` para componentes no instalados.
@@ -22,10 +24,10 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.03 — Fijar la distribución de Blender
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** confirmar Blender 5.2.1 LTS, fuente aprobada, ruta reproducible y modalidad de distribución para Windows.
 - **Evidencia esperada:** comparación del instalador tradicional y ZIP portable oficial; fuente, versión, hash cuando sea posible, criterios aplicados y decisión registrada antes de descargar o instalar.
-- **Validación:** revisión de procedencia y compatibilidad con el portátil; preferir ZIP portable si cumple funcionamiento, ausencia de cambios globales innecesarios y rollback/reproducibilidad, sin decidirlo por adelantado.
+- **Validación:** revisión de procedencia y compatibilidad con el portátil; se adoptó el ZIP portable por su funcionamiento, ausencia de cambios globales innecesarios y rollback/reproducibilidad.
 - **Autorización del usuario:** sí antes de descargar o instalar.
 
 ## T2.04 — Instalar y verificar Blender
@@ -36,39 +38,51 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Validación:** smoke de apertura/guardado y comprobación de no exposición de servicios no solicitados.
 - **Autorización del usuario:** sí.
 
+**Resultado observado T2.04:** Blender inició y reportó `5.2.1 LTS`; el fixture de aceptación se guardó posteriormente en T2.09/T2.10, pero no se demostró el guardado de una escena vacía independiente.
+
+**Pendiente:** demostrar el guardado de una escena vacía en el área de pruebas, si se mantiene este criterio original.
+
 ## T2.05 — Revisar el MCP candidato
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** inspeccionar `ahujasid/blender-mcp` y contrastar su integración con la referencia `webita/blender-codex-mcp`, sin aceptar una rama mutable sin pin.
 - **Evidencia esperada:** procedencia, licencia, versión/tag/commit exacto aprobado, permisos, transporte y compatibilidad documentados antes de instalar.
 - **Validación:** revisión del código y de la configuración; no ejecutar código externo sin inspección; cualquier actualización posterior repite smoke y aceptación.
 - **Autorización del usuario:** sí antes de instalar o ejecutar el MCP.
 
+**Resultado T2.05:** se revisó `ahujasid/blender-mcp`, se comparó con `webita/blender-codex-mcp` como referencia y se fijó el commit `5866814479b4e2ca674d8d44969a9a2a78fdc8bb` antes de instalarlo.
+
 ## T2.06 — Configurar el MCP solo en localhost
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** arrancar el MCP candidato con una frontera de red local.
 - **Evidencia esperada:** configuración local, telemetría opcional deshabilitada si procede y puerto identificado.
 - **Validación:** handshake real y comprobación de binding solo en `localhost`/loopback; rechazo de LAN/Internet; revisión de la evidencia técnica disponible sobre rutas/permisos, sin declarar sandbox del workspace por la sola política.
 - **Autorización del usuario:** sí antes de abrir el servicio local.
 
+**Resultado T2.06:** Blender MCP quedó instalado y operativo con `BLENDER_MCP_SAFE_MODE=1`, `DISABLE_TELEMETRY=true`, `BLENDER_HOST=127.0.0.1` y `BLENDER_PORT=9876`. El handshake y el listener `127.0.0.1:9876` resultaron PASS; no se observó binding fuera de loopback.
+
 ## T2.07 — Integrar Codex CLI desde el repo
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** permitir que Codex opere desde el workspace y conecte con el MCP local.
 - **Evidencia esperada:** configuración reproducible y separada de credenciales/globales.
 - **Validación:** Codex obtiene información de la escena y no requiere GPT-6 Astra para funcionar.
 - **Autorización del usuario:** sí antes de modificar configuración global o habilitar capacidades privilegiadas.
 
+**Resultado T2.07:** Codex CLI `0.153.1` reconoció el servidor lógico `blender` y completó la comunicación con Blender MCP. `get_scene_info` devolvió la escena `Scene` y los tres objetos iniciales; no se introdujeron secretos ni se modificaron las entradas MCP existentes.
+
 ## T2.08 — Ejecutar el smoke técnico
 
-- **Estado:** `[x]` — validada el 2026-09-04.
+- **Estado:** `[ ]`
 - **Objetivo:** probar la cadena Codex CLI → MCP local → Blender con una escena vacía/desechable.
 - **Evidencia esperada:** primera operación `bpy` de solo lectura (nombre de escena y/o número de objetos), una operación de escena simple y reversible y archivo de smoke guardado.
 - **Validación:** la primera operación no usa filesystem, red ni procesos externos; el guardado posterior es explícito dentro del workspace; apertura/guardado, operación reversible, rutas/permisos observables y diff/artefactos revisados. La ausencia de sandbox técnico se registra como limitación, no como PASS.
 - **Autorización del usuario:** sí antes de ejecutar `execute_blender_code`/`bpy`.
 
 **Resultado T2.08:** `get_addon_status` permanece como `DEUDA CONOCIDA NO BLOQUEANTE PARA EL SMOKE`: `src/blender_mcp/config.py` no existe en el pin y la tool no se usa para validar telemetría. El precheck live, handshake, lectura inicial, primera llamada `bpy` read-only, creación/verificación/eliminación del cubo temporal, captura de viewport y validación independiente de red resultaron PASS. No se creó ningún `.blend`, no se modificó código upstream y T2.09 no se inició.
+
+**Pendiente:** el criterio original de guardar un archivo de smoke no está demostrado; la operación reversible y su limpieza sí quedaron validadas.
 
 ## T2.09 — Crear la habitación sintética mínima
 
@@ -102,11 +116,13 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.12 — Documentar la réplica en sobremesa
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-05.
 - **Objetivo:** documentar versiones, fuentes, rutas variables, orden de arranque y diferencias entre equipos.
 - **Evidencia esperada:** procedimiento que otra persona pueda seguir sin secretos ni rutas absolutas personales.
 - **Validación:** revisión de reproducibilidad y lista de controles que deben repetirse en el PC.
 - **Autorización del usuario:** no para documentar; sí antes de instalar o ejecutar el procedimiento en el sobremesa.
+
+**Resultado T2.12:** la infraestructura de Blender/Codex/MCP se preparó en ambos equipos y el fixture creado en el portátil se validó correctamente en el sobremesa. La documentación conserva el contrato, el orden de validación y las variables sanitizadas; no se documentan rutas personales ni equivalencia absoluta de detalles locales.
 
 ## T2.13 — Cierre del T2 y PR
 
@@ -115,3 +131,5 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Evidencia esperada:** checklist de aceptación, resultados reales, evidencia visual y diff completo.
 - **Validación:** todos los gates aplicables en `PASS`; el resto marcado como `NO APLICA`, `PENDIENTE DE INFRAESTRUCTURA` o `NO EJECUTADO` con explicación.
 - **Autorización del usuario:** sí para abrir PR, merge, instalación posterior y cualquier cambio de política.
+
+**Pendiente:** revisión final del diff, decisión de commit/PR y cierre formal del T2.
