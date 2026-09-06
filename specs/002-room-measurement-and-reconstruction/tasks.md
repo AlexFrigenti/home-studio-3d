@@ -103,21 +103,24 @@ y detenerse ante una discrepancia no resuelta.
 
 ## T2.11 — Definir política de fotos y referencias
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** establecer cómo las fotos apoyan la referencia visual sin convertirse en medidas sin escala.
 - **Archivos:** sección documental y futuras referencias bajo `assets/references/<room_id>/` solo si se aprueban.
 - **Validación:** escala conocida, privacidad, EXIF, procedencia y relación con `source_id`.
 - **Rollback:** retirar solo referencias atribuibles y conservar originales fuera del repo.
 - **Autorización:** autorización explícita para versionar cualquier foto o plano.
+- **Evidencia:** el propietario aprobó explícitamente la política para una captura futura como referencia visual. Los originales permanecerán fuera del repositorio; el EXIF podrá conservarse únicamente en esos originales privados; cualquier imagen propuesta para Git deberá revisarse, sanearse y autorizarse de forma explícita posteriormente. Las notas podrán usar `source_id` neutros, sin rutas personales. Las fotografías no sustituyen medidas físicas salvo con escala conocida y documentación expresa. Se evitarán personas, documentos, pantallas, direcciones y otros elementos identificativos. Esta aprobación no afirma que existan fotografías reales ni autoriza su versionado.
 
 ## T2.12 — Preparar el primer salón real
 
-- **Estado:** `[ ]`
+- **Estado:** `[~]`
 - **Objetivo:** preparar, sin ejecutar ahora, la primera captura real y decidir más adelante su archivo bajo `measurements/`.
 - **Archivos:** nombre y ubicación del primer archivo real pendientes de decisión específica; derivados aislados.
 - **Validación:** schema, procedimiento, incertidumbres, privacidad, trazabilidad y plan de rollback aprobados.
 - **Rollback:** conservar el registro original; revertir solo representaciones derivadas.
 - **Autorización:** aprobación específica posterior del room ID, nombre/ubicación, captura y uso de Blender.
+- **Evidencia parcial:** `docs/setup/002-real-room-measurement-field-sheet.md` preparada y aprobada explícitamente por el propietario para la primera sesión real. La hoja no contiene medidas reales y su aprobación no autoriza automáticamente la captura, la creación o el versionado del JSON, la ejecución del validator ni Blender/MCP.
+- **Pendientes antes de capturar:** `room_id`; nombre y ruta prevista del JSON real; `session_id`; instrumentos; tolerancias/incertidumbres adoptadas; y autorización específica para iniciar la captura real.
 
 ## T2.13 — Cerrar el slice y preparar PR
 
