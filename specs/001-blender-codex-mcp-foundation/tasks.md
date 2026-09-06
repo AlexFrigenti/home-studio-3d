@@ -1,6 +1,6 @@
 # Tareas: Blender + Codex + MCP Foundation
 
-Las tareas reflejan el estado real de ejecución de este slice. T2.01–T2.13 están completadas con la evidencia documentada; T2.01 conserva una excepción documental explícita. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
+Las tareas siguientes registran el estado validado del slice T2. La evidencia operativa queda en los inventarios, decisiones y validaciones enlazados en cada tarea; T2.01 conserva una excepción documental explícita y T2.13 está cerrada. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -92,7 +92,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Validación:** caras interiores exactas, grosor hacia fuera sin alterar el volumen, escena recreable con las mismas constantes en ambos equipos, abrible/guardable, sin assets externos y sin sobrescribir escenas canónicas.
 - **Autorización del usuario:** sí antes de crear y guardar la escena de aceptación.
 
-**Resultado T2.09:** se creó la colección `HS3D_T2_09_FOUNDATION_ROOM` con `floor`, `wall_south`, `wall_north`, `wall_west`, `wall_east`, `door`, `window`, `sofa_proxy`, `HS3D_TEST_CAMERA` y `HS3D_TEST_LIGHT`. La escena usa `METRIC` y `scale_length = 1.0`, y se guardó en `blender/scenes/tests/001-foundation-room.blend` con tamaño `103358` bytes. Los objetos iniciales `Cube`, `Camera` y `Light` fueron confirmados como la escena por defecto y retirados; no se añadieron materiales ni assets externos. Se obtuvo una captura rápida de viewport sin render; la validación geométrica exhaustiva queda para T2.10 y la inspección visual formal para T2.11.
+**Resultado T2.09:** se creó la colección `HS3D_T2_09_FOUNDATION_ROOM` con `floor`, `wall_south`, `wall_north`, `wall_west`, `wall_east`, `door`, `window`, `sofa_proxy`, `HS3D_TEST_CAMERA` y `HS3D_TEST_LIGHT`. La escena usa `METRIC` y `scale_length = 1.0`, y se guardó inicialmente en `blender/scenes/tests/001-foundation-room.blend` con tamaño `103358` bytes; el fixture versionado final tras T2.10 tiene `103445` bytes. Los objetos iniciales `Cube`, `Camera` y `Light` fueron confirmados como la escena por defecto y retirados; no se añadieron materiales ni assets externos. Se obtuvo una captura rápida de viewport sin render; la validación geométrica exhaustiva queda para T2.10 y la inspección visual formal para T2.11.
 
 ## T2.10 — Validar dimensiones y transformaciones
 
@@ -122,7 +122,7 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Validación:** revisión de reproducibilidad y lista de controles que deben repetirse en el PC.
 - **Autorización del usuario:** no para documentar; sí antes de instalar o ejecutar el procedimiento en el sobremesa.
 
-**Resultado T2.12:** la infraestructura de Blender/Codex/MCP se preparó en ambos equipos y el fixture creado en el portátil se validó correctamente en el sobremesa. La documentación conserva el contrato, el orden de validación y las variables sanitizadas; no se documentan rutas personales ni equivalencia absoluta de detalles locales.
+**Resultado T2.12:** la infraestructura de Blender/Codex/MCP se preparó en ambos equipos y el fixture creado en el portátil se validó correctamente en el sobremesa. La validación del sobremesa quedó documentada en `docs/setup/desktop-environment-inventory.md`, que registra Blender 5.2.1 LTS, RTX 3080, el pin exacto de `ahujasid/blender-mcp`, Codex CLI, safe mode, telemetría, loopback, integraciones deshabilitadas, handshake, `get_scene_info`, validación cross-machine, rollback de `approval_mode`, snapshot de configuración, la deuda conocida de `get_addon_status` y el clon activo fuera de OneDrive. La documentación conserva el contrato, el orden de validación y las variables sanitizadas; las rutas personales y los secretos quedan sanitizados o excluidos, y no se afirma equivalencia absoluta de los detalles locales.
 
 ## T2.13 — Cierre del T2 y PR
 
@@ -134,12 +134,12 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 **Checklist final T2.13 (2026-09-06):**
 
-- Revisión final de `spec.md`, `plan.md`, `tasks.md`, la documentación de setup/decisions y el diff completo contra `origin/main`: **PASS**.
+- Revisión final contra `.quality/QUALITY.md` y `CONTRIBUTING.md`, incluyendo `spec.md`, `plan.md`, `tasks.md`, la documentación de setup/decisions y el diff completo contra `origin/main`: **PASS**; los 13 criterios aplicables tienen evidencia PASS o disposición explícita.
 - Criterios aplicables del T2: **PASS** o disposición explícita; T2.01 conserva su excepción documental, T2.04 y T2.08 tienen smoke independiente con guardado/reapertura, y T2.12 documenta la validación del fixture entre portátil y sobremesa sin afirmar equivalencia absoluta de los entornos.
 - Diff final: **PASS**; `git diff --check` sin errores.
 - Commits: **REALIZADOS**; la foundation y el cierre documental quedan trazables en la historia de esta rama.
-- Push: **REALIZADO**; la rama remota coincide con el HEAD local antes de abrir la PR.
-- PR: **AUTORIZADA Y PREVISTA como parte de este cierre**; la apertura se ejecuta inmediatamente después de este commit.
+- Push: **REALIZADO**; la rama remota coincide con el HEAD local.
+- PR #2: **ABIERTA** hacia `main` como parte de este cierre; el merge queda fuera de alcance y requiere autorización explícita.
 - CI/merge: **NO APLICA** a este cierre documental mientras no exista una política o check de CI configurado que ejecutar; el merge queda fuera de este paso y requiere checks verdes y autorización explícita.
 - Deuda de `get_addon_status`: **ACEPTADA COMO NO BLOQUEANTE** y conservada en la documentación.
 - Producción 3D real: **NO INICIADA**; el fixture y los smoke `.blend` son evidencia de foundation.
