@@ -48,7 +48,7 @@
 
 ### Archivos previstos para fases posteriores
 
-- Crear: `docs/setup/room-measurement-procedure.md` para el procedimiento real de captura.
+- Crear: `docs/setup/002-real-room-measurement-procedure.md` para el procedimiento real de captura.
 - Crear: futuras pruebas de comparación completa datos ↔ Blender y un informe de validación para el primer salón real.
 
 Estos archivos son planificación, no entregables de la ejecución actual.
@@ -150,7 +150,7 @@ fallback de proxy explícito, no cambia el dato canónico.
 
 **Objetivo:** documentar cómo medir una habitación real con cinta como mínimo, contrastar con láser/plano/fotos/escaneo y registrar incertidumbre.
 
-**Archivos:** crear `docs/setup/room-measurement-procedure.md`; los originales fotográficos personales permanecen fuera del repo.
+**Archivos:** crear `docs/setup/002-real-room-measurement-procedure.md`; los originales fotográficos personales permanecen fuera del repo.
 
 **Validaciones:** otra persona puede seguir el orden de captura, elegir el origen, repetir medidas críticas, registrar evidencia y producir JSON sin rutas locales.
 

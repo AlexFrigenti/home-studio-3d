@@ -93,10 +93,11 @@ y detenerse ante una discrepancia no resuelta.
 
 ## T2.10 — Documentar el procedimiento de toma de medidas
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** describir orden de captura, repetición, origen, segmentos, huecos, incertidumbre y evidencia.
-- **Archivos:** futuro `docs/setup/room-measurement-procedure.md`.
-- **Validación:** otra persona puede seguirlo con cinta métrica sin depender de rutas o herramientas propietarias.
+- **Archivos:** `docs/setup/002-real-room-measurement-procedure.md`.
+- **Validación:** procedimiento documentado para que otra persona pueda seguirlo con cinta métrica sin depender de rutas o herramientas propietarias; revisión humana independiente completada y aprobación explícita del propietario registrada antes de la primera sesión real.
+- **Evidencia:** `docs/setup/002-real-room-measurement-procedure.md`, revisado y aprobado explícitamente por el propietario.
 - **Rollback:** revertir el documento; mantener fuera del repo fotos y originales personales no aprobados.
 - **Autorización:** aprobación del procedimiento antes de la primera sesión real.
 
