@@ -7,6 +7,11 @@
 - Contrato: volumen interior `5.00 × 4.00 × 2.50 m`
 - T2.10: PASS con tolerancia `1e-6 m`; `sofa_proxy.location` corregido y persistente tras reapertura.
 
+## Validación entre equipos
+
+- El fixture `blender/scenes/tests/001-foundation-room.blend` fue probado entre el portátil y el sobremesa.
+- La prueba confirmó la reproducibilidad del fixture y de su contrato sintético; no se registran aquí rutas ni detalles adicionales del sobremesa.
+
 ## Evidencia visual T2.11
 
 - Evidencia persistente: `renders/previews/001-foundation-room/viewport-overview.png`

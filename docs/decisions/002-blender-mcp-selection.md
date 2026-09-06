@@ -1,10 +1,10 @@
 # Decisión 002 — Selección del MCP de Blender
 
-Estado: T2.07 y T2.08 completadas para el portátil. El pin está instalado y validado solo en loopback; Codex reconoce el servidor y obtuvo información de escena mediante tools de lectura. La tool `get_addon_status` mantiene una deuda conocida de importación, no bloqueante para el smoke, documentada más abajo.
+Estado: selección, instalación, integración y validación live completadas para el portátil. El pin está instalado y validado solo en loopback; Codex reconoce el servidor y obtuvo información de escena mediante tools de lectura. El fixture de foundation también se probó entre portátil y sobremesa. La tool `get_addon_status` mantiene una deuda conocida de importación, no bloqueante para la comunicación ni para el smoke, documentada más abajo.
 
-Fecha de revisión: 2026-09-04.
+Fecha de revisión: 2026-09-05.
 
-## Decisión propuesta
+## Decisión adoptada
 
 Adoptar inicialmente el candidato canónico **`ahujasid/blender-mcp`**, fijado al commit exacto:
 
@@ -59,7 +59,7 @@ Con safe mode activo siguen disponibles las tools de estado/lectura (`get_addon_
 - Listener observado: `127.0.0.1:9876`, PID de Blender.
 - Conexión observada: `127.0.0.1:9876` ↔ `127.0.0.1:<puerto efímero>`.
 - No apareció listener en `0.0.0.0`, una IP LAN ni una interfaz pública.
-- El servidor MCP conectó correctamente y obtuvo el handshake del addon; no se solicitaron `get_scene_info`, capturas, importaciones, descargas ni otras tools de escena.
+- El servidor MCP conectó correctamente y obtuvo el handshake del addon. La lectura de escena se validó después mediante `get_scene_info` en T2.07/T2.08.
 
 La variable de entorno y el consentimiento del addon son controles de configuración; el binding se consideró PASS por la dirección observada, no por la palabra `localhost` ni por `AGENTS.md`.
 
@@ -67,11 +67,11 @@ La variable de entorno y el consentimiento del addon son controles de configurac
 
 | Área | Hallazgo | Decisión para Home Studio 3D |
 | --- | --- | --- |
-| Blender | El README del candidato declara compatibilidad general desde Blender 3.0; no se encontró una matriz específica que certifique Blender 5.2.x. | Blender 5.2.1 LTS queda dentro del mínimo declarado, pero la compatibilidad con 5.2.1 se considera **pendiente de smoke real**. |
+| Blender | El README del candidato declara compatibilidad general desde Blender 3.0; no se encontró una matriz específica que certifique Blender 5.2.x. | Blender 5.2.1 LTS queda dentro del mínimo declarado y la compatibilidad operativa quedó validada mediante handshake, lectura de escena y smoke real. |
 | Python del servidor MCP | `pyproject.toml` requiere Python `>=3.10`; el README recomienda Python 3.11 gestionado por `uv`. | Usar el Python externo gestionado por `uv`, preferentemente 3.11; no instalar paquetes en Python global ni en el Python embebido de Blender. |
-| Python embebido de Blender | El addon se ejecuta dentro de Blender y el servidor MCP es un proceso Python separado. El Python embebido 3.13.13 de Blender no satisface por sí solo la instalación del servidor externo ni debe recibir paquetes. | Mantener separadas ambas runtimes. La compatibilidad del addon con Blender 5.2.1 se valida con el smoke; no se infiere solo de `requires-python`. |
-| Dependencias | El paquete declara `mcp>=1.9.0,<2` y `httpx>=0.27.0`, además de requerir `uv`/`uvx` en el flujo documentado. | Instalar dependencias únicamente en el entorno externo aislado del MCP y con lockfile, cuando T2.06 sea autorizado. |
-| Codex | La documentación del candidato usa el comando `uvx blender-mcp`; el fork usa una ejecución desde su checkout mediante `uv --directory`. | Para conservar el pin, ejecutar desde un checkout externo del SHA elegido con `uv ... run --locked`, o validar un equivalente con `uvx --from` fijado al SHA. No usar `uvx blender-mcp` sin pin. |
+| Python embebido de Blender | El addon se ejecuta dentro de Blender y el servidor MCP es un proceso Python separado. El Python embebido 3.13.13 de Blender no satisface por sí solo la instalación del servidor externo ni debe recibir paquetes. | Mantener separadas ambas runtimes. La compatibilidad del addon con Blender 5.2.1 quedó validada con el smoke; no se infiere solo de `requires-python`. |
+| Dependencias | El paquete declara `mcp>=1.9.0,<2` y `httpx>=0.27.0`, además de requerir `uv`/`uvx` en el flujo documentado. | Se instalaron únicamente en el entorno externo aislado del MCP y con lockfile. |
+| Codex | La documentación del candidato usa el comando `uvx blender-mcp`; el fork usa una ejecución desde su checkout mediante `uv --directory`. | La ejecución validada usa el checkout externo del SHA elegido con `uv ... run --locked`; no se usa un paquete mutable sin pin. |
 
 Fuentes: [README fijado al commit](https://github.com/ahujasid/blender-mcp/blob/5866814479b4e2ca674d8d44969a9a2a78fdc8bb/README.md) y [pyproject.toml fijado](https://github.com/ahujasid/blender-mcp/blob/5866814479b4e2ca674d8d44969a9a2a78fdc8bb/pyproject.toml).
 
@@ -95,9 +95,9 @@ El servidor se crea con FastMCP y termina llamando a `mcp.run()` sin seleccionar
 - Defaults documentados: host `localhost`, puerto `9876`.
 - El cliente MCP lee `BLENDER_HOST` y `BLENDER_PORT`.
 - El addon construye su servidor con `host='localhost'` y expone en la interfaz el puerto, no un campo de host; el código hace `bind((host, port))`.
-- Configuración propuesta: `BLENDER_HOST=127.0.0.1` y `BLENDER_PORT=9876` para el cliente, manteniendo el addon en su default y verificando el listener real.
+- Configuración utilizada y validada: `BLENDER_HOST=127.0.0.1` y `BLENDER_PORT=9876` para el cliente, manteniendo el addon en su default y verificando el listener real.
 
-`localhost` no se considera por sí solo una prueba técnica de loopback. En T2.06 se debe comprobar el `LocalAddress` real con `Get-NetTCPConnection` o `netstat -ano`. Solo será PASS si el listener de Blender aparece en loopback (`127.0.0.1`; cualquier otra dirección, como `0.0.0.0`, una IP LAN o una interfaz pública, obliga a detenerse). Si Windows resuelve `localhost` de forma no-loopback, no se continuará sin una decisión técnica adicional y revisión del addon.
+`localhost` no se considera por sí solo una prueba técnica de loopback. En T2.06 se comprobó el `LocalAddress` real con `Get-NetTCPConnection`: el listener de Blender apareció en `127.0.0.1:9876`, sin binding en `0.0.0.0`, una IP LAN o una interfaz pública.
 
 ## Superficie de herramientas y privilegios
 
@@ -145,7 +145,7 @@ El commit contiene telemetría que puede registrar uso, prompts, código, errore
 1. iniciar el proceso con `DISABLE_TELEMETRY=true`;
 2. desmarcar el consentimiento en las preferencias del addon; también existe la tool `disable_telemetry`.
 
-La implementación acepta además `BLENDER_MCP_DISABLE_TELEMETRY` y `MCP_DISABLE_TELEMETRY`. Para el primer arranque se propone establecer `DISABLE_TELEMETRY=true` antes de iniciar el servidor y dejar desmarcado el consentimiento del addon cuando se instale. Después debe verificarse el estado con `get_addon_status` y revisar que no existan conexiones de telemetría durante el smoke, sin inventar una garantía si no se puede observar. El mensaje de `disable_telemetry` advierte que el opt-out por consentimiento puede conservar contadores anónimos mínimos; el flag de entorno deshabilita el collector del servidor.
+La implementación acepta además `BLENDER_MCP_DISABLE_TELEMETRY` y `MCP_DISABLE_TELEMETRY`. En esta foundation se estableció `DISABLE_TELEMETRY=true` antes de iniciar el servidor y se dejó desmarcado el consentimiento del addon. La verificación se hizo directamente mediante la configuración live y `bpy`, no mediante `get_addon_status`, que conserva la deuda de importación documentada abajo. El mensaje de `disable_telemetry` advierte que el opt-out por consentimiento puede conservar contadores anónimos mínimos; el flag de entorno deshabilita el collector del servidor.
 
 Fuente: [control de telemetría en README](https://github.com/ahujasid/blender-mcp/blob/5866814479b4e2ca674d8d44969a9a2a78fdc8bb/README.md#telemetry-control) y [implementación de telemetría](https://github.com/ahujasid/blender-mcp/blob/5866814479b4e2ca674d8d44969a9a2a78fdc8bb/src/blender_mcp/telemetry.py).
 
@@ -164,16 +164,16 @@ La referencia secundaria es [webita/blender-codex-mcp](https://github.com/webita
 
 La comparación se limita a configuración, transporte, secuencia y capacidades declaradas; no se adopta ningún código del fork ni se instala como dependencia.
 
-## Estrategia de instalación propuesta para T2.06
+## Estrategia de instalación ejecutada para T2.06
 
-No se ejecuta en T2.05.
+La estrategia se ejecutó después de fijar el pin en T2.05 y con la autorización correspondiente.
 
 1. **Servidor externo.** Crear `<MCP_HOME>` fuera de `<REPO_ROOT>` y obtener un checkout/artefacto del commit exacto `586...`. Ejecutar con la ruta absoluta de `uv` y `--locked` desde ese checkout, o validar antes un `uvx --from` que incluya el SHA. No usar un paquete mutable de PyPI como pin final.
 2. **Addon.** Desde el mismo checkout fijado, usar el instalador oficial documentado (`install-addon`) o instalar manualmente el `addon.py` equivalente del mismo SHA en la carpeta de addons de usuario de Blender. El addon queda fuera del repositorio Home Studio 3D; no se copiará a `blender/` del proyecto.
 3. **Codex.** Añadir únicamente en la configuración local de Codex, y solo con autorización, una entrada `[mcp_servers.blender]` que invoque el servidor fijado con rutas absolutas. No versionar esta configuración ni secretos. No usar un plugin de Codex del fork.
-4. **Variables iniciales.** Proponer `BLENDER_HOST=127.0.0.1`, `BLENDER_PORT=9876`, `BLENDER_MCP_SAFE_MODE=1` y `DISABLE_TELEMETRY=true`. Mantener desactivadas Poly Haven, Sketchfab, Poly Pizza, Hyper3D y Hunyuan3D; no introducir credenciales.
+4. **Variables iniciales.** Usar `BLENDER_HOST=127.0.0.1`, `BLENDER_PORT=9876`, `BLENDER_MCP_SAFE_MODE=1` y `DISABLE_TELEMETRY=true`. Mantener desactivadas Poly Haven, Sketchfab, Poly Pizza, Hyper3D y Hunyuan3D; no introducir credenciales.
 5. **Verificación.** Con Blender GUI y el addon activo, comprobar proceso, listener, `LocalAddress`, handshake/versiones, `get_scene_info`, una operación `bpy` inocua y reversible, screenshot y verificación numérica. Ejecutar `Get-NetTCPConnection -State Listen`/`netstat -ano` y rechazar cualquier binding no-loopback. El modo seguro y la política del agente se validan por separado.
-6. **Segundo equipo.** Repetir el mismo SHA, lockfile, versión de Blender, convención `<BLENDER_HOME>`/`<MCP_HOME>` y checklist, sustituyendo solo rutas locales expresadas mediante variables.
+6. **Segundo equipo.** Repetir el mismo SHA, lockfile, versión de Blender, convención `<BLENDER_HOME>`/`<MCP_HOME>` y checklist, sustituyendo solo rutas locales expresadas mediante variables. El fixture se probó entre portátil y sobremesa; no se registran rutas personales adicionales del sobremesa.
 
 ## Rollback
 
@@ -205,9 +205,9 @@ No se usará rollback destructivo si la procedencia de un archivo o configuraci�
 - Listener observado después de la sesión: únicamente `127.0.0.1:9876`, asociado a Blender. No apareció binding en `0.0.0.0`, LAN ni interfaz pública.
 - No se ejecutó `execute_blender_code`, no se usaron tools de escritura y no se creó ni modificó ningún `.blend`.
 
-## Resultado de T2.08 — smoke técnico
+## Resultado de T2.08 — smoke técnico y validación live
 
-Fecha de ejecución: 2026-09-04.
+Fecha de ejecución inicial: 2026-09-04. Revalidación del guardado independiente: 2026-09-05.
 
 ### Precheck
 
@@ -215,8 +215,8 @@ Fecha de ejecución: 2026-09-04.
 - El working tree contenía los cambios documentales previos y los artefactos de T2.08; esta tarea no modificó código upstream, addon, configuración de Codex ni escenas persistentes.
 - Blender portable 5.2.1 LTS quedó arrancado y el proceso live confirmó la versión `5.2.1 LTS`; el pin es `5866814479b4e2ca674d8d44969a9a2a78fdc8bb` y el paquete `1.9.1`.
 - La configuración local de Codex existe y conserva la entrada lógica `blender`; las entradas `node_repl` y `unity` no se tocaron. No se registran rutas personales ni valores sensibles.
-- La configuración live mantiene `BLENDER_MCP_SAFE_MODE="1"`, `DISABLE_TELEMETRY="true"`, `BLENDER_HOST="127.0.0.1"` y `BLENDER_PORT="9876"`, con integraciones externas deshabilitadas. No se modificó la configuración.
-- No había una escena canónica abierta al iniciar la reanudación. `get_scene_info` confirmó la escena inicial `Scene` con exactamente `Cube`, `Camera` y `Light`; no hay archivos `.blend` en el repositorio.
+- La configuración live mantuvo `BLENDER_MCP_SAFE_MODE="1"`, `DISABLE_TELEMETRY="true"`, `BLENDER_HOST="127.0.0.1"` y `BLENDER_PORT="9876"`, con integraciones externas deshabilitadas. Durante T2.08 no se modificó la configuración.
+- En el precheck de T2.08 no había una escena canónica abierta. `get_scene_info` confirmó entonces la escena inicial `Scene` con exactamente `Cube`, `Camera` y `Light`; el fixture se creó posteriormente en T2.09.
 
 ### `get_addon_status` y diagnóstico
 
@@ -228,6 +228,7 @@ Fecha de ejecución: 2026-09-04.
 ### Lectura, escritura y verificación
 
 - `get_scene_info`: **PASS**, escena `Scene`, exactamente `Cube`, `Light` y `Camera`, 3 objetos.
+- La comunicación live `Codex → Blender MCP → Blender` quedó validada end-to-end; la lectura de escena no modificó Blender, el repositorio ni ningún archivo `.blend`.
 - Primera llamada `execute_blender_code` read-only: **PASS**. Devolvió Blender `5.2.1 LTS`, escena `Scene`, 3 objetos, `METRIC`, `scale_length=1.0`; sin filesystem, red, subprocess, escritura, preferencias, render o guardado.
 - Creación controlada: **PASS**. `HS3D_T2_08_SMOKE_CUBE`, tipo `MESH` con topología de cubo, cero materiales.
 - Verificación independiente: **PASS**, tolerancia `1e-6 m`; `location=(0,0,0.5)`, `dimensions=(1,1,1)`, `rotation=(0,0,0)`, `scale=(1,1,1)`.
@@ -242,7 +243,14 @@ Fecha de ejecución: 2026-09-04.
 - Telemetría: **PASS**, `DISABLE_TELEMETRY="true"` y consentimiento del addon `False`, verificado directamente mediante `bpy`; `get_addon_status` no se utilizó para esta conclusión.
 - Integraciones: **PASS**, Poly Haven, Sketchfab, Poly Pizza, Hyper3D y Hunyuan3D `False`, verificado directamente mediante `bpy`.
 - Procesos MCP: árbol esperado activo (`uv` → `blender-mcp` → Python), sin procesos MCP huérfanos inesperados observados.
-- La escena final conserva exactamente `Cube`, `Light` y `Camera`; no hay `.blend` nuevo. No se modificaron cámara, preferencias ni materiales.
+- En la ejecución inicial de T2.08 el estado final conservaba exactamente `Cube`, `Light` y `Camera` y no se creó `.blend`; el fixture se creó y validó posteriormente en T2.09/T2.10. La revalidación del guardado independiente se documenta a continuación y no altera el fixture.
+
+### Revalidación T2.08 — guardado independiente
+
+- La cadena live `Codex CLI → MCP local → Blender` resultó PASS en el PORTÁTIL. La primera operación mediante MCP fue read-only y no realizó llamadas de filesystem, red ni procesos externos.
+- Se creó `T2_08_TEMP_REVERSIBLE_CUBE`, se verificó como `MESH` con 8 vértices, 12 aristas, 6 polígonos, ubicación `(0, 0, 0.5)`, rotación cero y escala `(1, 1, 1)`, y se eliminó completamente antes de guardar.
+- Se guardó `blender/scenes/tests/003-codex-mcp-smoke.blend` (`96929` bytes; SHA-256 `E55AE5C1DEA4C814D6FA3286F6232D2056FAED58EBD44286B4352912F2D995B4`). La escena `T2_08_CODEX_MCP_SMOKE` reabrió correctamente con Blender `5.2.1 LTS`, 0 objetos, 0 mallas, 0 materiales, unidades `METRIC`, `scale_length = 1.0` y sin cambios pendientes.
+- La comprobación read-only de red observó únicamente listeners loopback en `127.0.0.1:9876`, cero listeners no-loopback en ese puerto y cero conexiones establecidas no-loopback atribuibles a Blender/MCP. No se reutilizó `001-foundation-room.blend`, no se modificó código upstream ni configuración global.
 
 ### Rollback de la integración Codex
 
@@ -252,13 +260,10 @@ Fecha de ejecución: 2026-09-04.
 4. Verificar que no queda proceso MCP huérfano ni listener MCP adicional; conservar Blender y el addon sin cambios.
 5. Mantener el backup hasta confirmar la reversión y no eliminar archivos fuera de las rutas identificadas de esta fase.
 
-## Riesgos y bloqueo de paso
+## Riesgos y estado de cierre
 
-Riesgos principales: Python arbitrario y acceso potencial a filesystem/procesos/red; falta de sandbox técnico; binding no-loopback por resolución de `localhost`; integraciones externas y credenciales; cambios upstream; incompatibilidad no probada con Blender 5.2.1; instalaciones no reproducibles; rutas diferentes entre equipos; corrupción de escenas; y coste de generación/render/VRAM.
+Riesgos principales: Python arbitrario y acceso potencial a filesystem/procesos/red; falta de sandbox técnico; binding no-loopback por resolución de `localhost`; integraciones externas y credenciales; cambios upstream; ausencia de una matriz upstream específica para Blender 5.2.1, aunque la compatibilidad operativa local quedó validada; instalaciones no reproducibles; rutas diferentes entre equipos; corrupción de escenas; y coste de generación/render/VRAM.
 
-No hay bloqueo para mantener este candidato y este pin como propuesta. Antes de T2.06 siguen siendo obligatorios:
+No hay bloqueo para mantener este candidato y este pin como decisión adoptada. La foundation queda validada para el flujo local y el fixture sintético. Permanece la deuda conocida de `get_addon_status`: el pin no contiene `src/blender_mcp/config.py`, por lo que la consulta de estado/telemetría falla por importación. Esta deuda no bloquea el handshake, `get_scene_info`, el listener loopback ni la validación del fixture.
 
-- autorización explícita para instalar/configurar y abrir el servicio local;
-- validar que la instalación desde el SHA conserva addon y servidor compatibles;
-- confirmar técnicamente el binding de Blender en loopback, porque el addon usa `localhost` por defecto y no expone un campo de host;
-- ejecutar el smoke y registrar evidencia; ningún control no ejecutado se marcará como PASS.
+Las futuras operaciones de producción, cualquier actualización de Blender o del pin, y cualquier cambio de configuración deberán repetir los gates que correspondan; no se consideran autorizadas por esta documentación.

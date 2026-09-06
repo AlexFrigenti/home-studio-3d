@@ -1,16 +1,20 @@
 # Tareas: Blender + Codex + MCP Foundation
 
-Las tareas siguientes registran el estado validado del slice T2. La evidencia operativa queda en los inventarios, decisiones y validaciones enlazados en cada tarea. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
+Las tareas siguientes registran el estado validado del slice T2. La evidencia operativa queda en los inventarios, decisiones y validaciones enlazados en cada tarea; T2.01 conserva una excepción documental explícita y T2.13 está cerrada. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.01 — Aprobar alcance y contrato
 
-- **Estado:** `[x]` — validada el 2026-09-06.
+- **Estado:** `[x]` — cerrada el 2026-09-05 **CON EXCEPCIÓN DOCUMENTAL**.
 - **Objetivo:** confirmar que `spec.md`, `plan.md` y `tasks.md` reflejan un único objetivo y todos los límites T2.
 - **Evidencia esperada:** aprobación del alcance, exclusiones, criterios, riesgos e invariantes.
 - **Validación:** revisión cruzada de los tres artefactos y del diff completo.
 - **Autorización del usuario:** sí, aprobación de la especificación antes de instalar o configurar.
+
+**Excepción documental T2.01:** la aprobación previa exigida originalmente no quedó registrada a tiempo; no se afirma que esa aprobación existiera. El propietario del proyecto acepta formalmente esta desviación de proceso, confirma retrospectivamente que el alcance, las exclusiones, los riesgos, los criterios y las invariantes de T2 fueron respetados, y autoriza cerrar T2.01 como completada **CON EXCEPCIÓN DOCUMENTAL**.
+
+**Autorización formal del propietario:** “Autorizo la excepción formal de T2.01: acepto que la aprobación previa no quedó registrada, confirmo retrospectivamente que el alcance, exclusiones, riesgos, criterios e invariantes de T2 fueron respetados y autorizo cerrar T2.01 como completada con excepción documental.”
 
 ## T2.02 — Inventariar el portátil
 
@@ -25,16 +29,20 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Estado:** `[x]` — validada el 2026-09-04.
 - **Objetivo:** confirmar Blender 5.2.1 LTS, fuente aprobada, ruta reproducible y modalidad de distribución para Windows.
 - **Evidencia esperada:** comparación del instalador tradicional y ZIP portable oficial; fuente, versión, hash cuando sea posible, criterios aplicados y decisión registrada antes de descargar o instalar.
-- **Validación:** revisión de procedencia y compatibilidad con el portátil; preferir ZIP portable si cumple funcionamiento, ausencia de cambios globales innecesarios y rollback/reproducibilidad, sin decidirlo por adelantado.
+- **Validación:** revisión de procedencia y compatibilidad con el portátil; se adoptó el ZIP portable por su funcionamiento, ausencia de cambios globales innecesarios y rollback/reproducibilidad.
 - **Autorización del usuario:** sí antes de descargar o instalar.
 
 ## T2.04 — Instalar y verificar Blender
 
-- **Estado:** `[x]` — validada el 2026-09-04.
+- **Estado:** `[x]` — validada el 2026-09-05.
 - **Objetivo:** instalar Blender 5.2.1 LTS en el portátil usando la modalidad aprobada en T2.03.
 - **Evidencia esperada:** Blender inicia, muestra la versión esperada y guarda una escena vacía en el área de pruebas.
 - **Validación:** smoke de apertura/guardado y comprobación de no exposición de servicios no solicitados.
 - **Autorización del usuario:** sí.
+
+**Resultado T2.04:** Blender inició y reportó `5.2.1 LTS`. Se creó y guardó de forma independiente `blender/scenes/tests/002-blender-empty-save-smoke.blend` con la escena `T2_04_EMPTY_SAVE_SMOKE`: 0 objetos, 0 materiales, unidades `METRIC`, `scale_length = 1.0` y sin assets externos. El archivo se cerró y reabrió correctamente; el contenido persistió y no quedaron cambios pendientes. La comprobación read-only de red observó únicamente loopback y ningún listener o conexión establecida no-loopback atribuible a Blender/MCP.
+
+**Definición factual de “escena vacía” T2.04:** escena independiente sin objetos ni materiales, equivalente al estado mínimo de Blender usado para esta prueba; no se reutilizó `001-foundation-room.blend`.
 
 ## T2.05 — Revisar el MCP candidato
 
@@ -44,6 +52,8 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Validación:** revisión del código y de la configuración; no ejecutar código externo sin inspección; cualquier actualización posterior repite smoke y aceptación.
 - **Autorización del usuario:** sí antes de instalar o ejecutar el MCP.
 
+**Resultado T2.05:** se revisó `ahujasid/blender-mcp`, se comparó con `webita/blender-codex-mcp` como referencia y se fijó el commit `5866814479b4e2ca674d8d44969a9a2a78fdc8bb` antes de instalarlo.
+
 ## T2.06 — Configurar el MCP solo en localhost
 
 - **Estado:** `[x]` — validada el 2026-09-04.
@@ -51,6 +61,8 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Evidencia esperada:** configuración local, telemetría opcional deshabilitada si procede y puerto identificado.
 - **Validación:** handshake real y comprobación de binding solo en `localhost`/loopback; rechazo de LAN/Internet; revisión de la evidencia técnica disponible sobre rutas/permisos, sin declarar sandbox del workspace por la sola política.
 - **Autorización del usuario:** sí antes de abrir el servicio local.
+
+**Resultado T2.06:** Blender MCP quedó instalado y operativo con `BLENDER_MCP_SAFE_MODE=1`, `DISABLE_TELEMETRY=true`, `BLENDER_HOST=127.0.0.1` y `BLENDER_PORT=9876`. El handshake y el listener `127.0.0.1:9876` resultaron PASS; no se observó binding fuera de loopback.
 
 ## T2.07 — Integrar Codex CLI desde el repo
 
@@ -60,15 +72,17 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Validación:** Codex obtiene información de la escena y no requiere GPT-6 Astra para funcionar.
 - **Autorización del usuario:** sí antes de modificar configuración global o habilitar capacidades privilegiadas.
 
+**Resultado T2.07:** Codex CLI `0.153.1` reconoció el servidor lógico `blender` y completó la comunicación con Blender MCP. `get_scene_info` devolvió la escena `Scene` y los tres objetos iniciales; no se introdujeron secretos ni se modificaron las entradas MCP existentes.
+
 ## T2.08 — Ejecutar el smoke técnico
 
-- **Estado:** `[x]` — validada el 2026-09-04.
+- **Estado:** `[x]` — validada el 2026-09-05.
 - **Objetivo:** probar la cadena Codex CLI → MCP local → Blender con una escena vacía/desechable.
 - **Evidencia esperada:** primera operación `bpy` de solo lectura (nombre de escena y/o número de objetos), una operación de escena simple y reversible y archivo de smoke guardado.
 - **Validación:** la primera operación no usa filesystem, red ni procesos externos; el guardado posterior es explícito dentro del workspace; apertura/guardado, operación reversible, rutas/permisos observables y diff/artefactos revisados. La ausencia de sandbox técnico se registra como limitación, no como PASS.
 - **Autorización del usuario:** sí antes de ejecutar `execute_blender_code`/`bpy`.
 
-**Resultado T2.08:** `get_addon_status` permanece como `DEUDA CONOCIDA NO BLOQUEANTE PARA EL SMOKE`: `src/blender_mcp/config.py` no existe en el pin y la tool no se usa para validar telemetría. El precheck live, handshake, lectura inicial, primera llamada `bpy` read-only, creación/verificación/eliminación del cubo temporal, captura de viewport y validación independiente de red resultaron PASS. No se creó ningún `.blend`, no se modificó código upstream y T2.09 no se inició.
+**Resultado T2.08:** `get_addon_status` permanece como `DEUDA CONOCIDA NO BLOQUEANTE PARA EL SMOKE`: `src/blender_mcp/config.py` no existe en el pin y la tool no se usa para validar telemetría. La cadena live `Codex CLI → MCP local → Blender` resultó PASS; la primera operación mediante MCP fue read-only y consultó escena, objetos y unidades sin filesystem, red ni procesos externos. Se creó el cubo temporal `T2_08_TEMP_REVERSIBLE_CUBE`, se verificó mediante MCP (`MESH`, 8 vértices, 12 aristas, 6 polígonos, ubicación `(0, 0, 0.5)`) y se eliminó completamente antes del guardado. Se guardó de forma independiente `blender/scenes/tests/003-codex-mcp-smoke.blend` con la escena `T2_08_CODEX_MCP_SMOKE`, 0 objetos, 0 mallas, 0 materiales, unidades `METRIC` y `scale_length = 1.0`; el archivo se cerró y reabrió correctamente con Blender `5.2.1 LTS` y sin cambios pendientes. La comprobación read-only de red observó únicamente loopback y ningún listener o conexión establecida no-loopback atribuible a Blender/MCP. No se reutilizó `001-foundation-room.blend`, no se modificó código upstream ni configuración global.
 
 ## T2.09 — Crear la habitación sintética mínima
 
@@ -108,14 +122,24 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 - **Validación:** revisión de reproducibilidad y lista de controles que deben repetirse en el PC.
 - **Autorización del usuario:** no para documentar; sí antes de instalar o ejecutar el procedimiento en el sobremesa.
 
-**Resultado T2.12:** `docs/setup/desktop-environment-inventory.md` documenta Blender 5.2.1 LTS, RTX 3080, el pin exacto de `ahujasid/blender-mcp`, Codex CLI, safe mode, telemetría, loopback, integraciones deshabilitadas, handshake, `get_scene_info`, validación cross-machine, rollback de `approval_mode`, snapshot de configuración, la deuda conocida de `get_addon_status` y el clon activo fuera de OneDrive. Las rutas personales y los secretos quedan sanitizados o excluidos.
+**Resultado T2.12:** la infraestructura de Blender/Codex/MCP se preparó en ambos equipos y el fixture creado en el portátil se validó correctamente en el sobremesa. La validación del sobremesa quedó documentada en `docs/setup/desktop-environment-inventory.md`, que registra Blender 5.2.1 LTS, RTX 3080, el pin exacto de `ahujasid/blender-mcp`, Codex CLI, safe mode, telemetría, loopback, integraciones deshabilitadas, handshake, `get_scene_info`, validación cross-machine, rollback de `approval_mode`, snapshot de configuración, la deuda conocida de `get_addon_status` y el clon activo fuera de OneDrive. La documentación conserva el contrato, el orden de validación y las variables sanitizadas; las rutas personales y los secretos quedan sanitizados o excluidos, y no se afirma equivalencia absoluta de los detalles locales.
 
 ## T2.13 — Cierre del T2 y PR
 
-- **Estado:** `[x]` — validada el 2026-09-06.
+- **Estado:** `[x]` — cerrada el 2026-09-06.
 - **Objetivo:** cerrar la fundación con evidencia, riesgos, limitaciones y documentación alineadas.
 - **Evidencia esperada:** checklist de aceptación, resultados reales, evidencia visual y diff completo.
 - **Validación:** todos los gates aplicables en `PASS`; el resto marcado como `NO APLICA`, `PENDIENTE DE INFRAESTRUCTURA` o `NO EJECUTADO` con explicación.
 - **Autorización del usuario:** sí para abrir PR, merge, instalación posterior y cualquier cambio de política.
 
-**Resultado T2.13:** revisión final contra `.quality/QUALITY.md` y `CONTRIBUTING.md` completada; los 13 criterios de aceptación tienen evidencia PASS, la deuda de `get_addon_status` permanece explícita y el diff queda limitado al slice. El cierre se publica mediante PR hacia `main`; el merge queda fuera de alcance y requiere autorización explícita.
+**Checklist final T2.13 (2026-09-06):**
+
+- Revisión final contra `.quality/QUALITY.md` y `CONTRIBUTING.md`, incluyendo `spec.md`, `plan.md`, `tasks.md`, la documentación de setup/decisions y el diff completo contra `origin/main`: **PASS**; los 13 criterios aplicables tienen evidencia PASS o disposición explícita.
+- Criterios aplicables del T2: **PASS** o disposición explícita; T2.01 conserva su excepción documental, T2.04 y T2.08 tienen smoke independiente con guardado/reapertura, y T2.12 documenta la validación del fixture entre portátil y sobremesa sin afirmar equivalencia absoluta de los entornos.
+- Diff final: **PASS**; `git diff --check` sin errores.
+- Commits: **REALIZADOS**; la foundation y el cierre documental quedan trazables en la historia de esta rama.
+- Push: **REALIZADO**; la rama remota coincide con el HEAD local.
+- PR #2: **ABIERTA** hacia `main` como parte de este cierre; el merge queda fuera de alcance y requiere autorización explícita.
+- CI/merge: **NO APLICA** a este cierre documental mientras no exista una política o check de CI configurado que ejecutar; el merge queda fuera de este paso y requiere checks verdes y autorización explícita.
+- Deuda de `get_addon_status`: **ACEPTADA COMO NO BLOQUEANTE** y conservada en la documentación.
+- Producción 3D real: **NO INICIADA**; el fixture y los smoke `.blend` son evidencia de foundation.

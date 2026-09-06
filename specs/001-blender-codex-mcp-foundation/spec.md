@@ -2,36 +2,36 @@
 
 > Clasificación: T2 — complejo o sensible
 > Rama: `spec/001-blender-codex-mcp-foundation`
-> Estado: propuesta documental para aprobación antes de instalar o configurar nada
+> Estado: foundation ejecutada y validada; documentación alineada en esta rama; cierre T2/PR pendiente
 
 ## Objetivo del slice
 
 Definir una base local, segura y reproducible para que Codex CLI pueda trabajar con Blender 5.2.1 LTS, dentro de la línea de soporte 5.2 LTS, mediante un MCP de Blender limitado a localhost, usar `bpy` como capacidad privilegiada y validar escenas mediante comprobaciones numéricas y evidencia visual.
 
-El primer entorno objetivo será el portátil. Después, la instalación y la configuración se documentarán para replicarlas en el PC de sobremesa sin convertir ninguna máquina en autoridad sobre las medidas del proyecto.
+El primer entorno objetivo fue el portátil. La instalación, la configuración y la validación del fixture quedaron documentadas para replicar el flujo en el PC de sobremesa sin convertir ninguna máquina en autoridad sobre las medidas del proyecto.
 
 ## Problema
 
-El proyecto todavía no tiene un procedimiento aprobado para instalar Blender, elegir y aislar el MCP, conectar Codex CLI, limitar el acceso a archivos o verificar que una operación agentic produjo una escena válida. Sin una base común, pueden aparecer puertos expuestos, rutas locales frágiles, instalaciones no reproducibles, escenas corruptas o resultados visualmente plausibles pero dimensionalmente incorrectos.
+Antes de esta foundation, el proyecto no tenía un procedimiento validado para instalar Blender, elegir y aislar el MCP, conectar Codex CLI o verificar que una operación agentic produjera una escena válida. La foundation documentó y validó ese camino local, manteniendo como riesgos la superficie privilegiada de Blender/Python y la deuda conocida de `get_addon_status`.
 
 ## Alcance
 
 ### Incluye
 
 - Inventario reproducible del entorno inicial del portátil.
-- Procedimiento futuro para Blender 5.2.1 LTS, Codex CLI y el MCP candidato.
+- Procedimiento validado para Blender 5.2.1 LTS, Codex CLI y el MCP adoptado.
 - Arquitectura y límites de confianza de la conexión local.
 - Integración de Codex con MCP usando `webita/blender-codex-mcp` como referencia específica, sin asumir que sea una dependencia obligatoria.
 - Uso controlado de `execute_blender_code`/`bpy` como capacidad privilegiada.
 - Smoke técnico y test de aceptación de una habitación sintética mínima.
 - Validación numérica de dimensiones, transformaciones y unidades.
 - Captura de viewport o render preview e inspección visual explícita.
-- Documentación para repetir el procedimiento posteriormente en el sobremesa.
+- Documentación y prueba de la repetición del fixture posteriormente en el sobremesa.
 
 ### Fuera de alcance
 
-- Cualquier instalación o configuración durante esta fase documental.
-- Instalación de Blender, Python, `uv`, MCP, addons, paquetes o dependencias.
+- Nuevas instalaciones o configuraciones fuera de las ya ejecutadas y documentadas en este slice.
+- Producción 3D posterior, assets, paquetes o dependencias adicionales.
 - Modificación de configuración global de Codex o Blender.
 - Integración con servicios MCP remotos, LAN o Internet.
 - Dependencia de GPT-6 Astra; el flujo debe funcionar con el agente disponible y ser compatible con Astra cuando esté disponible.
@@ -77,19 +77,19 @@ La política de `AGENTS.md` por sí sola nunca permite marcar como `PASS` un con
 ## Decisiones técnicas y operativas
 
 - Línea de soporte de Blender: **Blender 5.2 LTS**. Versión inicial objetivo: **Blender 5.2.1 LTS**.
-- En Windows, T2.03 comparará antes de descargar o instalar el instalador tradicional y la distribución portable ZIP oficial. La opción portable será preferente si cumple los criterios de versión, funcionamiento, rutas reproducibles, ausencia de cambios globales innecesarios y rollback sencillo. T2.03 debe registrar la decisión; este documento no la fija todavía.
-- MCP candidato principal: **`ahujasid/blender-mcp`**. No se instalará desde una rama mutable sin pin: debe fijarse a una versión, tag o commit exacto aprobado y registrar el commit elegido antes de instalar. El pin definitivo queda pendiente de T2.05; cualquier actualización posterior obliga a repetir el smoke y el test de aceptación.
+- En Windows, T2.03 comparó el instalador tradicional y la distribución portable ZIP oficial. Se adoptó y validó la opción portable por sus criterios de versión, funcionamiento, rutas reproducibles, ausencia de cambios globales innecesarios y rollback sencillo.
+- MCP adoptado: **`ahujasid/blender-mcp`**, fijado al commit `5866814479b4e2ca674d8d44969a9a2a78fdc8bb`. No se instala desde una rama mutable sin pin; cualquier actualización posterior obliga a repetir el smoke y el test de aceptación.
 - Referencia específica de integración con Codex: **`webita/blender-codex-mcp`**. Se usará para entender el acoplamiento Codex/MCP, no como permiso para copiar código sin inspección.
 - Transporte: solo conexión local mediante loopback; no se aceptan binds a `0.0.0.0`, interfaces LAN o exposición pública.
 - Telemetría opcional: deshabilitarla si el MCP permite hacerlo razonablemente; registrar la limitación si no existe esa opción.
 - Codex es el agente principal. GPT-6 Astra no es un requisito de funcionamiento; la integración debe dejar una ruta compatible para adoptarlo en el futuro.
 - Las medidas estructuradas siguen siendo la fuente de verdad. Las escenas Blender son representaciones verificables y no redefinen las medidas.
 - Las unidades internas serán metros, con unidades explícitas en escena y documentación.
-- La primera estación validada será el portátil; el PC con RTX 3080 de 10 GB de VRAM y 32 GB de RAM se usará posteriormente como segunda estación.
+- El portátil fue la primera estación validada. El fixture sintético se probó entre portátil y sobremesa; no se registran aquí rutas ni estado adicional del sobremesa.
 
 ## Criterios de aceptación
 
-La fundación será válida cuando, con evidencia real y sin secretos:
+La fundación se considera válida cuando, con evidencia real y sin secretos:
 
 1. Blender 5.2.1 LTS pueda iniciarse correctamente.
 2. Codex CLI pueda trabajar desde el repositorio.
@@ -103,7 +103,9 @@ La fundación será válida cuando, con evidencia real y sin secretos:
 10. Ningún servicio MCP quede escuchando fuera de localhost.
 11. No se introduzcan secretos, credenciales ni datos privados en código, configuración, escenas o commits.
 12. No se utilicen servicios de pago ni créditos externos.
-13. El procedimiento de instalación y validación pueda repetirse después en el sobremesa, registrando las diferencias de hardware y rutas.
+13. El fixture y su validación puedan repetirse después en el sobremesa, sin inventar diferencias de hardware ni rutas no documentadas.
+
+Estado de aceptación: Blender 5.2.1, Codex CLI y Blender MCP quedaron instalados y operativos; la comunicación live `Codex → Blender MCP → Blender` quedó validada. El fixture `blender/scenes/tests/001-foundation-room.blend` quedó validado y se probó entre portátil y sobremesa. Las rutas personales del sobremesa no se incorporan porque no forman parte de la evidencia documentada.
 
 ## Test de aceptación funcional
 
@@ -123,9 +125,9 @@ El test final usa una escena sintética y desechable; no representa medidas real
   | `sofa_proxy` | `1.80 × 0.80 × 0.90 m` | `(2.50, 2.00, 0.45) m` | Rotación `(0, 0, 0)`; límites `x=1.60..3.40`, `y=1.60..2.40`, `z=0.00..0.90 m`. |
 
 - Una cámara y una luz.
-- Escena prevista para el área de pruebas `blender/scenes/tests/001-foundation-room.blend`; nunca debe sustituir una escena canónica.
+- Escena conservada para el área de pruebas `blender/scenes/tests/001-foundation-room.blend`; nunca debe sustituir una escena canónica.
 - Captura de viewport o render preview, sin render final pesado.
-- La escena debe recrearse de forma determinista en portátil y sobremesa usando los mismos nombres, constantes, sistema de coordenadas y transformaciones, sin aleatoriedad ni assets externos.
+- El fixture creado en el portátil se validó correctamente en el sobremesa; cualquier futura recreación deberá conservar los mismos nombres, constantes, sistema de coordenadas y transformaciones, sin aleatoriedad ni assets externos.
 
 ### Comprobaciones mínimas
 
@@ -140,7 +142,7 @@ La validación debe comprobar también que la escena usa metros, que las caras i
 
 ### Primera operación `bpy` del smoke
 
-En T2.08, la primera operación `bpy` será una inspección de solo lectura, inocua y reversible (no cambia el estado), por ejemplo consultar `bpy.context.scene.name` y el número de objetos de la escena. No realizará llamadas de filesystem, red ni procesos externos. Después, cualquier guardado deberá ser una operación explícita a una escena de prueba dentro del workspace; la ausencia de llamadas en esta primera operación no constituye un sandbox técnico general.
+En T2.08, la primera operación `bpy` fue una inspección de solo lectura, inocua y reversible (no cambió el estado), consultando la escena y el número de objetos. No realizó llamadas de filesystem, red ni procesos externos. Los guardados posteriores fueron operaciones explícitas sobre escenas de prueba dentro del workspace; la ausencia de llamadas en esta primera operación no constituye un sandbox técnico general.
 
 ## Riesgos T2 y mitigaciones
 
