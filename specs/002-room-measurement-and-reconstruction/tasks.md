@@ -126,6 +126,29 @@ y detenerse ante una discrepancia no resuelta.
 - **Bloqueo restante:** falta únicamente la autorización específica para iniciar la captura real; T2.12 no se cierra con estas decisiones previas.
 - **Pendiente antes de capturar:** autorización específica para iniciar la captura real.
 
+## T2.12-V — Preparar captura de geometría vertical real
+
+- **Estado:** `[ ]` — preparación documental únicamente; no iniciada y sin datos nuevos.
+- **Objetivo:** definir una captura gradual de alturas, alféizares, profundidades y espesores reales para sustituir proxies/fallbacks solo cuando exista evidencia suficiente.
+- **Instrumento y registro:** para cada lectura futura anotar instrumento, valor y unidad, `status` (`measured`, `estimated`, `derived` o `unknown`), incertidumbre y una nota sobre accesibilidad o dificultad. No exigir mediciones que requieran desmontar elementos.
+- **Habitación:** capturar altura suelo → techo. El estado actual sigue siendo `observed=unknown`/`value=null`; la geometría `3.00 m` sigue siendo `derived` con fallback explícito y debe quedar trazable si se sustituye.
+- **Puertas:** P1 y P2: altura real y profundidad/grosor si es accesible; sentido de apertura solo como dato opcional futuro.
+- **Ventanas:** V1, V2, V3 y V4: altura real del hueco, altura de alféizar y profundidad si es accesible.
+- **Paredes:** espesor real solo donde pueda medirse de forma fiable; mantener el fallback `0.10 m` mientras permanezca `unknown`.
+- **Checklist breve de campo:**
+  1. altura suelo → techo;
+  2. P1: altura y profundidad si es accesible;
+  3. P2: altura y profundidad si es accesible;
+  4. V1: altura de hueco, alféizar y profundidad si es accesible;
+  5. V2: altura de hueco, alféizar y profundidad si es accesible;
+  6. V3: altura de hueco, alféizar y profundidad si es accesible;
+  7. V4: altura de hueco, alféizar y profundidad si es accesible;
+  8. espesores de pared únicamente en puntos fiables.
+- **Regla de no inventar:** una altura o profundidad que no pueda medirse permanece `unknown`; Blender puede continuar mostrando el proxy y el pipeline puede continuar usando fallbacks documentados. Una aproximación visual nunca se convierte en `measured`.
+- **Pipeline:** cualquier actualización futura seguirá JSON canónico → validator → generation plan → Blender. No se corrige la escena manualmente ni se promocionan estados de forma implícita.
+- **Validación prevista:** revisar diff y trazabilidad del JSON, ejecutar los gates oficiales, regenerar una variante derivada solo con autorización y comprobar que los fallbacks sustituidos quedan identificados.
+- **Decisiones pendientes:** instrumento concreto y evidencia de cada lectura; incertidumbre de accesos difíciles; profundidades/espesores realmente accesibles; autorización específica para iniciar la sesión y actualizar el JSON.
+
 ## T2.13 — Cerrar el slice y preparar PR
 
 - **Estado:** `[ ]`
