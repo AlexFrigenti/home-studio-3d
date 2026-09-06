@@ -49,12 +49,35 @@ como geometría derivada de proxy, conserva `hs3d_thickness_source_status =
 unknown` y marca el fallback explícitamente. No se convierte en una medida
 `measured`.
 
+En documentos `room-v1.1`, una habitación cuya medida `height` sea `unknown`
+puede materializarse con el proxy geométrico explícito de `3.00 m` definido por
+`generate_room.py`. El generation plan conserva `observed_height_m = null` y
+`observed_height_status = unknown`, y separa `geometry_height_m = 3.00`,
+`geometry_height_status = derived` y los metadatos de fallback, motivo y
+procedencia. Este valor solo sirve para materialización provisional; no cambia
+el JSON canónico, no es una estimación y no convierte la altura desconocida en
+`measured` ni `estimated`. Una futura lectura física sustituirá el proxy durante
+la generación sin alterar esta semántica.
+
 Los openings se representan en v1 como cuboides de proxy, colocados en el
 segmento referenciado usando `offset`, `width`, `height` y `sill_height`.
 Quedan en el lado interior de la pared y no ejecutan booleanos ni pretenden
 ser huecos constructivos. La profundidad desconocida usa un proxy derivado
 de `0.06 m`. Esta limitación debe resolverse antes de admitir geometría real
 que requiera carpintería o cortes constructivos.
+
+En `room-v1.1`, si la geometría vertical observada de un opening es
+`unknown`, el plan conserva la posición y el ancho horizontales observados y
+usa una banda visual derivada de `0.10 m` de altura. Si el antepecho también es
+desconocido, la banda se coloca de forma determinista en el centro de la altura
+geométrica de la habitación; no se presenta como antepecho medido. El plan y
+la metadata separan los valores observados de las dimensiones visuales, marcan
+`proxy_only = true` y `constructive_geometry = false`, y registran el método y
+la razón `unknown vertical opening geometry; visualization proxy only`.
+Este marcador permite revisar ubicación y ancho horizontal, pero no representa
+las dimensiones constructivas del hueco ni ejecuta booleanos. Una futura
+captura vertical real sustituirá el proxy durante la generación; no existe
+autoestimación.
 
 El elemento fijo sintético se genera como proxy simple. Para un anclaje de
 pared, su posición usa `wall_id` y `anchor.offset`; `height` se interpreta

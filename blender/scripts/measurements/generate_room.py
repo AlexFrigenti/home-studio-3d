@@ -29,6 +29,12 @@ GENERATOR_V11_VERSION = "room-v1.1-generator-1"
 MATH_TOLERANCE_M = 1e-6
 DEFAULT_WALL_THICKNESS_M = 0.10
 DEFAULT_OPENING_DEPTH_M = 0.06
+DEFAULT_OPENING_VISUAL_BAND_HEIGHT_M = 0.10
+OPENING_VISUAL_PROXY_METHOD = "visual_band"
+OPENING_VISUAL_PROXY_REASON = "unknown vertical opening geometry; visualization proxy only"
+DEFAULT_ROOM_HEIGHT_PROXY_M = 3.00
+ROOM_HEIGHT_PROXY_METHOD = "generator_fallback"
+ROOM_HEIGHT_PROXY_REASON = "unknown room height; explicit generation proxy for materialization"
 DEFAULT_FIXED_WIDTH_M = 0.12
 DEFAULT_FIXED_DEPTH_M = 0.06
 DEFAULT_FIXED_PROXY_HEIGHT_M = 0.12
@@ -132,6 +138,13 @@ def _measurement(record: dict[str, Any], field: str, *, fallback: float | None =
         "depends_on": list(value.get("depends_on", [])) if isinstance(value.get("depends_on"), list) else [],
         "used_fallback": used_fallback,
     }
+
+
+def _observed_measurement_value(record: dict[str, Any], field: str) -> float | None:
+    measurement = record.get(field)
+    if not isinstance(measurement, dict) or measurement.get("status") == "unknown":
+        return None
+    return measurement.get("value")
 
 
 def _segment_length_measurements(segment: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], bool]:
@@ -277,10 +290,15 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
     if not report.valid:
         raise GenerationError("measurement validation failed: " + "; ".join(report.errors))
 
-    height_measurement = _measurement(room, "height")
+    # Keep the historical v1 plan untouched. The explicit height proxy is an
+    # additive v1.1 generation capability, never a measurement fallback.
+    height_fallback = DEFAULT_ROOM_HEIGHT_PROXY_M if room["schema_version"] == "1.1" else None
+    height_measurement = _measurement(room, "height", fallback=height_fallback)
     height = height_measurement["value_m"]
     if height is None:
         raise GenerationError("room height is unknown and cannot be materialized")
+    observed_height = room["height"].get("value")
+    room_geometry_height_status = "derived" if height_measurement["used_fallback"] else height_measurement["status"]
     segments = room["boundary"]["segments"]
     walls_by_id: dict[str, dict[str, Any]] = {}
     walls: list[dict[str, Any]] = []
@@ -377,8 +395,8 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
             offset = _measurement(opening, "offset")
             width = _measurement(opening, "width")
             opening_height = _measurement(opening, "height")
-            if any(measurement["value_m"] is None for measurement in (offset, width, opening_height)):
-                raise GenerationError(f"opening {opening['id']} has unknown required geometry")
+            if any(measurement["value_m"] is None for measurement in (offset, width)):
+                raise GenerationError(f"opening {opening['id']} has unknown horizontal geometry")
             depth = _measurement(opening, "depth", fallback=DEFAULT_OPENING_DEPTH_M)
             sill = _measurement(opening, "sill_height") if kind == "window" else {
                 "value_m": 0.0,
@@ -389,42 +407,86 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
                 "depends_on": [opening["id"]],
                 "used_fallback": False,
             }
+            height_unknown = opening_height["value_m"] is None
+            sill_unknown = kind == "window" and sill["value_m"] is None
+            geometry_height = (
+                DEFAULT_OPENING_VISUAL_BAND_HEIGHT_M
+                if height_unknown
+                else opening_height["value_m"]
+            )
+            opening_geometry_height_status = "derived" if height_unknown else opening_height["status"]
+            geometry_sill = sill["value_m"]
+            if sill_unknown:
+                geometry_sill = max(0.0, (height - geometry_height) / 2.0)
+            geometry_sill_status = "derived" if sill_unknown else sill["status"]
+            vertical_proxy = height_unknown or sill_unknown
+            geometry_proxy_method = OPENING_VISUAL_PROXY_METHOD if vertical_proxy else "opening_proxy"
+            geometry_proxy_reason = (
+                OPENING_VISUAL_PROXY_REASON
+                if vertical_proxy
+                else "opening proxy; visualization only"
+            )
             centerline = _add(wall["start_m"], _scale(wall["direction"], offset["value_m"] + width["value_m"] / 2.0))
             center = _add(centerline, _scale(wall["outward"], -depth["value_m"] / 2.0))
-            z_min = sill["value_m"]
+            z_min = geometry_sill
             geometry_vertices = _oriented_box_geometry(
                 center,
                 wall["direction"],
                 wall["outward"],
                 width["value_m"],
                 depth["value_m"],
-                opening_height["value_m"],
+                geometry_height,
                 z_min,
             )
-            openings.append(
-                {
-                    "id": opening["id"],
-                    "kind": kind,
-                    "wall_id": opening["wall_id"],
-                    "source_id": width["source_id"] or opening["id"],
-                    "offset_m": offset["value_m"],
-                    "offset_status": offset["status"],
-                    "width_m": width["value_m"],
-                    "width_status": width["status"],
-                    "height_m": opening_height["value_m"],
-                    "height_status": opening_height["status"],
-                    "depth_m": depth["value_m"],
-                    "depth_status": depth["status"],
-                    "sill_height_m": sill["value_m"],
-                    "sill_status": sill["status"],
-                    "position_m": center,
-                    "direction": wall["direction"],
-                    "outward": wall["outward"],
-                    "z_min_m": z_min,
-                    "vertices_m": geometry_vertices,
-                    "proxy": True,
-                }
-            )
+            opening_plan = {
+                "id": opening["id"],
+                "kind": kind,
+                "wall_id": opening["wall_id"],
+                "source_id": width["source_id"] or opening["id"],
+                "offset_m": offset["value_m"],
+                "offset_status": offset["status"],
+                "width_m": width["value_m"],
+                "width_status": width["status"],
+                "height_m": geometry_height,
+                "height_status": opening_height["status"],
+                "depth_m": depth["value_m"],
+                "depth_status": depth["status"],
+                "sill_height_m": geometry_sill,
+                "sill_status": sill["status"],
+                "position_m": center,
+                "direction": wall["direction"],
+                "outward": wall["outward"],
+                "z_min_m": z_min,
+                "vertices_m": geometry_vertices,
+                "proxy": True,
+            }
+            if room["schema_version"] == "1.1":
+                opening_plan.update(
+                    {
+                        "observed_height_m": _observed_measurement_value(opening, "height"),
+                        "observed_height_status": opening_height["status"],
+                        "geometry_height_m": geometry_height,
+                        "geometry_height_status": opening_geometry_height_status,
+                        "geometry_height_proxy": height_unknown,
+                        "observed_sill_height_m": _observed_measurement_value(opening, "sill_height")
+                        if kind == "window"
+                        else None,
+                        "observed_sill_height_status": sill["status"] if kind == "window" else "not_applicable",
+                        "geometry_sill_height_m": geometry_sill,
+                        "geometry_sill_height_status": geometry_sill_status,
+                        "geometry_sill_height_proxy": sill_unknown,
+                        "observed_depth_m": _observed_measurement_value(opening, "depth"),
+                        "observed_depth_status": depth["status"],
+                        "geometry_depth_m": depth["value_m"],
+                        "geometry_depth_status": "derived" if depth["used_fallback"] else depth["status"],
+                        "geometry_depth_proxy": depth["used_fallback"],
+                        "proxy_only": True,
+                        "constructive_geometry": False,
+                        "geometry_proxy_method": geometry_proxy_method,
+                        "geometry_proxy_reason": geometry_proxy_reason,
+                    }
+                )
+            openings.append(opening_plan)
 
     fixed_elements: list[dict[str, Any]] = []
     for element in room["fixed_elements"]:
@@ -493,6 +555,23 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
     }
     if room["schema_version"] == "1.1":
         plan["schema_version"] = "1.1"
+        plan.update(
+            {
+                "observed_height_m": observed_height,
+                "observed_height_status": height_measurement["status"],
+                "observed_height_source_id": height_measurement["source_id"],
+                "geometry_height_m": height,
+                "geometry_height_status": room_geometry_height_status,
+                "geometry_height_fallback": height_measurement["used_fallback"],
+                "geometry_height_fallback_value_m": height if height_measurement["used_fallback"] else None,
+                "geometry_height_fallback_method": ROOM_HEIGHT_PROXY_METHOD
+                if height_measurement["used_fallback"]
+                else None,
+                "geometry_height_fallback_reason": ROOM_HEIGHT_PROXY_REASON
+                if height_measurement["used_fallback"]
+                else None,
+            }
+        )
     return plan
 
 
@@ -611,6 +690,21 @@ def _create_scene(plan: dict[str, Any], input_path: Path) -> Any:
         "hs3d_wall_thickness_fallback_m": DEFAULT_WALL_THICKNESS_M,
     }
     _set_metadata(root, root_metadata)
+    if plan.get("schema_version") == "1.1":
+        _set_metadata(
+            root,
+            {
+                "hs3d_observed_height_m": plan["observed_height_m"],
+                "hs3d_observed_height_status": plan["observed_height_status"],
+                "hs3d_observed_height_source_id": plan["observed_height_source_id"],
+                "hs3d_geometry_height_m": plan["geometry_height_m"],
+                "hs3d_geometry_height_status": plan["geometry_height_status"],
+                "hs3d_geometry_height_fallback": plan["geometry_height_fallback"],
+                "hs3d_geometry_height_fallback_value_m": plan["geometry_height_fallback_value_m"],
+                "hs3d_geometry_height_fallback_method": plan["geometry_height_fallback_method"],
+                "hs3d_geometry_height_fallback_reason": plan["geometry_height_fallback_reason"],
+            },
+        )
     for collection in (architecture, openings_collection, fixed_collection, validation_collection):
         _set_metadata(collection, {"hs3d_collection_role": collection.name, "hs3d_room_id": plan["room_id"]})
 
@@ -671,28 +765,50 @@ def _create_scene(plan: dict[str, Any], input_path: Path) -> Any:
         obj = _mesh_object(name, opening["vertices_m"], _box_faces(), openings_collection)
         color = (0.75, 0.25, 0.08, 1.0) if opening["kind"] == "door" else (0.08, 0.45, 0.85, 1.0)
         _apply_material(obj, door_material if opening["kind"] == "door" else window_material, color)
-        _set_metadata(
-            obj,
-            {
-                "hs3d_role": "opening_proxy",
-                "hs3d_opening_kind": opening["kind"],
-                "hs3d_source_id": opening["source_id"],
-                "hs3d_status": opening["width_status"],
-                "hs3d_geometry_status": "derived",
-                "hs3d_wall_id": opening["wall_id"],
-                "hs3d_offset_m": opening["offset_m"],
-                "hs3d_offset_status": opening["offset_status"],
-                "hs3d_width_m": opening["width_m"],
-                "hs3d_width_status": opening["width_status"],
-                "hs3d_height_m": opening["height_m"],
-                "hs3d_height_status": opening["height_status"],
-                "hs3d_sill_height_m": opening["sill_height_m"],
-                "hs3d_sill_status": opening["sill_status"],
-                "hs3d_depth_m": opening["depth_m"],
-                "hs3d_depth_status": opening["depth_status"],
-                "hs3d_proxy": True,
-            },
-        )
+        opening_metadata = {
+            "hs3d_role": "opening_proxy",
+            "hs3d_opening_kind": opening["kind"],
+            "hs3d_source_id": opening["source_id"],
+            "hs3d_status": opening["width_status"],
+            "hs3d_geometry_status": "derived",
+            "hs3d_wall_id": opening["wall_id"],
+            "hs3d_offset_m": opening["offset_m"],
+            "hs3d_offset_status": opening["offset_status"],
+            "hs3d_width_m": opening["width_m"],
+            "hs3d_width_status": opening["width_status"],
+            "hs3d_height_m": opening["height_m"],
+            "hs3d_height_status": opening["height_status"],
+            "hs3d_sill_height_m": opening["sill_height_m"],
+            "hs3d_sill_status": opening["sill_status"],
+            "hs3d_depth_m": opening["depth_m"],
+            "hs3d_depth_status": opening["depth_status"],
+            "hs3d_proxy": True,
+        }
+        if plan.get("schema_version") == "1.1":
+            opening_metadata.update(
+                {
+                    "hs3d_observed_height_m": opening["observed_height_m"],
+                    "hs3d_observed_height_status": opening["observed_height_status"],
+                    "hs3d_geometry_height_m": opening["geometry_height_m"],
+                    "hs3d_geometry_height_status": opening["geometry_height_status"],
+                    "hs3d_geometry_height_proxy": opening["geometry_height_proxy"],
+                    "hs3d_observed_sill_height_m": opening["observed_sill_height_m"],
+                    "hs3d_observed_sill_height_status": opening["observed_sill_height_status"],
+                    "hs3d_geometry_sill_height_m": opening["geometry_sill_height_m"],
+                    "hs3d_geometry_sill_height_status": opening["geometry_sill_height_status"],
+                    "hs3d_geometry_sill_height_proxy": opening["geometry_sill_height_proxy"],
+                    "hs3d_observed_depth_m": opening["observed_depth_m"],
+                    "hs3d_observed_depth_status": opening["observed_depth_status"],
+                    "hs3d_geometry_depth_m": opening["geometry_depth_m"],
+                    "hs3d_geometry_depth_status": opening["geometry_depth_status"],
+                    "hs3d_geometry_depth_proxy": opening["geometry_depth_proxy"],
+                    "hs3d_proxy_only": opening["proxy_only"],
+                    "hs3d_constructive_geometry": opening["constructive_geometry"],
+                    "hs3d_geometry_proxy_method": opening["geometry_proxy_method"],
+                    "hs3d_geometry_proxy_reason": opening["geometry_proxy_reason"],
+                }
+            )
+        _set_metadata(obj, opening_metadata)
 
     for element in plan["fixed_elements"]:
         name = f"HS3D_FIXED_{element['id']}"
@@ -889,6 +1005,42 @@ def validate_generated_scene(room: dict[str, Any], root_collection: Any | None =
             errors.append(f"opening {opening['id']} wall reference was not preserved")
         elif abs(float(obj.get("hs3d_offset_m", -1.0)) - opening["offset_m"]) > MATH_TOLERANCE_M:
             errors.append(f"opening {opening['id']} offset does not match plan")
+        if obj is not None and plan.get("schema_version") == "1.1":
+            if obj.get("hs3d_observed_height_status") != opening["observed_height_status"]:
+                errors.append(f"opening {opening['id']} observed height status does not match plan")
+            if abs(float(obj.get("hs3d_geometry_height_m", -1.0)) - opening["geometry_height_m"]) > MATH_TOLERANCE_M:
+                errors.append(f"opening {opening['id']} geometry height does not match plan")
+            if obj.get("hs3d_geometry_height_status") != opening["geometry_height_status"]:
+                errors.append(f"opening {opening['id']} geometry height status does not match plan")
+            if bool(obj.get("hs3d_geometry_height_proxy", False)) != opening["geometry_height_proxy"]:
+                errors.append(f"opening {opening['id']} geometry height proxy flag does not match plan")
+            if obj.get("hs3d_observed_sill_height_status") != opening["observed_sill_height_status"]:
+                errors.append(f"opening {opening['id']} observed sill status does not match plan")
+            if abs(
+                float(obj.get("hs3d_geometry_sill_height_m", -1.0))
+                - opening["geometry_sill_height_m"]
+            ) > MATH_TOLERANCE_M:
+                errors.append(f"opening {opening['id']} geometry sill height does not match plan")
+            if obj.get("hs3d_geometry_sill_height_status") != opening["geometry_sill_height_status"]:
+                errors.append(f"opening {opening['id']} geometry sill status does not match plan")
+            if bool(obj.get("hs3d_geometry_sill_height_proxy", False)) != opening["geometry_sill_height_proxy"]:
+                errors.append(f"opening {opening['id']} geometry sill proxy flag does not match plan")
+            if obj.get("hs3d_observed_depth_status") != opening["observed_depth_status"]:
+                errors.append(f"opening {opening['id']} observed depth status does not match plan")
+            if abs(float(obj.get("hs3d_geometry_depth_m", -1.0)) - opening["geometry_depth_m"]) > MATH_TOLERANCE_M:
+                errors.append(f"opening {opening['id']} geometry depth does not match plan")
+            if obj.get("hs3d_geometry_depth_status") != opening["geometry_depth_status"]:
+                errors.append(f"opening {opening['id']} geometry depth status does not match plan")
+            if bool(obj.get("hs3d_geometry_depth_proxy", False)) != opening["geometry_depth_proxy"]:
+                errors.append(f"opening {opening['id']} geometry depth proxy flag does not match plan")
+            if bool(obj.get("hs3d_proxy_only", False)) != opening["proxy_only"]:
+                errors.append(f"opening {opening['id']} proxy-only metadata does not match plan")
+            if bool(obj.get("hs3d_constructive_geometry", True)) != opening["constructive_geometry"]:
+                errors.append(f"opening {opening['id']} constructive metadata does not match plan")
+            if obj.get("hs3d_geometry_proxy_method") != opening["geometry_proxy_method"]:
+                errors.append(f"opening {opening['id']} proxy method does not match plan")
+            if obj.get("hs3d_geometry_proxy_reason") != opening["geometry_proxy_reason"]:
+                errors.append(f"opening {opening['id']} proxy reason does not match plan")
 
     for element in plan["fixed_elements"]:
         obj = bpy.data.objects.get(f"HS3D_FIXED_{element['id']}")
@@ -901,6 +1053,27 @@ def validate_generated_scene(room: dict[str, Any], root_collection: Any | None =
         errors.append("root measurement status index is not preserved")
     if root.get("hs3d_logical_signature") != logical_signature(plan):
         errors.append("root logical signature does not match plan")
+    if plan.get("schema_version") == "1.1":
+        if root.get("hs3d_observed_height_status") != plan["observed_height_status"]:
+            errors.append("root observed height status does not match plan")
+        if root.get("hs3d_observed_height_source_id") != plan["observed_height_source_id"]:
+            errors.append("root observed height source does not match plan")
+        if abs(float(root.get("hs3d_geometry_height_m", -1.0)) - plan["geometry_height_m"]) > MATH_TOLERANCE_M:
+            errors.append("root geometry height does not match plan")
+        if root.get("hs3d_geometry_height_status") != plan["geometry_height_status"]:
+            errors.append("root geometry height status does not match plan")
+        if bool(root.get("hs3d_geometry_height_fallback", False)) != plan["geometry_height_fallback"]:
+            errors.append("root geometry height fallback flag does not match plan")
+        if plan["geometry_height_fallback"]:
+            if abs(
+                float(root.get("hs3d_geometry_height_fallback_value_m", -1.0))
+                - plan["geometry_height_fallback_value_m"]
+            ) > MATH_TOLERANCE_M:
+                errors.append("root geometry height fallback value does not match plan")
+            if root.get("hs3d_geometry_height_fallback_method") != plan["geometry_height_fallback_method"]:
+                errors.append("root geometry height fallback method does not match plan")
+            if root.get("hs3d_geometry_height_fallback_reason") != plan["geometry_height_fallback_reason"]:
+                errors.append("root geometry height fallback reason does not match plan")
     prefix_objects_outside = [obj.name for obj in bpy.data.objects if obj.name.startswith(OBJECT_PREFIX) and obj not in objects]
     if prefix_objects_outside:
         errors.append(f"generated objects outside root collection: {sorted(prefix_objects_outside)}")
