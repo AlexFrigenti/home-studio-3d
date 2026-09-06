@@ -120,7 +120,11 @@ y detenerse ante una discrepancia no resuelta.
 - **Rollback:** conservar el registro original; revertir solo representaciones derivadas.
 - **Autorización:** aprobación específica posterior del room ID, nombre/ubicación, captura y uso de Blender.
 - **Evidencia parcial:** `docs/setup/002-real-room-measurement-field-sheet.md` preparada y aprobada explícitamente por el propietario para la primera sesión real. La hoja no contiene medidas reales y su aprobación no autoriza automáticamente la captura, la creación o el versionado del JSON, la ejecución del validator ni Blender/MCP.
-- **Pendientes antes de capturar:** `room_id`; nombre y ruta prevista del JSON real; `session_id`; instrumentos; tolerancias/incertidumbres adoptadas; y autorización específica para iniciar la captura real.
+- **Decisiones previas aprobadas:** `room_id`=`living-room-main`; nombre humano=`Salón principal`; `session_id`=`2026-09-06-session-01`; instrumento principal=cinta métrica; soporte auxiliar=croquis manual en papel; unidad canónica=`m`; incertidumbre base para una lectura directa normal y accesible con cinta=`±0.01 m`; ruta prevista del JSON=`measurements/rooms/living-room-main.json`.
+- **Regla de incertidumbre aprobada:** `±0.01 m` no redondea automáticamente las lecturas; accesos peores, geometría difícil o menor confianza requieren una incertidumbre mayor adecuada; `estimated` debe identificarse y conservar una incertidumbre acorde con la estimación; si un dato no puede medirse o estimarse con confianza suficiente, usar `unknown`; no inventar precisión ni inferir valores silenciosamente.
+- **Instancia de sesión:** no se crea una copia específica; la hoja canónica permanece reutilizable porque el contrato actual no define una ubicación ni convención para instancias documentales de sesiones. La ruta JSON queda prevista, pero el archivo no se crea.
+- **Bloqueo restante:** falta únicamente la autorización específica para iniciar la captura real; T2.12 no se cierra con estas decisiones previas.
+- **Pendiente antes de capturar:** autorización específica para iniciar la captura real.
 
 ## T2.13 — Cerrar el slice y preparar PR
 
