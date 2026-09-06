@@ -2,7 +2,7 @@
 
 > Clasificación: T2
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: schema JSON v1, fixture sintético y validación mínima implementados; no se han ejecutado generación Blender ni tareas de datos reales.
+> Estado: schema JSON v1, fixture sintético, validador y primer generador Blender implementados; no se han ejecutado tareas de datos reales.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -66,30 +66,30 @@ y detenerse ante una discrepancia no resuelta.
 
 ## T2.07 — Diseñar e implementar el generador Blender
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** convertir un `Room` validado en arquitectura derivada 1:1 con colecciones y source IDs claros.
-- **Archivos:** futuro `blender/scripts/measurements/generate_room.py` y variantes de prueba fuera de escenas canónicas.
-- **Validación:** determinismo, transformaciones aplicadas, dimensiones, unidades, origen, huecos y no sobrescritura.
+- **Archivos:** `blender/scripts/measurements/generate_room.py`, `tests/measurements/test_room_generation.py` y `blender/scenes/tests/002-room-v1-generated.blend`.
+- **Validación:** input validado antes de generar, `METRIC`/`scale_length=1.0`, colección raíz `HS3D_ROOM_<room_id>`, paredes desde segmentos ordenados, suelo poligonal, proxies de openings/fixed elements, transformaciones aplicadas, metadata de estados y no sobrescritura de una salida existente.
 - **Rollback:** snapshot/variante separable; retirar solo la salida de prueba.
-- **Autorización:** explícita antes de ejecutar `bpy` o guardar `.blend`.
+- **Autorización:** explícita recibida para ejecutar `bpy` y guardar la escena sintética de prueba.
 
 ## T2.08 — Probar regeneración determinista
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** demostrar que el mismo JSON v1 y versión del generador producen la misma firma de geometría/informe.
-- **Archivos:** futuras pruebas de determinismo y un informe reproducible.
-- **Validación:** dos ejecuciones limpias, comparación de nombres, puntos, dimensiones y resultados; ningún ajuste manual oculto.
+- **Archivos:** `generate_room.py`, `tests/measurements/test_room_generation.py` y la escena derivada.
+- **Validación:** dos generaciones controladas en la misma escena, comparación de nombres, puntos, dimensiones, metadata y firma lógica; cero duplicados residuales y ningún ajuste manual oculto.
 - **Rollback:** eliminar solo salidas temporales; conservar el JSON de entrada y su hash.
-- **Autorización:** aprobación del fixture y del destino de pruebas.
+- **Autorización:** fixture y destino de pruebas aprobados.
 
 ## T2.09 — Validar representación en Blender
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** comprobar `METRIC`, `scale_length=1.0`, geometría, huecos, alturas y correspondencia datos ↔ Blender.
-- **Archivos:** futuro informe y escena derivada de prueba; no el salón real.
-- **Validación:** comparación numérica usando incertidumbre física, apertura controlada y registro de discrepancias.
+- **Archivos:** `blender/scripts/measurements/validate_generated_room.py`, escena derivada y preview técnico.
+- **Validación:** comparación numérica con `1e-6 m` para geometría derivada, unidades, boundary, altura, posiciones de huecos, fixed element, metadata, ausencia de duplicados y apertura controlada; sin modificar input ni modelar el salón real.
 - **Rollback:** cerrar sin sobrescribir escenas canónicas y eliminar/isolar la variante creada.
-- **Autorización:** autorización explícita para iniciar Blender y ejecutar `bpy`.
+- **Autorización:** autorización explícita recibida para iniciar Blender y ejecutar `bpy` en la escena de prueba.
 
 ## T2.10 — Documentar el procedimiento de toma de medidas
 
@@ -123,6 +123,6 @@ y detenerse ante una discrepancia no resuelta.
 - **Estado:** `[ ]`
 - **Objetivo:** revisar scope, documentación, riesgos, invariantes y gates; dejar la PR lista sin empezar el siguiente slice.
 - **Archivos:** solo los artefactos aprobados de este checkpoint, sin ampliar el alcance.
-- **Validación:** `git diff --check`, `git status --short`, diff completo, ausencia de secretos, ausencia de `.blend` o datos reales nuevos bajo `measurements/` y revisión contra `.quality/QUALITY.md`/`CONTRIBUTING.md`.
+- **Validación:** `git diff --check`, `git status --short`, diff completo, ausencia de secretos, ausencia de datos reales nuevos bajo `measurements/`, revisión de los binarios/preview derivados y revisión contra `.quality/QUALITY.md`/`CONTRIBUTING.md`.
 - **Rollback:** revertir el commit documental si el contrato requiere cambios antes de aprobarse.
 - **Autorización:** autorización explícita para commit/push/PR; el merge queda fuera de esta tarea.

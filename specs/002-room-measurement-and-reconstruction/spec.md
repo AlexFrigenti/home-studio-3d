@@ -2,7 +2,7 @@
 
 > Clasificación: T2 — contrato canónico de medidas, unidades y coordenadas
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: schema JSON v1, fixture sintético y validación mínima implementados; no se han capturado medidas reales ni generado geometría del salón
+> Estado: schema JSON v1, fixture sintético, validador y primer generador Blender implementados; no se han capturado medidas reales ni generado geometría del salón
 
 ## Objetivo
 
@@ -31,17 +31,19 @@ entre observación, incertidumbre, geometría derivada y evidencia.
 - Clasificación obligatoria de cada medida como `measured`, `estimated`, `derived` o `unknown`.
 - Propuesta de tolerancias físicas, matemáticas y visuales.
 - Evaluación del flujo de captura y de la evidencia fotográfica.
-- Arquitectura futura `measurement file → parser/validator → bpy generator → .blend`.
+- Arquitectura `measurement file → parser/validator → bpy generator → .blend`.
 - Schema JSON v1 estricto en `measurements/schema/room-v1.schema.json`.
 - Fixture sintético en `measurements/fixtures/room-v1-synthetic.json`.
 - Validación estructural/determinista mínima y tests con Python estándar.
+- Generador Blender v1 para el fixture, escena derivada, validación numérica y preview técnico.
 - Validaciones futuras, riesgos, invariantes y decisiones pendientes.
 
 ### Fuera de alcance
 
 - Capturar o registrar todavía medidas reales en `measurements/`.
 - Modelar el salón real o modificar cualquier escena canónica.
-- Crear generador Blender, parser complejo, integración MCP, `.blend`, previews o renders en este slice.
+- Generar geometría a partir de medidas reales o modelar el salón real.
+- Integración MCP o cambios en la configuración de Blender/Codex.
 - Modelar el salón real o añadir datos reales bajo `measurements/`.
 - Instalar Blender, MCP, Python, paquetes, addons, LiDAR o herramientas de captura.
 - Cambiar `README.md`, `PROJECT_CONTEXT.md` o la configuración local; no modificar
@@ -346,7 +348,7 @@ decisión explícita. Una referencia versionada debe tener un `evidence_id`,
 descripción, fecha, escala conocida (`true/false`) y relación con las medidas;
 no se añadirá una foto solo para rellenar evidencia.
 
-## Generación futura en Blender
+## Generación Blender v1 y límites futuros
 
 La arquitectura objetivo es:
 
@@ -361,7 +363,7 @@ measurement file → parser/validator → bpy generator → .blend
   ocultos. Acepta una entrada validada y produce una variante o escena controlada.
 - La arquitectura se separa de decoración: la estructura y huecos no dependen
   de mobiliario, materiales o assets.
-- Las colecciones futuras deben distinguir arquitectura medida/derivada,
+- Las colecciones deben distinguir arquitectura medida/derivada,
   huecos, elementos fijos y decoración.
 - Las transformaciones se aplican y se verifican tras crear la geometría.
 - Nunca se sobrescribe una escena canónica sin snapshot, destino explícito y
@@ -369,9 +371,22 @@ measurement file → parser/validator → bpy generator → .blend
 - El generador debe conservar el vínculo entre objeto y `source_id` cuando sea
   posible mediante nombres/metadata no ambiguos.
 
-## Validaciones futuras
+Este slice materializa el primer generador en
+`blender/scripts/measurements/generate_room.py`. Consume únicamente el fixture
+validado y guarda la escena derivada en
+`blender/scenes/tests/002-room-v1-generated.blend`. Las paredes y el suelo se
+construyen desde los puntos ordenados de `boundary.segments`; el espesor
+desconocido usa un fallback de proxy explícito de `0.10 m`, conservando el
+estado original `unknown`. Las puertas y ventanas se representan como proxies
+geométricos coloreados y colocados sobre su segmento, no como booleanos que
+recorten la pared. Los elementos fijos usan proxies simples y metadata de
+trazabilidad. Esta limitación queda documentada y deberá resolverse antes de
+admitir geometría real que requiera huecos constructivos.
 
-El validador y el generador deberán cubrir, como mínimo:
+## Cobertura actual y validaciones futuras
+
+El validador y el generador cubren estas reglas para el fixture sintético; las
+reglas deberán ampliarse antes de admitir datos reales:
 
 - JSON válido, `schema_version` compatible e IDs únicos.
 - Unidades explícitas y semántica de magnitudes coherente con cada campo.
@@ -414,10 +429,11 @@ las fases posteriores sin reinterpretación silenciosa:
    huecos y segmentos múltiples.
 7. Puertas y ventanas se referencian por pared/segmento y offset.
 8. Los métodos de captura y la política de fotos están documentados sin exigir LiDAR.
-9. La arquitectura parser/validator/generator y sus validaciones futuras están definidas.
+9. La arquitectura parser/validator/generator y sus validaciones futuras están definidas, con un primer generador sintético ejecutable.
 10. El fixture sintético 002 versionado incluye retranqueo, `estimated`, `derived` y un elemento fijo opcional.
 11. El plan separa diseño, fixture, validador, generador, validaciones y procedimiento real.
-12. El flujo no depende de rutas personales, no contiene medidas reales y mantiene fuera de alcance Blender, MCP y el modelado real.
+12. El flujo no depende de rutas personales, no contiene medidas reales, no modifica MCP/Codex y mantiene fuera de alcance el modelado real.
+13. La escena sintética derivada conserva unidades, colecciones, metadata, determinismo y validación numérica documentados.
 
 ## Riesgos T2 y mitigaciones
 
@@ -442,7 +458,7 @@ las fases posteriores sin reinterpretación silenciosa:
 - Ninguna estimación se etiqueta como `measured`.
 - Todas las unidades son explícitas y la unidad canónica es el metro.
 - El sistema de coordenadas y el origen son deterministas y están registrados.
-- La geometría futura es regenerable a partir del archivo validado.
+- La geometría derivada es regenerable a partir del archivo validado.
 - El flujo no depende de rutas personales.
 - Blender no redefine medidas reales.
 - Toda discrepancia queda registrada como warning/fail o decisión explícita.
@@ -452,9 +468,12 @@ las fases posteriores sin reinterpretación silenciosa:
 ## Decisiones pendientes
 
 - Revisar el contrato implementado de schema v1 antes de admitir datos reales.
+- Revisar la estrategia de proxies de openings y fallback de espesores antes de
+  admitir geometría real.
 - Revisar el baseline de tolerancias con evidencia de una primera sesión real,
   sin confundir esa revisión con la precisión almacenada o matemática.
 - Mantener sin decidir el nombre y la ubicación exacta del primer archivo real:
   solo se abrirá esa decisión después de completar schema v1, fixture sintético,
   parser/validator, generación Blender sintética y validación determinista.
-- Aprobar la primera implementación del parser/validador y del generador Blender.
+- Revisar y aprobar la implementación sintética del parser/validador y del
+  generador Blender antes de admitir datos reales.

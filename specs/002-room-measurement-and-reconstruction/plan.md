@@ -6,7 +6,7 @@
 
 **Architecture:** Un archivo JSON por habitación será la fuente estructurada. Un parser/validador separado comprobará schema, unidades, topología e incertidumbre antes de que un generador `bpy` produzca una escena derivada en colecciones controladas; la decoración quedará separada de la arquitectura.
 
-**Tech Stack:** JSON UTF-8 v1 aprobado, Python estándar para parser/validador futuro, Blender 5.2.1 LTS y `bpy` solo cuando exista autorización explícita, Git/GitHub para trazabilidad.
+**Tech Stack:** JSON UTF-8 v1 aprobado, Python estándar para validación y plan lógico, Blender 5.2.1 LTS y `bpy` solo cuando exista autorización explícita, Git/GitHub para trazabilidad.
 
 **Spec:** `specs/002-room-measurement-and-reconstruction/spec.md`
 
@@ -21,7 +21,7 @@
 - Las puertas y ventanas se anclan a `wall_id` y offset desde el inicio del segmento.
 - No se corregirán medidas reales para hacer que Blender encaje.
 - No se capturarán medidas reales ni se modelará el salón en las fases documentales de este slice.
-- No se instalarán herramientas, no se modificarán medidas reales ni escenas, y no se crearán `.blend` en el cierre documental actual.
+- No se instalarán herramientas ni se modificarán medidas reales o escenas canónicas; la escena sintética derivada de esta fase tiene destino de prueba explícito.
 - Todas las rutas versionadas deben ser relativas al repo o expresadas mediante variables, nunca rutas personales absolutas.
 
 ---
@@ -37,14 +37,19 @@
 - Crear: `measurements/fixtures/room-v1-synthetic.json`.
 - Crear: `blender/scripts/measurements/validate_measurements.py` y
   `tests/measurements/test_room_v1_validation.py`.
+- Crear: `blender/scripts/measurements/generate_room.py` y
+  `blender/scripts/measurements/validate_generated_room.py`.
+- Crear: `tests/measurements/test_room_generation.py`,
+  `blender/scenes/tests/002-room-v1-generated.blend` y
+  `renders/previews/002-room-v1-generated/viewport-overview.png`.
+- Crear: `docs/setup/002-room-generation-validation.md`.
 - Modificar: ningún dato real, escena, asset ni configuración existente.
-- Escenas/assets/medidas reales: `No aplica`; no se crean `.blend`, fotos ni datos reales bajo `measurements/`.
+- Escenas/assets/medidas reales: `No aplica`; el único `.blend` de esta fase es la escena sintética indicada y no se crean fotos ni datos reales bajo `measurements/`.
 
 ### Archivos previstos para fases posteriores
 
-- Crear: `blender/scripts/measurements/generate_room.py` y `tests/measurements/test_generation_signature.py`.
 - Crear: `docs/setup/room-measurement-procedure.md` para el procedimiento real de captura.
-- Crear: un informe de validación y, solo si se autoriza, una escena/preview de prueba en áreas separadas.
+- Crear: futuras pruebas de comparación completa datos ↔ Blender y un informe de validación para el primer salón real.
 
 Estos archivos son planificación, no entregables de la ejecución actual.
 
@@ -96,9 +101,18 @@ Estos archivos son planificación, no entregables de la ejecución actual.
 
 **Objetivo:** generar arquitectura 1:1 a partir de un objeto ya validado, con origen/ejes explícitos y colecciones separadas.
 
-**Archivos:** crear `blender/scripts/measurements/generate_room.py`; cualquier escena de salida debe vivir en un destino de pruebas separado.
+**Estado:** generador v1 implementado para el fixture sintético; no consume datos reales.
 
-**Validaciones:** entrada validada obligatoria, nombres estables, transformaciones aplicadas, dimensiones comparadas con incertidumbre, no sobrescritura canónica y reporte de source IDs.
+**Archivos:** `blender/scripts/measurements/generate_room.py`,
+`tests/measurements/test_room_generation.py` y la escena derivada de prueba.
+
+**Estrategia:** validar primero el JSON, reiniciar solo la escena de prueba,
+crear una colección raíz `HS3D_ROOM_<room_id>` con subcolecciones separadas,
+usar paredes prismáticas desde segmentos ordenados, suelo poligonal, proxies
+de openings y proxy del elemento fijo. El espesor `unknown` usa solo un
+fallback de proxy explícito, no cambia el dato canónico.
+
+**Validaciones:** entrada validada obligatoria, nombres estables, transformaciones aplicadas, dimensiones comparadas con `1e-6 m`, metadata de estados/source IDs, no duplicación y no sobrescritura de una salida existente.
 
 **Rollback:** generar en una variante o archivo desechable, guardar snapshot antes de operaciones destructivas y retirar solo la salida de prueba verificada.
 
@@ -108,9 +122,11 @@ Estos archivos son planificación, no entregables de la ejecución actual.
 
 **Objetivo:** comprobar que la representación coincide con medidas y derivaciones sin silenciar discrepancias.
 
-**Archivos:** crear `tests/measurements/test_data_blender_comparison.py` y un informe bajo `docs/validation/` solo después de aprobar la ubicación; no cambiar los datos de entrada.
+**Estado:** validación Blender específica implementada para la escena sintética; la comparación ampliada del primer salón real queda posterior.
 
-**Validaciones:** unidades, puntos de pared, longitudes, área/altura derivadas, offsets de huecos, alturas, incertidumbre y reglas warning/fail; repetir la regeneración con el mismo input.
+**Archivos:** `blender/scripts/measurements/validate_generated_room.py`; no cambiar los datos de entrada.
+
+**Validaciones:** unidades, puntos de pared, longitudes, área/altura derivadas, offsets de huecos, alturas, metadata, ausencia de duplicados y reglas de determinismo; repetir la regeneración con el mismo input.
 
 **Rollback:** conservar los datos y eliminar solo informes o variantes generadas; una discrepancia se corrige en la captura/contrato, no en el generador.
 
@@ -120,7 +136,9 @@ Estos archivos son planificación, no entregables de la ejecución actual.
 
 **Objetivo:** confirmar que un preview técnico hace visibles las paredes, huecos, retranqueos/pilares y ausencia de artefactos graves.
 
-**Archivos:** si se conserva evidencia, crear un preview bajo `renders/previews/002-room-measurement/` y un informe asociado; no sustituir el preview del slice 001.
+**Estado:** preview técnico ligero generado e inspeccionado; no sustituye el preview del slice 001.
+
+**Archivos:** `renders/previews/002-room-v1-generated/viewport-overview.png` y documentación de validación.
 
 **Validaciones:** cámara/resolución registradas, inspección visual explícita y contraste con validación numérica. No usar la imagen para cambiar medidas.
 
@@ -152,7 +170,7 @@ Estos archivos son planificación, no entregables de la ejecución actual.
 
 **Autorización:** aprobación humana específica posterior del room ID, nombre/ubicación del archivo, medidas, fotos y primera ejecución del generador; esta fase no se ejecuta ahora.
 
-## Interfaz futura propuesta
+## Interfaz implementada y futura
 
 El límite entre componentes será explícito:
 
@@ -160,9 +178,13 @@ El límite entre componentes será explícito:
   sin corregir valores.
 - `validate_room(room) -> ValidationReport`: devuelve errores y warnings con
   `source_id`, regla y residual; no modifica `room`.
-- `generate_room(room, output_target) -> GenerationReport`: recibe solo un
-  `Room` validado, crea arquitectura derivada y devuelve objetos/dimensiones
-  comprobados.
+- `build_generation_plan(room) -> GenerationPlan`: valida un objeto ya cargado y
+  calcula geometría lógica determinista sin tocar Blender.
+- `generate_room(input_path, output_path, preview_path) -> GenerationReport`:
+  carga y valida el JSON, crea arquitectura derivada en una escena de prueba,
+  valida la escena dos veces y guarda un único `.blend`.
+- `validate_generated_scene(room, root_collection) -> ValidationReport`:
+  contrasta unidades, colecciones, geometría, metadata y conteos con `1e-6 m`.
 - `compare_room_to_blender(room, scene) -> ComparisonReport`: compara datos con
   Blender usando incertidumbre física y registra discrepancias.
 
@@ -172,7 +194,7 @@ Los nombres son contrato de planificación; cualquier cambio requiere actualizar
 ## Validaciones transversales
 
 - `git diff --check` y `git status --short` en cada cambio documental.
-- Revisión completa del diff y confirmación de tres archivos únicamente en este slice.
+- Revisión completa del diff y confirmación de que solo aparecen los artefactos previstos de este slice.
 - JSON/schema: parseo, versionado, IDs, unidades, estados y serialización determinista.
 - Geometría: conexión, cierre, auto-intersecciones, huecos, alturas, ángulos y retranqueos.
 - Blender: apertura, generación, dimensiones, unidades, transformaciones y preview cuando se autorice.
