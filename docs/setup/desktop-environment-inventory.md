@@ -413,3 +413,20 @@ vigilarse en futuras sesiones.
   el preview versionado del portátil no se sobrescribió.
 - La validación documental aplicable es la revisión del diff, `git diff
   --check` y `git status --short`.
+
+## Integración de shell del Blender portable (2026-09-07)
+
+- Blender continúa siendo la distribución portable 5.2.1 LTS bajo
+  `<BLENDER_HOME>` y permanece fuera de `PATH`; no se instaló otra copia ni se
+  utilizó MSI.
+- Windows lo expone, en el ámbito del usuario actual, mediante un acceso
+  `Blender 5.2.1 LTS` en el menú Inicio y otro en el Escritorio. Ambos apuntan
+  al mismo `<BLENDER_HOME>\blender-5.2.1-windows-x64\blender.exe` y usan su
+  icono.
+- La asociación de `.blend` usa el ProgID específico de usuario
+  `HomeStudio3D.Blender521`; también queda registrado como opción de Open With
+  y usa el icono del mismo ejecutable. La GUI y la automatización del proyecto
+  siguen utilizando un único binario portable.
+- El rollback consiste en eliminar únicamente esos dos accesos directos y
+  retirar el ProgID y la asociación `.blend` creados por esta integración. El
+  precheck confirmó que no existía una asociación previa que restaurar.
