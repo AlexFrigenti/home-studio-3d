@@ -1,6 +1,6 @@
 # Tareas: Blender + Codex + MCP Foundation
 
-Las tareas reflejan el estado real de ejecución de este slice. T2.01–T2.12 están completadas con la evidencia documentada; T2.01 conserva una excepción documental explícita y T2.13 queda pendiente por el cierre formal indicado en su tarea. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
+Las tareas reflejan el estado real de ejecución de este slice. T2.01–T2.13 están completadas con la evidencia documentada; T2.01 conserva una excepción documental explícita. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -126,10 +126,20 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.13 — Cierre del T2 y PR
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — cerrada el 2026-09-06.
 - **Objetivo:** cerrar la fundación con evidencia, riesgos, limitaciones y documentación alineadas.
 - **Evidencia esperada:** checklist de aceptación, resultados reales, evidencia visual y diff completo.
 - **Validación:** todos los gates aplicables en `PASS`; el resto marcado como `NO APLICA`, `PENDIENTE DE INFRAESTRUCTURA` o `NO EJECUTADO` con explicación.
 - **Autorización del usuario:** sí para abrir PR, merge, instalación posterior y cualquier cambio de política.
 
-**Pendiente:** revisión final del diff, decisión de commit/PR y cierre formal del T2.
+**Checklist final T2.13 (2026-09-06):**
+
+- Revisión final de `spec.md`, `plan.md`, `tasks.md`, la documentación de setup/decisions y el diff completo contra `origin/main`: **PASS**.
+- Criterios aplicables del T2: **PASS** o disposición explícita; T2.01 conserva su excepción documental, T2.04 y T2.08 tienen smoke independiente con guardado/reapertura, y T2.12 documenta la validación del fixture entre portátil y sobremesa sin afirmar equivalencia absoluta de los entornos.
+- Diff final: **PASS**; `git diff --check` sin errores.
+- Commits: **REALIZADOS**; la foundation y el cierre documental quedan trazables en la historia de esta rama.
+- Push: **REALIZADO**; la rama remota coincide con el HEAD local antes de abrir la PR.
+- PR: **AUTORIZADA Y PREVISTA como parte de este cierre**; la apertura se ejecuta inmediatamente después de este commit.
+- CI/merge: **NO APLICA** a este cierre documental mientras no exista una política o check de CI configurado que ejecutar; el merge queda fuera de este paso y requiere checks verdes y autorización explícita.
+- Deuda de `get_addon_status`: **ACEPTADA COMO NO BLOQUEANTE** y conservada en la documentación.
+- Producción 3D real: **NO INICIADA**; el fixture y los smoke `.blend` son evidencia de foundation.
