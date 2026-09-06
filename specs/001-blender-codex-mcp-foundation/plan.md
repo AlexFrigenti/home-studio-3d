@@ -1,12 +1,14 @@
 # Plan: Blender + Codex + MCP Foundation
 
+Estado de ejecución: las fases de inventario, distribución, MCP, integración, smoke y habitación sintética se ejecutaron y validaron. El fixture se probó entre portátil y sobremesa. Este documento conserva el procedimiento para futuras repeticiones; no inicia producción 3D.
+
 ## Especificación relacionada
 
 - `spec.md`
 
 ## Enfoque
 
-Construir la fundación de forma incremental, primero con inventario y decisiones reproducibles, después con instalación y configuración local controladas, y finalmente con un smoke técnico y una escena sintética de aceptación. Cada fase debe producir evidencia concreta y mantener la separación entre la escena de prueba, las medidas canónicas y cualquier escena futura de la vivienda.
+Construir la fundación de forma incremental, primero con inventario y decisiones reproducibles, después con instalación y configuración local controladas, y finalmente con un smoke técnico y una escena sintética de aceptación. Este plan se ejecutó con ese orden. Cada fase produjo evidencia concreta y mantiene la separación entre la escena de prueba, las medidas canónicas y cualquier escena futura de la vivienda.
 
 La planificación no instala ni configura nada por sí misma. Las acciones de instalación, ejecución privilegiada, configuración de MCP y modificación de ajustes globales requieren autorización explícita en el punto indicado.
 
@@ -45,11 +47,11 @@ La planificación no instala ni configura nada por sí misma. Las acciones de in
 **Acciones:**
 
 - Antes de descargar o instalar, comparar explícitamente en Windows el instalador tradicional y la distribución portable ZIP oficial.
-- Preferir la opción portable si inicia la versión esperada, permite rutas reproducibles y configuración separada, evita cambios globales innecesarios y facilita un rollback limpio. T2.03 debe registrar la decisión y su justificación; no queda decidida en esta fase documental.
+- Se adoptó la opción portable porque inicia la versión esperada, permite rutas reproducibles y configuración separada, evita cambios globales innecesarios y facilita un rollback limpio. T2.03 registró la decisión y su justificación.
 - Obtener Blender 5.2.1 LTS de una fuente aprobada y registrar versión, fuente y hash cuando sea posible.
 - Elegir una ruta documentada y evitar rutas absolutas personales en el repo.
 - Mantener separadas las configuraciones de prueba de cualquier escena canónica.
-- No instalar addons ni paquetes adicionales en esta fase salvo que una tarea T2 posterior los autorice explícitamente.
+- No se instalaron addons ni paquetes adicionales en esta fase; la instalación posterior del addon y del servidor MCP quedó autorizada y documentada en T2.06.
 
 **Validaciones:** la modalidad elegida y sus criterios quedan documentados antes de la descarga; Blender inicia, reporta Blender 5.2.1 LTS, abre una escena vacía, puede guardar en un área de pruebas y no expone servicios no solicitados.
 
@@ -65,7 +67,7 @@ La planificación no instala ni configura nada por sí misma. Las acciones de in
 
 - Inspeccionar procedencia, licencia, versión, código y compatibilidad de `ahujasid/blender-mcp`.
 - Consultar `webita/blender-codex-mcp` como referencia concreta para el acoplamiento con Codex, sin copiar código sin revisión.
-- No instalar desde una rama mutable sin pin. Tras T2.05, seleccionar y aprobar una versión, tag o commit exacto, registrar el commit elegido y solo entonces autorizar la instalación.
+- No instalar desde una rama mutable sin pin. T2.05 fijó y registró el commit exacto `5866814479b4e2ca674d8d44969a9a2a78fdc8bb` antes de la instalación autorizada.
 - Determinar cómo arranca el servidor y cómo se conecta Blender, manteniendo el binding en localhost.
 - Deshabilitar telemetría opcional si existe una opción soportada.
 - Documentar la configuración como proyecto/local cuando el producto lo permita; no modificar configuración global sin aprobación.
@@ -103,9 +105,9 @@ La planificación no instala ni configura nada por sí misma. Las acciones de in
 - Abrir Blender con una escena de prueba vacía.
 - Pedir información básica de la escena a través de Codex/MCP.
 - Como primera operación `bpy`, ejecutar una inspección de solo lectura, inocua y reversible (no cambia el estado), por ejemplo consultar el nombre de la escena y el número de objetos. No debe leer/escribir filesystem, red ni lanzar procesos externos.
-- Tras esa comprobación, ejecutar solo una operación de escena simple, inspeccionada y reversible, y guardar explícitamente una escena de smoke dentro del área de pruebas del repo.
+- Tras esa comprobación, ejecutar solo una operación de escena simple, inspeccionada y reversible, y limpiar el estado temporal. El guardado de la escena de aceptación dentro del área de pruebas del repo corresponde a la Fase 6.
 
-**Validaciones:** información recibida, primera operación `bpy` de solo lectura, operación reversible, archivo abrible y guardable, diff/artefactos revisados y comprobación técnica de las rutas y permisos observables. La política de no acceder fuera del workspace se mantiene aunque no exista sandbox técnico; no se marca como `PASS` una limitación que no pueda demostrarse.
+**Validaciones:** información recibida, primera operación `bpy` de solo lectura, operación reversible, limpieza del estado temporal, y comprobación técnica de las rutas y permisos observables. La apertura/guardado del fixture se valida en la Fase 6. La política de no acceder fuera del workspace se mantiene aunque no exista sandbox técnico; no se marca como `PASS` una limitación que no pueda demostrarse.
 
 **Rollback:** cerrar Blender sin sobrescribir escenas canónicas y eliminar o aislar la escena de smoke solo después de verificar su alcance.
 
@@ -133,7 +135,9 @@ La planificación no instala ni configura nada por sí misma. Las acciones de in
 
 ### Fase 7 — Documentación reproducible para el segundo equipo
 
-**Objetivo:** permitir repetir el setup en el PC de sobremesa sin depender de memoria implícita ni de rutas del portátil.
+**Objetivo:** permitir repetir la validación del fixture en el PC de sobremesa sin depender de memoria implícita ni de rutas del portátil.
+
+**Estado:** la reproducción del fixture se probó entre portátil y sobremesa. Se conservan variables sanitizadas y no se añaden rutas ni un inventario del sobremesa que no estén documentados.
 
 **Acciones:**
 
@@ -168,4 +172,4 @@ La integración se mantiene en una rama específica. Las escenas de smoke y acep
 
 ## Dependencias externas
 
-Previstas para fases futuras, sujetas a revisión y autorización: Blender 5.2.1 LTS mediante la modalidad Windows que T2.03 seleccione, Codex CLI si no estuviera disponible, `ahujasid/blender-mcp` con pin exacto aprobado y la referencia `webita/blender-codex-mcp`. No se instala ninguna en esta fase documental.
+Foundation instalada y validada: Blender 5.2.1 LTS mediante Portable ZIP, Codex CLI y `ahujasid/blender-mcp` fijado al commit `5866814479b4e2ca674d8d44969a9a2a78fdc8bb`. La referencia `webita/blender-codex-mcp` se usó solo para contrastar la integración. No se incorporaron assets externos ni dependencias de producción.
