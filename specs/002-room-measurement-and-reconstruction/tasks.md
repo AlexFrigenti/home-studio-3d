@@ -2,7 +2,7 @@
 
 > Clasificación: T2
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: cierre documental parcial; JSON v1 y baseline inicial aprobados; no se han ejecutado fases de captura, validación de código ni generación Blender.
+> Estado: schema JSON v1, fixture sintético y validación mínima implementados; no se han ejecutado generación Blender ni tareas de datos reales.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -30,12 +30,12 @@ y detenerse ante una discrepancia no resuelta.
 
 ## T2.03 — Definir schema v1
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** fijar campos mínimos, tipos, estados de incertidumbre, referencias de evidencia y reglas de evolución.
-- **Archivos:** `spec.md`; futuro JSON de ejemplo solo después de aprobar el schema.
-- **Validación:** ejemplos válidos/ inválidos, IDs únicos, unidades explícitas, `unknown` sin valor y `derived` con fórmula.
+- **Archivos:** `measurements/schema/room-v1.schema.json`, `spec.md`.
+- **Validación:** schema JSON estricto parseable, contrato v1 declarado, estados condicionales, `unknown` sin valor y `derived` con fórmula/dependencias.
 - **Rollback:** subir una nueva `schema_version` o revertir el documento; no reinterpretar datos publicados.
-- **Autorización:** aprobación del contrato antes de guardar medidas reales.
+- **Autorización:** contrato implementado solo para datos sintéticos; cualquier medida real requiere una decisión posterior.
 
 ## T2.04 — Fijar coordenadas, unidades y tolerancias
 
@@ -48,21 +48,21 @@ y detenerse ante una discrepancia no resuelta.
 
 ## T2.05 — Definir fixture sintético 002
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** describir y después materializar una habitación con retranqueo/pilar, puerta, ventana, `estimated` y `derived`.
-- **Archivos:** primero el ejemplo de `spec.md`; futuro `measurements/fixtures/002-room-measurement.json`.
-- **Validación:** JSON parseable, frontera conectada/cerrada, derivación reproducible y sin decoración/datos personales.
+- **Archivos:** `measurements/fixtures/room-v1-synthetic.json`.
+- **Validación:** fixture parseable y válido, frontera conectada/cerrada, retranqueo, puerta, ventana, enchufe opcional, estados, fórmula/dependencias derivadas y canonización estable; sin decoración/datos personales.
 - **Rollback:** eliminar únicamente el fixture sintético; nunca borrar medidas reales.
-- **Autorización:** aprobación del schema antes de crear el archivo bajo `measurements/`.
+- **Autorización:** fixture sintético autorizado; no contiene datos reales.
 
 ## T2.06 — Diseñar e implementar el validador
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** producir un `ValidationReport` con errores/warnings trazables sin modificar la entrada.
-- **Archivos:** futuro `blender/scripts/measurements/validate_measurements.py` y pruebas bajo `tests/measurements/`.
-- **Validación:** schema, unidades, IDs, segmentos conectados, cierre, auto-intersecciones, huecos, alturas e incertidumbre.
+- **Archivos:** `blender/scripts/measurements/validate_measurements.py`, `tests/measurements/test_room_v1_validation.py`.
+- **Validación:** JSON/schema declarado, unidades, versión, referencias de pared, conexión/cierre, límites laterales y altura máxima de huecos, estados/incertidumbre, `derived`, `unknown` y canonización estable; `python -m unittest discover -s tests/measurements -p test_room_v1_validation.py -v` pasa 8/8; auto-intersecciones y reglas Blender avanzadas quedan pendientes.
 - **Rollback:** revertir script/pruebas; no ajustar datos para satisfacer el validador.
-- **Autorización:** aprobación de interfaces y, si se usan herramientas externas, de sus dependencias.
+- **Autorización:** implementación mínima con biblioteca estándar; no se instalaron dependencias.
 
 ## T2.07 — Diseñar e implementar el generador Blender
 
@@ -122,7 +122,7 @@ y detenerse ante una discrepancia no resuelta.
 
 - **Estado:** `[ ]`
 - **Objetivo:** revisar scope, documentación, riesgos, invariantes y gates; dejar la PR lista sin empezar el siguiente slice.
-- **Archivos:** solo los tres artefactos del slice salvo autorización posterior.
-- **Validación:** `git diff --check`, `git status --short`, diff completo, ausencia de secretos, ausencia de `.blend`/`measurements/` nuevos y revisión contra `.quality/QUALITY.md`/`CONTRIBUTING.md`.
+- **Archivos:** solo los artefactos aprobados de este checkpoint, sin ampliar el alcance.
+- **Validación:** `git diff --check`, `git status --short`, diff completo, ausencia de secretos, ausencia de `.blend` o datos reales nuevos bajo `measurements/` y revisión contra `.quality/QUALITY.md`/`CONTRIBUTING.md`.
 - **Rollback:** revertir el commit documental si el contrato requiere cambios antes de aprobarse.
 - **Autorización:** autorización explícita para commit/push/PR; el merge queda fuera de esta tarea.

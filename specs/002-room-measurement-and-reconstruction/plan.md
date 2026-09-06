@@ -21,7 +21,7 @@
 - Las puertas y ventanas se anclan a `wall_id` y offset desde el inicio del segmento.
 - No se corregirán medidas reales para hacer que Blender encaje.
 - No se capturarán medidas reales ni se modelará el salón en las fases documentales de este slice.
-- No se instalarán herramientas, no se modificará `measurements/` y no se crearán `.blend` en el cierre documental actual.
+- No se instalarán herramientas, no se modificarán medidas reales ni escenas, y no se crearán `.blend` en el cierre documental actual.
 - Todas las rutas versionadas deben ser relativas al repo o expresadas mediante variables, nunca rutas personales absolutas.
 
 ---
@@ -33,13 +33,15 @@
 - Crear: `specs/002-room-measurement-and-reconstruction/spec.md`.
 - Crear: `specs/002-room-measurement-and-reconstruction/plan.md`.
 - Crear: `specs/002-room-measurement-and-reconstruction/tasks.md`.
-- Modificar: ninguno.
-- Escenas/assets/medidas: `No aplica`; no se crean `.blend`, fotos ni archivos bajo `measurements/`.
+- Crear: `measurements/schema/room-v1.schema.json`.
+- Crear: `measurements/fixtures/room-v1-synthetic.json`.
+- Crear: `blender/scripts/measurements/validate_measurements.py` y
+  `tests/measurements/test_room_v1_validation.py`.
+- Modificar: ningún dato real, escena, asset ni configuración existente.
+- Escenas/assets/medidas reales: `No aplica`; no se crean `.blend`, fotos ni datos reales bajo `measurements/`.
 
 ### Archivos previstos para fases posteriores
 
-- Crear: `measurements/fixtures/002-room-measurement.json` para materializar el fixture conceptual después de aprobar el schema.
-- Crear: `blender/scripts/measurements/validate_measurements.py`, `tests/measurements/test_schema.py` y `tests/measurements/test_validator.py`.
 - Crear: `blender/scripts/measurements/generate_room.py` y `tests/measurements/test_generation_signature.py`.
 - Crear: `docs/setup/room-measurement-procedure.md` para el procedimiento real de captura.
 - Crear: un informe de validación y, solo si se autoriza, una escena/preview de prueba en áreas separadas.
@@ -52,33 +54,39 @@ Estos archivos son planificación, no entregables de la ejecución actual.
 
 **Objetivo:** fijar JSON v1, el objeto de medida, versionado, unidades, estados e invariantes.
 
-**Archivos:** revisar `spec.md`; en esta fase del slice solo se crean los tres artefactos documentales indicados arriba.
+**Estado:** implementación documental y contrato JSON v1 completados en este slice.
+
+**Archivos:** `measurements/schema/room-v1.schema.json` y documentación del slice.
 
 **Validaciones:** revisión humana del modelo, ejemplos JSON válidos, ausencia de `TBD`/`TODO`, comprobación de que `unknown` no se interpreta como cero y revisión de compatibilidad con el slice 001.
 
-**Rollback:** revertir el commit documental de la especificación; no tocar `measurements/` ni escenas.
+**Rollback:** revertir el commit documental de la especificación; no tocar datos reales de `measurements/` ni escenas.
 
-**Autorización:** aprobación humana explícita de JSON v1 recibida; el schema completo aún debe cerrarse antes de crear el fixture.
+**Autorización:** aprobación humana explícita de JSON v1 recibida; el schema estricto queda materializado en el archivo indicado.
 
 ### Fase 2 — Fixture sintético de medidas
 
 **Objetivo:** materializar el fixture conceptual 002 con habitación no rectangular, retranqueo o pilar, puerta, ventana, una medida `estimated` y otra `derived`.
 
-**Archivos:** crear `measurements/fixtures/002-room-measurement.json`; no modificar el fixture 001 ni datos reales.
+**Estado:** fixture sintético implementado; no representa una vivienda real.
 
-**Validaciones:** parseo JSON, schema v1, IDs únicos, cierre de segmentos, área derivada reproducible, clasificación de estados y ausencia de datos personales.
+**Archivos:** `measurements/fixtures/room-v1-synthetic.json`; no modificar el fixture 001 ni datos reales.
+
+**Validaciones:** parseo JSON, schema v1, IDs únicos, cierre de segmentos, declaración de fórmula/dependencias derivadas, clasificación de estados y ausencia de datos personales; el recálculo geométrico completo queda para una fase posterior.
 
 **Rollback:** eliminar únicamente el fixture sintético o revertir su commit; conservar intactos `measurements/rooms/` y las escenas canónicas.
 
-**Autorización:** aprobación del schema; no requiere instalar herramientas, pero requiere autorización antes de introducir la primera estructura bajo `measurements/`.
+**Autorización:** aprobación del schema recibida; la estructura bajo `measurements/` se limita al schema y fixture sintéticos de este slice.
 
 ### Fase 3 — Validador de medidas
 
 **Objetivo:** implementar un validador que rechace schema/unidades/topología/estados inválidos y devuelva warnings/fails trazables.
 
-**Archivos:** crear `blender/scripts/measurements/validate_measurements.py`, `tests/measurements/test_schema.py` y `tests/measurements/test_validator.py`; no tocar Blender durante la primera versión del parser.
+**Estado:** validación mínima estructural y determinista implementada; las reglas geométricas avanzadas quedan para una fase posterior.
 
-**Validaciones:** tests deterministas para schema, estados, IDs, segmentos conectados, cierre, auto-intersecciones evidentes, huecos dentro de paredes, alturas e incertidumbre; `1e-6 m` solo para matemática.
+**Archivos:** `blender/scripts/measurements/validate_measurements.py` y `tests/measurements/test_room_v1_validation.py`; no tocar Blender durante esta fase.
+
+**Validaciones:** JSON/schema estricto declarado, unidades, versión, referencias de pared, conexión y cierre de segmentos, límites laterales y altura máxima de huecos, estados/incertidumbre, `derived`, `unknown` y canonización estable; `1e-6 m` solo para matemática.
 
 **Rollback:** revertir el script y las pruebas; no cambiar ningún JSON real para hacer pasar un test.
 

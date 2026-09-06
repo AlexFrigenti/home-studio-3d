@@ -2,7 +2,7 @@
 
 > Clasificación: T2 — contrato canónico de medidas, unidades y coordenadas
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: cierre documental; JSON v1 y baseline inicial aprobados; no se han capturado medidas reales ni generado geometría del salón
+> Estado: schema JSON v1, fixture sintético y validación mínima implementados; no se han capturado medidas reales ni generado geometría del salón
 
 ## Objetivo
 
@@ -32,16 +32,20 @@ entre observación, incertidumbre, geometría derivada y evidencia.
 - Propuesta de tolerancias físicas, matemáticas y visuales.
 - Evaluación del flujo de captura y de la evidencia fotográfica.
 - Arquitectura futura `measurement file → parser/validator → bpy generator → .blend`.
-- Diseño de un segundo fixture sintético conceptual para probar el contrato.
+- Schema JSON v1 estricto en `measurements/schema/room-v1.schema.json`.
+- Fixture sintético en `measurements/fixtures/room-v1-synthetic.json`.
+- Validación estructural/determinista mínima y tests con Python estándar.
 - Validaciones futuras, riesgos, invariantes y decisiones pendientes.
 
 ### Fuera de alcance
 
 - Capturar o registrar todavía medidas reales en `measurements/`.
 - Modelar el salón real o modificar cualquier escena canónica.
-- Crear `.blend`, previews, scripts, validadores o generadores en este slice.
+- Crear generador Blender, parser complejo, integración MCP, `.blend`, previews o renders en este slice.
+- Modelar el salón real o añadir datos reales bajo `measurements/`.
 - Instalar Blender, MCP, Python, paquetes, addons, LiDAR o herramientas de captura.
-- Cambiar `README.md`, `PROJECT_CONTEXT.md`, `measurements/` o la configuración local.
+- Cambiar `README.md`, `PROJECT_CONTEXT.md` o la configuración local; no modificar
+  medidas reales fuera de los artefactos sintéticos de este slice.
 - Convertir las tolerancias propuestas en estándar definitivo sin aprobación y validación.
 - Añadir fotografías personales, planos privados o assets externos al repositorio.
 
@@ -61,7 +65,9 @@ sintética no adquiere autoridad sobre `measurements/`.
 ## Sistema de unidades y precisión
 
 - Unidad canónica de almacenamiento: metros (`m`).
-- Los campos de longitud terminan en `_m`; áreas usan `_m2` y ángulos usan `_deg`.
+- Las coordenadas terminan en `_m`; las magnitudes escalares usan las unidades
+  declaradas por el campo y `units: "m"` como base (por ejemplo, `floor_area`
+  representa m²).
 - Los valores JSON se almacenan como números, no como cadenas con unidades.
 - La precisión de almacenamiento mínima propuesta es `0.001 m` (1 mm); se pueden
   conservar más decimales cuando procedan del instrumento, sin presentarlos como
@@ -109,8 +115,8 @@ orientación de una aplicación externa.
 4. Si ninguna opción es clara, no elegir visualmente: registrar varios candidatos
    y dejar la elección pendiente de aprobación humana.
 
-El archivo debe guardar `corner_id`, `wall_ids`, `selection_rule` y el punto
-local. El generador no puede inferir silenciosamente otro origen.
+El archivo debe guardar `corner_id`, `adjacent_segment_ids`, `selection_rule` y
+el punto local. El generador no puede inferir silenciosamente otro origen.
 
 ## Decisión de formato: JSON frente a YAML
 
@@ -130,111 +136,54 @@ como `no`, `01` o una fecha cambie de tipo según el parser. YAML no forma parte
 del formato canónico v1; solo podrá existir en el futuro como vista o export
 opcional y nunca como otra fuente de verdad.
 
-## Modelo de datos propuesto: schema v1
+## Modelo de datos implementado: schema v1
 
-Cada archivo representa una habitación. La estructura inicial es deliberadamente
-pequeña y extensible:
+Cada archivo representa una habitación y se valida contra
+`measurements/schema/room-v1.schema.json`. La estructura canónica de nivel
+superior es:
 
-```json
-{
-  "schema_version": "1.0",
-  "room_id": "living_room",
-  "name": "Nombre humano de la habitación",
-  "units": "m",
-  "measured_at": "2026-09-06",
-  "capture": {
-    "method": "mixed",
-    "session_id": "capture-001",
-    "notes": "Métodos y orden de captura"
-  },
-  "coordinate_system": {
-    "origin": {
-      "type": "interior_floor_corner",
-      "corner_id": "corner-01",
-      "point_m": [0.0, 0.0, 0.0],
-      "wall_ids": ["wall-01", "wall-08"],
-      "selection_rule": "entry_right_first_clear_corner"
-    },
-    "axes": {
-      "x": "wall-01_start_to_end",
-      "y": "right_handed_perpendicular_to_x",
-      "z": "vertical_up",
-      "handedness": "right"
-    },
-    "boundary_winding": "counterclockwise_viewed_from_above"
-  },
-  "dimensions": {
-    "height": {
-      "value_m": 2.5,
-      "status": "measured",
-      "uncertainty_m": 0.005,
-      "method": "laser",
-      "source_id": "capture-001-height"
-    }
-  },
-  "walls": [
-    {
-      "id": "wall-01",
-      "start_m": [0.0, 0.0, 0.0],
-      "end_m": [5.0, 0.0, 0.0],
-      "length": {
-        "value_m": 5.0,
-        "status": "measured",
-        "uncertainty_m": 0.005,
-        "method": "tape",
-        "source_id": "capture-001-wall-01"
-      },
-      "thickness": {
-        "status": "unknown",
-        "method": "not_captured",
-        "note": "No se rellena hasta medirla"
-      }
-    }
-  ],
-  "openings": {
-    "doors": [],
-    "windows": []
-  },
-  "fixed_elements": [],
-  "notes": [],
-  "evidence": []
-}
-```
+- `schema_version`, `room_id`, `name`, `units`, `measured_at` y
+  `measurement_method`.
+- `coordinate_system`, `height` y `boundary.segments`.
+- `openings.doors` y `openings.windows`.
+- `fixed_elements` y `notes`.
+- `floor_area` es opcional y puede ser una medida `derived`.
+
+El fixture ejecutable de este slice, que muestra todos los estados y un
+retranqueo, está en `measurements/fixtures/room-v1-synthetic.json`. No se crea
+ningún archivo de medidas reales.
 
 ### Campos obligatorios y opcionales
 
 En v1 son obligatorios `schema_version`, `room_id`, `name`, `units`,
-`measured_at`, `capture`, `coordinate_system`, `walls` y `openings`.
-`capture.method`, la información del origen y los ejes también son obligatorios;
-`capture.session_id` y `capture.notes` son opcionales. `walls` debe contener al
-menos un segmento y `openings` debe conservar las listas `doors` y `windows`,
-aunque estén vacías.
+`measured_at`, `measurement_method`, `coordinate_system`, `height`, `boundary`,
+`openings`, `fixed_elements` y `notes`. La información del origen, los ejes,
+`boundary.winding` y los segmentos también son obligatorios; `boundary.segments`
+debe contener al menos tres segmentos y `openings` debe conservar las listas
+`doors` y `windows`, aunque estén vacías.
 
-`dimensions`, `fixed_elements`, `notes` y `evidence` son opcionales. Si se
-incluye `fixed_elements`, cada elemento debe cumplir su contrato y los
-enchufes/interruptores siguen siendo opcionales dentro de esa colección. Si se
-omite una colección opcional, equivale a una colección vacía, no a una medida
-desconocida. Una propiedad métrica no disponible se expresa dentro de su objeto
-de medida con `status: "unknown"` y sin `value_*`.
+`floor_area` es opcional. Si se incluye `fixed_elements`, cada elemento debe
+cumplir su contrato y los enchufes/interruptores siguen siendo opcionales dentro
+de esa colección. Una propiedad métrica no disponible se expresa dentro de su
+objeto de medida con `status: "unknown"` y sin `value`.
 
 ### Objeto de medida
 
 Las longitudes, alturas, offsets, espesores y dimensiones usan un objeto común.
-El sufijo del campo determina la magnitud: `value_m` para longitudes, `value_m2`
-para áreas y `value_deg` para ángulos. No se mezclan unidades dentro de un
-objeto:
+El campo que contiene la medida determina su magnitud; el objeto usa siempre
+`value` y `uncertainty` numéricos en las unidades declaradas. No se mezclan
+unidades dentro de un objeto:
 
-- `value_m`, `value_m2` o `value_deg`: uno de ellos es obligatorio para
-  `measured`, `estimated` y `derived`, según la magnitud del campo.
+- `value`: obligatorio para `measured`, `estimated` y `derived`.
 - `status`: obligatorio y limitado a `measured`, `estimated`, `derived`, `unknown`.
-- `uncertainty_m`: obligatorio cuando se conozca o sea relevante; no se inventa
+- `uncertainty`: obligatorio cuando se conozca o sea relevante; no se inventa
   para `unknown`.
 - `method`: método concreto o `not_captured`.
 - `source_id`: referencia a una observación, sesión o evidencia cuando aporte
   trazabilidad.
 - `note`: contexto humano breve, especialmente para estimaciones.
 - `formula` y `depends_on`: obligatorios para `derived`.
-- `unknown` no lleva ningún `value_*`; omitir el valor es distinto de medir cero.
+- `unknown` no lleva `value`; omitir el valor es distinto de medir cero.
 
 Reglas: una medida `estimated` no puede convertirse en `measured` por el
 generador; una medida `derived` debe poder recalcularse; una medida `unknown`
@@ -242,7 +191,7 @@ impide afirmar una validación exacta del atributo que depende de ella.
 
 ### Habitaciones y segmentos
 
-`walls` es una lista ordenada de segmentos, no una caja implícita. Cada segmento
+`boundary.segments` es una lista ordenada de segmentos, no una caja implícita. Cada segmento
 incluye `id`, `start_m`, `end_m`, `length` y un `thickness` opcional. Los puntos
 se expresan en el sistema local y heredan por defecto el estado, método,
 incertidumbre y `source_id` del segmento. Si un punto tiene una observación
@@ -259,9 +208,8 @@ segmentos permiten:
 - cierres de frontera y comprobación de auto-intersecciones.
 
 No se requiere un campo de “rectángulo” en v1: una habitación rectangular es
-simplemente una secuencia de cuatro segmentos. `dimensions` puede guardar
-resúmenes como largo, ancho, altura o área, cada uno con su objeto de medida;
-son auxiliares y la lista de segmentos manda sobre esos resúmenes.
+simplemente una secuencia de cuatro segmentos. `floor_area` puede guardar un
+resumen derivado, pero los segmentos mandan sobre cualquier resumen.
 
 ## Puertas y ventanas
 
@@ -274,15 +222,15 @@ globales arbitrarias. Todos los offsets y dimensiones son objetos de medida.
 {
   "id": "door-01",
   "wall_id": "wall-01",
-  "distance_from_start": {"value_m": 1.25, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "capture-001-door"},
-  "width": {"value_m": 0.82, "status": "measured", "uncertainty_m": 0.003, "method": "laser", "source_id": "capture-001-door"},
-  "height": {"value_m": 2.03, "status": "measured", "uncertainty_m": 0.003, "method": "laser", "source_id": "capture-001-door"},
+  "offset": {"value": 1.25, "status": "measured", "uncertainty": 0.005, "method": "tape", "source_id": "capture-001-door"},
+  "width": {"value": 0.82, "status": "measured", "uncertainty": 0.003, "method": "laser", "source_id": "capture-001-door"},
+  "height": {"value": 2.03, "status": "measured", "uncertainty": 0.003, "method": "laser", "source_id": "capture-001-door"},
   "depth": {"status": "unknown", "method": "not_captured"},
   "opening_direction": "unknown"
 }
 ```
 
-La validación comprueba que `distance_from_start + width` queda dentro de la
+La validación comprueba que `offset + width` queda dentro de la
 longitud del segmento. `opening_direction` es opcional y no se usa para crear
 geometría canónica hasta definir su semántica.
 
@@ -292,16 +240,16 @@ geometría canónica hasta definir su semántica.
 {
   "id": "window-01",
   "wall_id": "wall-02",
-  "distance_from_start": {"value_m": 0.80, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "capture-001-window"},
-  "width": {"value_m": 1.20, "status": "measured", "uncertainty_m": 0.003, "method": "laser", "source_id": "capture-001-window"},
-  "height": {"value_m": 1.00, "status": "measured", "uncertainty_m": 0.003, "method": "laser", "source_id": "capture-001-window"},
-  "sill_height": {"value_m": 0.90, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "capture-001-window"},
+  "offset": {"value": 0.80, "status": "measured", "uncertainty": 0.005, "method": "tape", "source_id": "capture-001-window"},
+  "width": {"value": 1.20, "status": "measured", "uncertainty": 0.003, "method": "laser", "source_id": "capture-001-window"},
+  "height": {"value": 1.00, "status": "measured", "uncertainty": 0.003, "method": "laser", "source_id": "capture-001-window"},
+  "sill_height": {"value": 0.90, "status": "measured", "uncertainty": 0.005, "method": "tape", "source_id": "capture-001-window"},
   "depth": {"status": "unknown", "method": "not_captured"}
 }
 ```
 
-La validación comprueba los límites laterales y `sill_height + height <= room.height`
-cuando la altura de la habitación está disponible.
+La validación comprueba los límites laterales y `sill_height + window.height <=
+room.height` cuando la altura de la habitación está disponible.
 
 ## Pilares, radiadores, enchufes y elementos fijos
 
@@ -311,11 +259,11 @@ la validación de espacio. En v1 se permiten `pillar`, `recess`, `radiator`,
 aportan valor al primer caso real; son elementos fijos opcionales y no son
 obligatorios para considerar una habitación modelable.
 
-Cada elemento tiene `id`, `type`, un anclaje (`wall_id` y
-`distance_from_start`, o un punto/polígono local), dimensiones, altura y medidas
+Cada elemento tiene `id`, `type`, un anclaje (`wall_id` y `offset`, o un punto
+local), dimensiones opcionales, altura y medidas
 de incertidumbre. Un enchufe o interruptor debe poder registrar como mínimo
 `type`, pared/segmento asociado, posición u offset, altura, `status`,
-`uncertainty_m` y `note`. No se modelan circuitos, cargas ni cableado en v1.
+`uncertainty` y `note`. No se modelan circuitos, cargas ni cableado en v1.
 Un pilar puede anclarse a una pared; un retranqueo se expresa preferentemente
 en la secuencia de segmentos para conservar su topología.
 
@@ -324,7 +272,7 @@ en la secuencia de segmentos para conservar su topología.
 Toda medida relevante debe tener uno de estos estados:
 
 - `measured`: lectura directa de un instrumento o fuente primaria validada.
-- `estimated`: aproximación explícita; exige `uncertainty_m` y `note`.
+- `estimated`: aproximación explícita; exige `uncertainty` y `note`.
 - `derived`: cálculo a partir de otros valores; exige `formula` y `depends_on`.
 - `unknown`: no capturada o no fiable; no puede actuar como medida real.
 
@@ -426,7 +374,7 @@ measurement file → parser/validator → bpy generator → .blend
 El validador y el generador deberán cubrir, como mínimo:
 
 - JSON válido, `schema_version` compatible e IDs únicos.
-- Unidades explícitas y campos con sufijos correctos.
+- Unidades explícitas y semántica de magnitudes coherente con cada campo.
 - Segmentos conectados dentro de la tolerancia matemática.
 - Frontera cerrada, orientación consistente y ausencia de auto-intersecciones
   evidentes.
@@ -441,87 +389,15 @@ El validador y el generador deberán cubrir, como mínimo:
   geometría y el mismo informe.
 - Revisión visual de preview sin que esta sustituya la comprobación numérica.
 
-## Primer test del slice: fixture conceptual 002
+## Primer test del slice: fixture sintético 002
 
-Antes del salón real se define un fixture sintético distinto del fixture 001.
-No se crea todavía como archivo; el siguiente JSON describe el contenido que
-deberá materializarse en una fase posterior, por ejemplo en
-`measurements/fixtures/002-room-measurement.json`.
-
-```json
-{
-  "schema_version": "1.0",
-  "room_id": "fixture_002_recessed_room",
-  "name": "Fixture sintético con retranqueo",
-  "units": "m",
-  "measured_at": "2026-09-06",
-  "capture": {
-    "method": "tape",
-    "session_id": "synthetic-002",
-    "notes": "Datos sintéticos; no representan una vivienda"
-  },
-  "coordinate_system": {
-    "origin": {
-      "type": "interior_floor_corner",
-      "corner_id": "corner-01",
-      "point_m": [0.0, 0.0, 0.0],
-      "wall_ids": ["wall-01", "wall-08"],
-      "selection_rule": "longest_uninterrupted_reference_wall"
-    },
-    "axes": {
-      "x": "wall-01_start_to_end",
-      "y": "right_handed_perpendicular_to_x",
-      "z": "vertical_up",
-      "handedness": "right"
-    },
-    "boundary_winding": "counterclockwise_viewed_from_above"
-  },
-  "dimensions": {
-    "height": {
-      "value_m": 2.48,
-      "status": "estimated",
-      "uncertainty_m": 0.03,
-      "method": "existing_plan",
-      "source_id": "synthetic-002-height",
-      "note": "Estimación deliberada para probar el flujo de incertidumbre"
-    },
-    "floor_area": {
-      "value_m2": 11.7,
-      "status": "derived",
-      "method": "shoelace_polygon",
-      "source_id": "synthetic-002-boundary",
-      "formula": "area from ordered wall endpoints",
-      "depends_on": ["wall-01", "wall-02", "wall-03", "wall-04", "wall-05", "wall-06", "wall-07", "wall-08"]
-    }
-  },
-  "walls": [
-    {"id": "wall-01", "start_m": [0.0, 0.0, 0.0], "end_m": [4.0, 0.0, 0.0], "length": {"value_m": 4.0, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-wall-01"}, "thickness": {"status": "unknown", "method": "not_captured"}},
-    {"id": "wall-02", "start_m": [4.0, 0.0, 0.0], "end_m": [4.0, 3.0, 0.0], "length": {"value_m": 3.0, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-wall-02"}, "thickness": {"status": "unknown", "method": "not_captured"}},
-    {"id": "wall-03", "start_m": [4.0, 3.0, 0.0], "end_m": [2.5, 3.0, 0.0], "length": {"value_m": 1.5, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-wall-03"}, "thickness": {"status": "unknown", "method": "not_captured"}},
-    {"id": "wall-04", "start_m": [2.5, 3.0, 0.0], "end_m": [2.5, 2.7, 0.0], "length": {"value_m": 0.3, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-wall-04"}, "thickness": {"status": "unknown", "method": "not_captured"}},
-    {"id": "wall-05", "start_m": [2.5, 2.7, 0.0], "end_m": [1.5, 2.7, 0.0], "length": {"value_m": 1.0, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-wall-05"}, "thickness": {"status": "unknown", "method": "not_captured"}},
-    {"id": "wall-06", "start_m": [1.5, 2.7, 0.0], "end_m": [1.5, 3.0, 0.0], "length": {"value_m": 0.3, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-wall-06"}, "thickness": {"status": "unknown", "method": "not_captured"}},
-    {"id": "wall-07", "start_m": [1.5, 3.0, 0.0], "end_m": [0.0, 3.0, 0.0], "length": {"value_m": 1.5, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-wall-07"}, "thickness": {"status": "unknown", "method": "not_captured"}},
-    {"id": "wall-08", "start_m": [0.0, 3.0, 0.0], "end_m": [0.0, 0.0, 0.0], "length": {"value_m": 3.0, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-wall-08"}, "thickness": {"status": "unknown", "method": "not_captured"}}
-  ],
-  "openings": {
-    "doors": [
-      {"id": "door-01", "wall_id": "wall-01", "distance_from_start": {"value_m": 1.0, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-door"}, "width": {"value_m": 0.8, "status": "measured", "uncertainty_m": 0.003, "method": "laser", "source_id": "synthetic-002-door"}, "height": {"value_m": 2.1, "status": "measured", "uncertainty_m": 0.003, "method": "laser", "source_id": "synthetic-002-door"}, "depth": {"value_m": 0.12, "status": "estimated", "uncertainty_m": 0.02, "method": "visual", "source_id": "synthetic-002-door"}}
-    ],
-    "windows": [
-      {"id": "window-01", "wall_id": "wall-02", "distance_from_start": {"value_m": 0.8, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-window"}, "width": {"value_m": 1.0, "status": "measured", "uncertainty_m": 0.003, "method": "laser", "source_id": "synthetic-002-window"}, "height": {"value_m": 1.0, "status": "measured", "uncertainty_m": 0.003, "method": "laser", "source_id": "synthetic-002-window"}, "sill_height": {"value_m": 0.9, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-window"}, "depth": {"status": "unknown", "method": "not_captured"}}
-    ]
-  },
-  "fixed_elements": [
-    {"id": "pillar-01", "type": "pillar", "wall_id": "wall-02", "distance_from_start": {"value_m": 1.8, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-pillar"}, "dimensions": {"width": {"value_m": 0.2, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-pillar"}, "depth": {"value_m": 0.2, "status": "measured", "uncertainty_m": 0.005, "method": "tape", "source_id": "synthetic-002-pillar"}, "height": {"value_m": 2.48, "status": "estimated", "uncertainty_m": 0.03, "method": "existing_plan", "source_id": "synthetic-002-height"}}}
-  ],
-  "notes": ["El retranqueo está formado por wall-04, wall-05 y wall-06.", "El fixture prueba una medida estimated y otra derived."],
-  "evidence": [{"id": "synthetic-002-boundary", "kind": "synthetic_spec", "scale_known": true, "path": null}]
-}
-```
-
-El fixture prueba una habitación no rectangular con retranqueo, un pilar, puerta,
-ventana, una medida `estimated` y otra `derived`. No contiene decoración ni
+El fixture ejecutable está en `measurements/fixtures/room-v1-synthetic.json` y
+valida contra el schema v1. Representa una habitación sintética de
+aproximadamente 5 × 4 m y altura 2.50 m, con ocho segmentos de boundary, un
+retranqueo de 1 × 0.3 m, una puerta, una ventana y un enchufe opcional como
+elemento fijo. Incluye medidas `measured`, una altura `estimated` con
+incertidumbre explícita, una superficie `derived` con fórmula y dependencias, y
+profundidad `unknown` sin valor fingido. No contiene decoración, datos reales ni
 datos personales.
 
 ## Criterios de aceptación
@@ -539,9 +415,9 @@ las fases posteriores sin reinterpretación silenciosa:
 7. Puertas y ventanas se referencian por pared/segmento y offset.
 8. Los métodos de captura y la política de fotos están documentados sin exigir LiDAR.
 9. La arquitectura parser/validator/generator y sus validaciones futuras están definidas.
-10. El fixture sintético 002 conceptual incluye retranqueo/pilar, `estimated` y `derived`.
+10. El fixture sintético 002 versionado incluye retranqueo, `estimated`, `derived` y un elemento fijo opcional.
 11. El plan separa diseño, fixture, validador, generador, validaciones y procedimiento real.
-12. El flujo no depende de rutas personales ni modifica todavía `measurements/` o Blender.
+12. El flujo no depende de rutas personales, no contiene medidas reales y mantiene fuera de alcance Blender, MCP y el modelado real.
 
 ## Riesgos T2 y mitigaciones
 
@@ -575,8 +451,7 @@ las fases posteriores sin reinterpretación silenciosa:
 
 ## Decisiones pendientes
 
-- Completar y aprobar el contrato detallado de schema v1 antes de materializar el
-  fixture sintético.
+- Revisar el contrato implementado de schema v1 antes de admitir datos reales.
 - Revisar el baseline de tolerancias con evidencia de una primera sesión real,
   sin confundir esa revisión con la precisión almacenada o matemática.
 - Mantener sin decidir el nombre y la ubicación exacta del primer archivo real:
