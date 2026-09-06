@@ -1,18 +1,20 @@
 # Tareas: Blender + Codex + MCP Foundation
 
-Las tareas reflejan el estado real de ejecución de este slice. T2.02–T2.03, T2.05–T2.07 y T2.09–T2.12 están completadas con la evidencia documentada. T2.01, T2.04, T2.08 y T2.13 quedan pendientes por las limitaciones o cierres indicados en cada tarea. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
+Las tareas reflejan el estado real de ejecución de este slice. T2.01–T2.12 están completadas con la evidencia documentada; T2.01 conserva una excepción documental explícita y T2.13 queda pendiente por el cierre formal indicado en su tarea. La política de `AGENTS.md` sigue vigente: no convertir cada microtarea en un subagente; usar el agente principal y mantener el proceso proporcional.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.01 — Aprobar alcance y contrato
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — cerrada el 2026-09-05 **CON EXCEPCIÓN DOCUMENTAL**.
 - **Objetivo:** confirmar que `spec.md`, `plan.md` y `tasks.md` reflejan un único objetivo y todos los límites T2.
 - **Evidencia esperada:** aprobación del alcance, exclusiones, criterios, riesgos e invariantes.
 - **Validación:** revisión cruzada de los tres artefactos y del diff completo.
 - **Autorización del usuario:** sí, aprobación de la especificación antes de instalar o configurar.
 
-**Pendiente:** falta únicamente la aprobación formal independiente del alcance y contrato; el trabajo técnico posterior se conserva.
+**Excepción documental T2.01:** la aprobación previa exigida originalmente no quedó registrada a tiempo; no se afirma que esa aprobación existiera. El propietario del proyecto acepta formalmente esta desviación de proceso, confirma retrospectivamente que el alcance, las exclusiones, los riesgos, los criterios y las invariantes de T2 fueron respetados, y autoriza cerrar T2.01 como completada **CON EXCEPCIÓN DOCUMENTAL**.
+
+**Autorización formal del propietario:** “Autorizo la excepción formal de T2.01: acepto que la aprobación previa no quedó registrada, confirmo retrospectivamente que el alcance, exclusiones, riesgos, criterios e invariantes de T2 fueron respetados y autorizo cerrar T2.01 como completada con excepción documental.”
 
 ## T2.02 — Inventariar el portátil
 
@@ -32,15 +34,15 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.04 — Instalar y verificar Blender
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-05.
 - **Objetivo:** instalar Blender 5.2.1 LTS en el portátil usando la modalidad aprobada en T2.03.
 - **Evidencia esperada:** Blender inicia, muestra la versión esperada y guarda una escena vacía en el área de pruebas.
 - **Validación:** smoke de apertura/guardado y comprobación de no exposición de servicios no solicitados.
 - **Autorización del usuario:** sí.
 
-**Resultado observado T2.04:** Blender inició y reportó `5.2.1 LTS`; el fixture de aceptación se guardó posteriormente en T2.09/T2.10, pero no se demostró el guardado de una escena vacía independiente.
+**Resultado T2.04:** Blender inició y reportó `5.2.1 LTS`. Se creó y guardó de forma independiente `blender/scenes/tests/002-blender-empty-save-smoke.blend` con la escena `T2_04_EMPTY_SAVE_SMOKE`: 0 objetos, 0 materiales, unidades `METRIC`, `scale_length = 1.0` y sin assets externos. El archivo se cerró y reabrió correctamente; el contenido persistió y no quedaron cambios pendientes. La comprobación read-only de red observó únicamente loopback y ningún listener o conexión establecida no-loopback atribuible a Blender/MCP.
 
-**Pendiente:** demostrar el guardado de una escena vacía en el área de pruebas, si se mantiene este criterio original.
+**Definición factual de “escena vacía” T2.04:** escena independiente sin objetos ni materiales, equivalente al estado mínimo de Blender usado para esta prueba; no se reutilizó `001-foundation-room.blend`.
 
 ## T2.05 — Revisar el MCP candidato
 
@@ -74,15 +76,13 @@ Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 ## T2.08 — Ejecutar el smoke técnico
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]` — validada el 2026-09-05.
 - **Objetivo:** probar la cadena Codex CLI → MCP local → Blender con una escena vacía/desechable.
 - **Evidencia esperada:** primera operación `bpy` de solo lectura (nombre de escena y/o número de objetos), una operación de escena simple y reversible y archivo de smoke guardado.
 - **Validación:** la primera operación no usa filesystem, red ni procesos externos; el guardado posterior es explícito dentro del workspace; apertura/guardado, operación reversible, rutas/permisos observables y diff/artefactos revisados. La ausencia de sandbox técnico se registra como limitación, no como PASS.
 - **Autorización del usuario:** sí antes de ejecutar `execute_blender_code`/`bpy`.
 
-**Resultado T2.08:** `get_addon_status` permanece como `DEUDA CONOCIDA NO BLOQUEANTE PARA EL SMOKE`: `src/blender_mcp/config.py` no existe en el pin y la tool no se usa para validar telemetría. El precheck live, handshake, lectura inicial, primera llamada `bpy` read-only, creación/verificación/eliminación del cubo temporal, captura de viewport y validación independiente de red resultaron PASS. No se creó ningún `.blend`, no se modificó código upstream y T2.09 no se inició.
-
-**Pendiente:** el criterio original de guardar un archivo de smoke no está demostrado; la operación reversible y su limpieza sí quedaron validadas.
+**Resultado T2.08:** `get_addon_status` permanece como `DEUDA CONOCIDA NO BLOQUEANTE PARA EL SMOKE`: `src/blender_mcp/config.py` no existe en el pin y la tool no se usa para validar telemetría. La cadena live `Codex CLI → MCP local → Blender` resultó PASS; la primera operación mediante MCP fue read-only y consultó escena, objetos y unidades sin filesystem, red ni procesos externos. Se creó el cubo temporal `T2_08_TEMP_REVERSIBLE_CUBE`, se verificó mediante MCP (`MESH`, 8 vértices, 12 aristas, 6 polígonos, ubicación `(0, 0, 0.5)`) y se eliminó completamente antes del guardado. Se guardó de forma independiente `blender/scenes/tests/003-codex-mcp-smoke.blend` con la escena `T2_08_CODEX_MCP_SMOKE`, 0 objetos, 0 mallas, 0 materiales, unidades `METRIC` y `scale_length = 1.0`; el archivo se cerró y reabrió correctamente con Blender `5.2.1 LTS` y sin cambios pendientes. La comprobación read-only de red observó únicamente loopback y ningún listener o conexión establecida no-loopback atribuible a Blender/MCP. No se reutilizó `001-foundation-room.blend`, no se modificó código upstream ni configuración global.
 
 ## T2.09 — Crear la habitación sintética mínima
 

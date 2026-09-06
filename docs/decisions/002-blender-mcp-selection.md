@@ -207,7 +207,7 @@ No se usará rollback destructivo si la procedencia de un archivo o configuraci�
 
 ## Resultado de T2.08 — smoke técnico y validación live
 
-Fecha de ejecución: 2026-09-04.
+Fecha de ejecución inicial: 2026-09-04. Revalidación del guardado independiente: 2026-09-05.
 
 ### Precheck
 
@@ -243,7 +243,14 @@ Fecha de ejecución: 2026-09-04.
 - Telemetría: **PASS**, `DISABLE_TELEMETRY="true"` y consentimiento del addon `False`, verificado directamente mediante `bpy`; `get_addon_status` no se utilizó para esta conclusión.
 - Integraciones: **PASS**, Poly Haven, Sketchfab, Poly Pizza, Hyper3D y Hunyuan3D `False`, verificado directamente mediante `bpy`.
 - Procesos MCP: árbol esperado activo (`uv` → `blender-mcp` → Python), sin procesos MCP huérfanos inesperados observados.
-- El estado final de T2.08 conservaba exactamente `Cube`, `Light` y `Camera`; en esa tarea no se creó `.blend`. El fixture se creó y validó posteriormente en T2.09/T2.10. No se modificaron cámara, preferencias ni materiales en T2.08.
+- En la ejecución inicial de T2.08 el estado final conservaba exactamente `Cube`, `Light` y `Camera` y no se creó `.blend`; el fixture se creó y validó posteriormente en T2.09/T2.10. La revalidación del guardado independiente se documenta a continuación y no altera el fixture.
+
+### Revalidación T2.08 — guardado independiente
+
+- La cadena live `Codex CLI → MCP local → Blender` resultó PASS en el PORTÁTIL. La primera operación mediante MCP fue read-only y no realizó llamadas de filesystem, red ni procesos externos.
+- Se creó `T2_08_TEMP_REVERSIBLE_CUBE`, se verificó como `MESH` con 8 vértices, 12 aristas, 6 polígonos, ubicación `(0, 0, 0.5)`, rotación cero y escala `(1, 1, 1)`, y se eliminó completamente antes de guardar.
+- Se guardó `blender/scenes/tests/003-codex-mcp-smoke.blend` (`96929` bytes; SHA-256 `E55AE5C1DEA4C814D6FA3286F6232D2056FAED58EBD44286B4352912F2D995B4`). La escena `T2_08_CODEX_MCP_SMOKE` reabrió correctamente con Blender `5.2.1 LTS`, 0 objetos, 0 mallas, 0 materiales, unidades `METRIC`, `scale_length = 1.0` y sin cambios pendientes.
+- La comprobación read-only de red observó únicamente listeners loopback en `127.0.0.1:9876`, cero listeners no-loopback en ese puerto y cero conexiones establecidas no-loopback atribuibles a Blender/MCP. No se reutilizó `001-foundation-room.blend`, no se modificó código upstream ni configuración global.
 
 ### Rollback de la integración Codex
 
