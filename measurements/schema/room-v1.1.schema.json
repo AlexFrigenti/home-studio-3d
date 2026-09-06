@@ -1,0 +1,651 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:home-studio-3d:measurements:room-v1.1",
+  "title": "Home Studio 3D Room Measurement v1.1",
+  "description": "Canonical structured measurements for one room. Lengths and uncertainties are expressed in metres unless a field name says otherwise.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "room_id",
+    "name",
+    "units",
+    "measured_at",
+    "measurement_method",
+    "coordinate_system",
+    "height",
+    "boundary",
+    "openings",
+    "fixed_elements",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.1"
+    },
+    "room_id": {
+      "$ref": "#/$defs/id"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "units": {
+      "const": "m"
+    },
+    "measured_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "measurement_method": {
+      "type": "string",
+      "minLength": 1
+    },
+    "coordinate_system": {
+      "$ref": "#/$defs/coordinate_system"
+    },
+    "height": {
+      "$ref": "#/$defs/measurement"
+    },
+    "floor_area": {
+      "$ref": "#/$defs/measurement"
+    },
+    "boundary": {
+      "$ref": "#/$defs/boundary"
+    },
+    "openings": {
+      "$ref": "#/$defs/openings"
+    },
+    "fixed_elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fixed_element"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "method"
+      ],
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "status": {
+          "enum": [
+            "measured",
+            "estimated",
+            "derived",
+            "unknown"
+          ]
+        },
+        "uncertainty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "formula": {
+          "type": "string",
+          "minLength": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "measured",
+                  "estimated",
+                  "derived"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "value"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "estimated"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "uncertainty",
+              "note"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "derived"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "formula",
+              "depends_on"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unknown"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "value"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "vector3": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "coordinate_system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin",
+        "axes",
+        "boundary_orientation",
+        "floor_z_m"
+      ],
+      "properties": {
+        "origin": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "corner_id",
+            "point_m",
+            "adjacent_segment_ids",
+            "selection_rule"
+          ],
+          "properties": {
+            "type": {
+              "const": "interior_finished_floor_corner"
+            },
+            "corner_id": {
+              "$ref": "#/$defs/id"
+            },
+            "point_m": {
+              "$ref": "#/$defs/vector3"
+            },
+            "adjacent_segment_ids": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "selection_rule": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "axes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y",
+            "z",
+            "handedness"
+          ],
+          "properties": {
+            "x": {
+              "type": "string",
+              "minLength": 1
+            },
+            "y": {
+              "type": "string",
+              "minLength": 1
+            },
+            "z": {
+              "type": "string",
+              "minLength": 1
+            },
+            "handedness": {
+              "const": "right"
+            }
+          }
+        },
+        "boundary_orientation": {
+          "const": "counterclockwise_viewed_from_above"
+        },
+        "floor_z_m": {
+          "const": 0
+        }
+      }
+    },
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "start_m",
+        "end_m",
+        "length"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "start_m": {
+          "$ref": "#/$defs/vector3"
+        },
+        "end_m": {
+          "$ref": "#/$defs/vector3"
+        },
+        "length": {
+          "$ref": "#/$defs/measurement"
+        },
+        "thickness": {
+          "$ref": "#/$defs/measurement"
+        },
+        "start_measurement": {
+          "$ref": "#/$defs/measurement"
+        },
+        "end_measurement": {
+          "$ref": "#/$defs/measurement"
+        },
+        "reconciled_geometry": {
+          "$ref": "#/$defs/reconciled_geometry"
+        }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "winding",
+        "segments"
+      ],
+      "properties": {
+        "winding": {
+          "const": "counterclockwise_viewed_from_above"
+        },
+        "segments": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/segment"
+          }
+        },
+        "reconciliation": {
+          "$ref": "#/$defs/reconciliation"
+        }
+      }
+    },
+    "opening_base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "wall_id",
+        "offset"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "wall_id": {
+          "$ref": "#/$defs/id"
+        },
+        "offset": {
+          "$ref": "#/$defs/measurement"
+        },
+        "width": {
+          "$ref": "#/$defs/measurement"
+        },
+        "height": {
+          "$ref": "#/$defs/measurement"
+        },
+        "depth": {
+          "$ref": "#/$defs/measurement"
+        },
+        "sill_height": {
+          "$ref": "#/$defs/measurement"
+        },
+        "opening_direction": {
+          "enum": [
+            "unknown",
+            "inward",
+            "outward",
+            "left",
+            "right"
+          ]
+        }
+      }
+    },
+    "door": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/opening_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "width",
+            "height"
+          ],
+          "properties": {
+            "opening_direction": {
+              "enum": [
+                "unknown",
+                "inward",
+                "outward",
+                "left",
+                "right"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "window": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/opening_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "width",
+            "height",
+            "sill_height"
+          ],
+          "properties": {
+            "sill_height": {
+              "$ref": "#/$defs/measurement"
+            }
+          }
+        }
+      ]
+    },
+    "openings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "doors",
+        "windows"
+      ],
+      "properties": {
+        "doors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/door"
+          }
+        },
+        "windows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/window"
+          }
+        }
+      }
+    },
+    "wall_anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wall_id",
+        "offset"
+      ],
+      "properties": {
+        "wall_id": {
+          "$ref": "#/$defs/id"
+        },
+        "offset": {
+          "$ref": "#/$defs/measurement"
+        }
+      }
+    },
+    "point_anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "point_m"
+      ],
+      "properties": {
+        "point_m": {
+          "$ref": "#/$defs/vector3"
+        }
+      }
+    },
+    "fixed_element": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "anchor",
+        "height"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "enum": [
+            "pillar",
+            "recess",
+            "radiator",
+            "socket",
+            "switch",
+            "fixed"
+          ]
+        },
+        "anchor": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/wall_anchor"
+            },
+            {
+              "$ref": "#/$defs/point_anchor"
+            }
+          ]
+        },
+        "height": {
+          "$ref": "#/$defs/measurement"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "reconciled_geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "length",
+        "delta_m",
+        "reason",
+        "reconciliation_id"
+      ],
+      "properties": {
+        "length": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/measurement"
+            },
+            {
+              "type": "object",
+              "required": [
+                "source_id"
+              ],
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "status": {
+                  "const": "derived"
+                }
+              }
+            }
+          ]
+        },
+        "delta_m": {
+          "type": "number"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reconciliation_id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "method",
+        "observed_residual_m",
+        "observed_residual_norm_m",
+        "reconciled_residual_m",
+        "reconciled_residual_norm_m",
+        "authorized_max_adjustment_m",
+        "accepted_residual_tolerance_m",
+        "adjusted_segment_ids",
+        "formula",
+        "depends_on",
+        "source_id",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observed_residual_m": {
+          "$ref": "#/$defs/vector3"
+        },
+        "observed_residual_norm_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "reconciled_residual_m": {
+          "$ref": "#/$defs/vector3"
+        },
+        "reconciled_residual_norm_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "authorized_max_adjustment_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "accepted_residual_tolerance_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "adjusted_segment_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "formula": {
+          "type": "string",
+          "minLength": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

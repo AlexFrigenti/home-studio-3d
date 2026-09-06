@@ -1,0 +1,168 @@
+{
+  "schema_version": "1.1",
+  "room_id": "fixture_011_reconciled_room",
+  "name": "Synthetic reconciled room",
+  "units": "m",
+  "measured_at": "2026-09-06",
+  "measurement_method": "manual_tape",
+  "coordinate_system": {
+    "origin": {
+      "type": "interior_finished_floor_corner",
+      "corner_id": "corner-01",
+      "point_m": [0.0, 0.0, 0.0],
+      "adjacent_segment_ids": ["wall-00", "wall-03"],
+      "selection_rule": "synthetic_reference_corner"
+    },
+    "axes": {
+      "x": "wall-00_start_to_end",
+      "y": "right_handed_perpendicular_to_x",
+      "z": "vertical_up",
+      "handedness": "right"
+    },
+    "boundary_orientation": "counterclockwise_viewed_from_above",
+    "floor_z_m": 0
+  },
+  "height": {
+    "value": 2.5,
+    "status": "measured",
+    "uncertainty": 0.01,
+    "method": "manual_tape",
+    "source_id": "synthetic-011-height"
+  },
+  "floor_area": {
+    "value": 4.0,
+    "status": "derived",
+    "method": "shoelace",
+    "formula": "shoelace(boundary.segments)",
+    "depends_on": ["wall-00", "wall-01", "wall-02", "wall-03"]
+  },
+  "boundary": {
+    "winding": "counterclockwise_viewed_from_above",
+    "segments": [
+      {
+        "id": "wall-00",
+        "start_m": [0.0, 0.0, 0.0],
+        "end_m": [2.0, 0.0, 0.0],
+        "length": {
+          "value": 1.98,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "synthetic-011-wall-00"
+        },
+        "reconciled_geometry": {
+          "length": {
+            "value": 2.0,
+            "status": "derived",
+            "method": "orthogonal_boundary_reconciliation",
+            "formula": "length.value + reconciled_geometry.delta_m",
+            "depends_on": ["wall-00.length", "boundary.reconciliation"],
+            "source_id": "synthetic-011-closure-01",
+            "note": "Synthetic geometry-only adjustment."
+          },
+          "delta_m": 0.02,
+          "reason": "Synthetic exact closure",
+          "reconciliation_id": "closure-01"
+        }
+      },
+      {
+        "id": "wall-01",
+        "start_m": [2.0, 0.0, 0.0],
+        "end_m": [2.0, 2.0, 0.0],
+        "length": {
+          "value": 2.0,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "synthetic-011-wall-01"
+        }
+      },
+      {
+        "id": "wall-02",
+        "start_m": [2.0, 2.0, 0.0],
+        "end_m": [0.0, 2.0, 0.0],
+        "length": {
+          "value": 2.0,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "synthetic-011-wall-02"
+        }
+      },
+      {
+        "id": "wall-03",
+        "start_m": [0.0, 2.0, 0.0],
+        "end_m": [0.0, 0.0, 0.0],
+        "length": {
+          "value": 2.0,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "synthetic-011-wall-03"
+        }
+      }
+    ],
+    "reconciliation": {
+      "id": "closure-01",
+      "method": "orthogonal_boundary_reconciliation",
+      "observed_residual_m": [-0.02, 0.0, 0.0],
+      "observed_residual_norm_m": 0.02,
+      "reconciled_residual_m": [0.0, 0.0, 0.0],
+      "reconciled_residual_norm_m": 0.0,
+      "authorized_max_adjustment_m": 0.05,
+      "accepted_residual_tolerance_m": 0.000001,
+      "adjusted_segment_ids": ["wall-00"],
+      "formula": "sum(effective_segment_vectors)",
+      "depends_on": [
+        "wall-00.length",
+        "wall-00.reconciled_geometry.length",
+        "wall-01.length",
+        "wall-02.length",
+        "wall-03.length"
+      ],
+      "source_id": "synthetic-011-closure-01",
+      "reason": "Synthetic exact closure"
+    }
+  },
+  "openings": {
+    "doors": [
+      {
+        "id": "door-01",
+        "wall_id": "wall-01",
+        "offset": {
+          "value": 0.5,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "synthetic-011-door"
+        },
+        "width": {
+          "value": 0.8,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "synthetic-011-door"
+        },
+        "height": {
+          "value": 2.0,
+          "status": "estimated",
+          "uncertainty": 0.05,
+          "method": "synthetic_estimate",
+          "source_id": "synthetic-011-door",
+          "note": "Synthetic estimate for compatibility coverage."
+        },
+        "depth": {
+          "status": "unknown",
+          "method": "not_captured"
+        },
+        "opening_direction": "unknown"
+      }
+    ],
+    "windows": []
+  },
+  "fixed_elements": [],
+  "notes": [
+    "Synthetic v1.1 fixture only; it contains no real room data.",
+    "Observed closure is non-zero and reconciled closure is exact."
+  ]
+}

@@ -25,6 +25,7 @@ except ImportError:  # pragma: no cover - exercised only outside Blender.
 
 
 GENERATOR_VERSION = "room-v1-generator-1"
+GENERATOR_V11_VERSION = "room-v1.1-generator-1"
 MATH_TOLERANCE_M = 1e-6
 DEFAULT_WALL_THICKNESS_M = 0.10
 DEFAULT_OPENING_DEPTH_M = 0.06
@@ -131,6 +132,20 @@ def _measurement(record: dict[str, Any], field: str, *, fallback: float | None =
         "depends_on": list(value.get("depends_on", [])) if isinstance(value.get("depends_on"), list) else [],
         "used_fallback": used_fallback,
     }
+
+
+def _segment_length_measurements(segment: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], bool]:
+    """Return observed length, effective geometry length and reconciliation state."""
+
+    observed = _measurement(segment, "length")
+    reconciled_geometry = segment.get("reconciled_geometry")
+    if not isinstance(reconciled_geometry, dict):
+        return observed, observed, False
+    reconciled_length = reconciled_geometry.get("length")
+    if not isinstance(reconciled_length, dict):
+        raise GenerationError("reconciled_geometry.length must be a measurement object")
+    geometry = _measurement({"length": reconciled_length}, "length")
+    return observed, geometry, True
 
 
 def _point(value: Iterable[float]) -> list[float]:
@@ -264,6 +279,8 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
 
     height_measurement = _measurement(room, "height")
     height = height_measurement["value_m"]
+    if height is None:
+        raise GenerationError("room height is unknown and cannot be materialized")
     segments = room["boundary"]["segments"]
     walls_by_id: dict[str, dict[str, Any]] = {}
     walls: list[dict[str, Any]] = []
@@ -271,10 +288,12 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
         segment_id = segment["id"]
         start = _point(segment["start_m"])
         end = _point(segment["end_m"])
-        length_measurement = _measurement(segment, "length")
+        observed_length_measurement, geometry_length_measurement, geometry_reconciled = _segment_length_measurements(segment)
+        if geometry_length_measurement["value_m"] is None:
+            raise GenerationError(f"segment {segment_id} effective geometry length is unknown")
         geometry = _wall_geometry(start, end, 0.0, height)
-        if abs(geometry["length_m"] - length_measurement["value_m"]) > MATH_TOLERANCE_M:
-            raise GenerationError(f"segment {segment_id} length disagrees with its coordinates")
+        if abs(geometry["length_m"] - geometry_length_measurement["value_m"]) > MATH_TOLERANCE_M:
+            raise GenerationError(f"segment {segment_id} effective length disagrees with its coordinates")
         thickness_measurement = _measurement(
             segment,
             "thickness",
@@ -288,11 +307,11 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
         )
         wall = {
             "id": segment_id,
-            "source_id": length_measurement["source_id"] or segment_id,
+            "source_id": observed_length_measurement["source_id"] or segment_id,
             "start_m": start,
             "end_m": end,
-            "length_m": length_measurement["value_m"],
-            "length_status": length_measurement["status"],
+            "length_m": geometry_length_measurement["value_m"],
+            "length_status": observed_length_measurement["status"],
             "thickness_m": thickness_measurement["value_m"],
             "thickness_source_status": thickness_measurement["status"],
             "thickness_geometry_status": "derived" if thickness_measurement["used_fallback"] else thickness_measurement["status"],
@@ -307,6 +326,18 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
             "height_m": height,
             "height_status": height_measurement["status"],
         }
+        if room["schema_version"] == "1.1":
+            wall.update(
+                {
+                    "observed_source_id": observed_length_measurement["source_id"],
+                    "geometry_source_id": geometry_length_measurement["source_id"],
+                    "observed_length_m": observed_length_measurement["value_m"],
+                    "observed_length_status": observed_length_measurement["status"],
+                    "geometry_length_m": geometry_length_measurement["value_m"],
+                    "geometry_length_status": geometry_length_measurement["status"],
+                    "geometry_reconciled": geometry_reconciled,
+                }
+            )
         walls.append(wall)
         walls_by_id[segment_id] = wall
 
@@ -346,6 +377,8 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
             offset = _measurement(opening, "offset")
             width = _measurement(opening, "width")
             opening_height = _measurement(opening, "height")
+            if any(measurement["value_m"] is None for measurement in (offset, width, opening_height)):
+                raise GenerationError(f"opening {opening['id']} has unknown required geometry")
             depth = _measurement(opening, "depth", fallback=DEFAULT_OPENING_DEPTH_M)
             sill = _measurement(opening, "sill_height") if kind == "window" else {
                 "value_m": 0.0,
@@ -443,8 +476,8 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
         )
 
     statuses, source_ids = _collect_metadata(room)
-    return {
-        "generator_version": GENERATOR_VERSION,
+    plan = {
+        "generator_version": GENERATOR_V11_VERSION if room["schema_version"] == "1.1" else GENERATOR_VERSION,
         "room_id": room["room_id"],
         "root_name": f"{ROOT_PREFIX}{room['room_id']}",
         "units": room["units"],
@@ -458,6 +491,9 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
         "status_index": statuses,
         "source_ids": source_ids,
     }
+    if room["schema_version"] == "1.1":
+        plan["schema_version"] = "1.1"
+    return plan
 
 
 def logical_signature(plan: dict[str, Any]) -> str:
@@ -564,7 +600,7 @@ def _create_scene(plan: dict[str, Any], input_path: Path) -> Any:
     root_metadata = {
         "hs3d_generator_version": plan["generator_version"],
         "hs3d_room_id": plan["room_id"],
-        "hs3d_schema_version": "1.0",
+        "hs3d_schema_version": plan.get("schema_version", "1.0"),
         "hs3d_units": plan["units"],
         "hs3d_input_path": relative_input,
         "hs3d_coordinate_system_json": plan["coordinate_system"],
@@ -603,22 +639,32 @@ def _create_scene(plan: dict[str, Any], input_path: Path) -> Any:
         name = f"HS3D_WALL_{wall['id']}"
         obj = _mesh_object(name, wall["vertices_m"], _wall_faces(), architecture)
         _apply_material(obj, wall_material, (0.55, 0.58, 0.64, 1.0))
-        _set_metadata(
-            obj,
-            {
-                "hs3d_role": "wall",
-                "hs3d_source_id": wall["source_id"],
-                "hs3d_status": wall["thickness_source_status"],
-                "hs3d_geometry_status": "derived",
-                "hs3d_length_m": wall["length_m"],
-                "hs3d_height_m": wall["height_m"],
-                "hs3d_height_status": wall["height_status"],
-                "hs3d_thickness_m": wall["thickness_m"],
-                "hs3d_thickness_source_status": wall["thickness_source_status"],
-                "hs3d_thickness_fallback": wall["thickness_fallback"],
-                "hs3d_inner_face_json": {"start_m": wall["inner_start_m"], "end_m": wall["inner_end_m"]},
-            },
-        )
+        wall_metadata = {
+            "hs3d_role": "wall",
+            "hs3d_source_id": wall["source_id"],
+            "hs3d_status": wall["thickness_source_status"],
+            "hs3d_geometry_status": "derived",
+            "hs3d_length_m": wall["length_m"],
+            "hs3d_height_m": wall["height_m"],
+            "hs3d_height_status": wall["height_status"],
+            "hs3d_thickness_m": wall["thickness_m"],
+            "hs3d_thickness_source_status": wall["thickness_source_status"],
+            "hs3d_thickness_fallback": wall["thickness_fallback"],
+            "hs3d_inner_face_json": {"start_m": wall["inner_start_m"], "end_m": wall["inner_end_m"]},
+        }
+        if plan.get("schema_version") == "1.1":
+            wall_metadata.update(
+                {
+                    "hs3d_observed_source_id": wall["observed_source_id"],
+                    "hs3d_geometry_source_id": wall["geometry_source_id"],
+                    "hs3d_observed_length_m": wall["observed_length_m"],
+                    "hs3d_observed_length_status": wall["observed_length_status"],
+                    "hs3d_geometry_length_m": wall["geometry_length_m"],
+                    "hs3d_geometry_length_status": wall["geometry_length_status"],
+                    "hs3d_geometry_reconciled": wall["geometry_reconciled"],
+                }
+            )
+        _set_metadata(obj, wall_metadata)
 
     for opening in plan["openings"]:
         name = f"HS3D_{opening['kind'].upper()}_{opening['id']}"
@@ -822,6 +868,16 @@ def validate_generated_scene(room: dict[str, Any], root_collection: Any | None =
             errors.append(f"wall {wall['id']} geometry does not match plan")
         elif abs(float(obj.get("hs3d_height_m", -1.0)) - plan["height_m"]) > MATH_TOLERANCE_M:
             errors.append(f"wall {wall['id']} height does not match plan")
+        # Existing v1 scenes do not carry the additive v1.1 metadata. Keep
+        # validating their original geometry while checking the richer
+        # observed/geometry split whenever it is present.
+        if obj is not None and plan.get("schema_version") == "1.1":
+            if abs(float(obj.get("hs3d_observed_length_m", -1.0)) - wall["observed_length_m"]) > MATH_TOLERANCE_M:
+                errors.append(f"wall {wall['id']} observed length metadata does not match plan")
+            if abs(float(obj.get("hs3d_geometry_length_m", -1.0)) - wall["geometry_length_m"]) > MATH_TOLERANCE_M:
+                errors.append(f"wall {wall['id']} geometry length metadata does not match plan")
+            if bool(obj.get("hs3d_geometry_reconciled", False)) != wall["geometry_reconciled"]:
+                errors.append(f"wall {wall['id']} reconciliation metadata does not match plan")
         if obj is not None and obj.get("hs3d_thickness_source_status") != wall["thickness_source_status"]:
             errors.append(f"wall {wall['id']} thickness status was not preserved")
 

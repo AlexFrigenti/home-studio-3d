@@ -2,7 +2,7 @@
 
 > Clasificación: T2 — contrato canónico de medidas, unidades y coordenadas
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: schema JSON v1, fixture sintético, validador y primer generador Blender implementados; no se han capturado medidas reales ni generado geometría del salón
+> Estado: schema JSON v1 y v1.1, fixtures sintéticos, validador y generación de planes implementados; hubo una captura física real fuera de `measurements/`, pero todavía no existe JSON canónico real versionado ni se ha generado o validado el salón real con Blender
 
 ## Objetivo
 
@@ -40,7 +40,7 @@ entre observación, incertidumbre, geometría derivada y evidencia.
 
 ### Fuera de alcance
 
-- Capturar o registrar todavía medidas reales en `measurements/`.
+- Transcribir o versionar medidas reales en `measurements/`; la captura física puede existir fuera del repositorio.
 - Modelar el salón real o modificar cualquier escena canónica.
 - Generar geometría a partir de medidas reales o modelar el salón real.
 - Integración MCP o cambios en la configuración de Blender/Codex.
@@ -154,6 +154,17 @@ superior es:
 El fixture ejecutable de este slice, que muestra todos los estados y un
 retranqueo, está en `measurements/fixtures/room-v1-synthetic.json`. No se crea
 ningún archivo de medidas reales.
+
+### Evolucion aditiva room-v1.1
+
+Cuando una captura observada necesita una geometria reconciliada para cerrar
+el perimetro, `measurements/schema/room-v1.1.schema.json` permite conservar
+ambas capas. `length` sigue siendo la observacion fisica y
+`reconciled_geometry.length` es un valor `derived` trazable que el generador
+puede usar como longitud efectiva. El bloque `boundary.reconciliation`
+documenta residuos, tolerancias, segmentos ajustados y dependencias; no hay
+optimizacion automatica ni sobrescritura silenciosa. Los archivos v1 siguen
+siendo validos e intactos para capturas que no necesitan reconciliacion.
 
 ### Campos obligatorios y opcionales
 

@@ -102,6 +102,38 @@ La tolerancia de estas comparaciones de geometría derivada es `1e-6 m`. Es
 una tolerancia matemática de comparación y no una afirmación sobre la
 incertidumbre física de las medidas.
 
+## Evolucion room-v1.1: medida observada y geometria reconciliada
+
+`measurements/schema/room-v1.1.schema.json` es una evolucion aditiva y
+retrocompatible. Los documentos `schema_version: "1.0"` siguen usando la
+semantica original. En v1.1, un segmento puede conservar su `length` observado
+y declarar opcionalmente `reconciled_geometry.length` para la longitud efectiva
+que usara el generador:
+
+`reconciled_geometry.length.value` si existe; en otro caso `length.value`.
+
+La reconciliacion siempre es `derived`, conserva la observacion sin
+sobrescribirla y exige delta firmado, formula, dependencias, `source_id`,
+motivo e identificador de reconciliacion. Tambien exige el bloque global
+`boundary.reconciliation`, que registra los residuos de cierre observado y
+reconciliado, el limite autorizado por segmento y la tolerancia final. El
+validador recalcula estos valores y rechaza discrepancias, dependencias no
+resolubles o ajustes fuera de tolerancia.
+
+No existe un optimizador automatico: toda reconciliacion requiere autorizacion
+y trazabilidad explicitas. La geometria generada conserva por separado los
+valores y estados observados y efectivos. Los datos que no necesitan esta
+separacion pueden continuar en room-v1.
+
+Las referencias `depends_on` de v1.1 usan una gramatica cerrada: `segment_id`,
+`segment_id.length`, `segment_id.reconciled_geometry.length`,
+`boundary.reconciliation` o `boundary.reconciliation.<residual_field>`, donde
+`residual_field` es uno de `observed_residual_m`,
+`observed_residual_norm_m`, `reconciled_residual_m` o
+`reconciled_residual_norm_m`. El validador resuelve unicamente estas rutas,
+rechaza rutas desconocidas o malformadas y detecta autorreferencias y ciclos
+entre reconciliaciones. `formula` es declarativa y no se evalua.
+
 ## Preview y limitaciones
 
 El preview técnico se guarda en:
