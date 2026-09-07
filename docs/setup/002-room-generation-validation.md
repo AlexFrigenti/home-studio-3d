@@ -59,6 +59,16 @@ el JSON canónico, no es una estimación y no convierte la altura desconocida en
 `measured` ni `estimated`. Una futura lectura física sustituirá el proxy durante
 la generación sin alterar esta semántica.
 
+Para `living-room-main`, la lectura física de altura de la sesión vertical
+2026-09-07 está registrada como `3.00 m`, `uncertainty=0.01 m`,
+`status=measured` y `method=manual_tape`. Su generation plan usa esa medida
+como altura observada y geométrica `measured`, sin activar el fallback general.
+El fallback de `3.00 m` se conserva para otros documentos v1.1 cuya altura siga
+siendo `unknown`. Las alturas de P1, P2, V1, V2, V3 y V4 continúan
+`unknown` y sus seis representaciones siguen siendo proxies visuales,
+`proxy_only=true` y `constructive_geometry=false`. No se ha realizado una
+nueva generación Blender tras esta actualización.
+
 Los openings se representan en v1 como cuboides de proxy, colocados en el
 segmento referenciado usando `offset`, `width`, `height` y `sill_height`.
 Quedan en el lado interior de la pared y no ejecutan booleanos ni pretenden

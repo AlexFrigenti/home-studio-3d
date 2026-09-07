@@ -308,18 +308,25 @@ class RoomGenerationPlanTests(unittest.TestCase):
             self.assertTrue(result["proxy_only"])
             self.assertFalse(result["constructive_geometry"])
 
-    def test_real_room_builds_with_unknown_height_proxy_and_preserves_geometry_data(self):
+    def test_real_room_builds_with_measured_height_and_preserves_geometry_data(self):
         room = json.loads(REAL_ROOM_PATH.read_text(encoding="utf-8"))
+        original = copy.deepcopy(room)
 
         plan = self.generator.build_generation_plan(room)
 
+        self.assertEqual(room["height"]["value"], 3.00)
+        self.assertEqual(room["height"]["status"], "measured")
+        self.assertEqual(room["height"]["uncertainty"], 0.01)
+        self.assertEqual(room["height"]["method"], "manual_tape")
         self.assertEqual(len(plan["walls"]), 22)
         self.assertEqual(len(plan["openings"]), 6)
-        self.assertIsNone(plan["observed_height_m"])
-        self.assertEqual(plan["observed_height_status"], "unknown")
+        self.assertEqual(plan["observed_height_m"], 3.00)
+        self.assertEqual(plan["observed_height_status"], "measured")
         self.assertEqual(plan["geometry_height_m"], 3.00)
-        self.assertEqual(plan["geometry_height_status"], "derived")
-        self.assertTrue(plan["geometry_height_fallback"])
+        self.assertEqual(plan["geometry_height_status"], "measured")
+        self.assertFalse(plan["geometry_height_fallback"])
+        self.assertEqual(plan["height_m"], 3.00)
+        self.assertEqual(plan["height_status"], "measured")
         walls = {wall["id"]: wall for wall in plan["walls"]}
         self.assertEqual(walls["wall-05"]["observed_length_m"], 0.45)
         self.assertEqual(walls["wall-05"]["geometry_length_m"], 0.47)
@@ -342,6 +349,7 @@ class RoomGenerationPlanTests(unittest.TestCase):
                 for opening in openings.values()
             )
         )
+        self.assertEqual(room, original)
 
     def test_real_room_proxy_plan_signature_is_deterministic(self):
         room = json.loads(REAL_ROOM_PATH.read_text(encoding="utf-8"))

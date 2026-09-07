@@ -23,10 +23,12 @@
     "floor_z_m": 0
   },
   "height": {
-    "status": "unknown",
-    "method": "not_captured",
-    "note": "Solo existe una aproximación verbal de ~3.00 m; no se incorpora como valor sin una incertidumbre aprobada.",
-    "source_id": "living-room-main-2026-09-06-session-01-height-verbal-approximation"
+    "value": 3.00,
+    "status": "measured",
+    "uncertainty": 0.01,
+    "method": "manual_tape",
+    "note": "floor-to-ceiling physical measurement; finished-floor to finished-ceiling physical reading from vertical measurement session 2026-09-07; replaces the previous unknown observation and disables the geometry fallback for this room only.",
+    "source_id": "living-room-main-2026-09-07-vertical-session-01-height-floor-to-ceiling"
   },
   "boundary": {
     "winding": "counterclockwise_viewed_from_above",

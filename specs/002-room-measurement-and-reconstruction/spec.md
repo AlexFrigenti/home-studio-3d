@@ -2,7 +2,7 @@
 
 > Clasificación: T2 — contrato canónico de medidas, unidades y coordenadas
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: schema JSON v1 y v1.1, fixtures sintéticos, validador y generación de planes implementados; hubo una captura física real fuera de `measurements/`, pero todavía no existe JSON canónico real versionado ni se ha generado o validado el salón real con Blender
+> Estado: schema JSON v1 y v1.1, fixtures sintéticos, validador y generación de planes implementados; `measurements/rooms/living-room-main.json` contiene ahora la altura general física autorizada, pero no se ha regenerado Blender tras esa actualización.
 
 ## Objetivo
 
@@ -40,14 +40,14 @@ entre observación, incertidumbre, geometría derivada y evidencia.
 
 ### Fuera de alcance
 
-- Transcribir o versionar medidas reales en `measurements/`; la captura física puede existir fuera del repositorio.
+- Transcribir o versionar nuevas medidas reales en `measurements/` fuera de autorizaciones específicas; la altura general autorizada de `living-room-main` ya está registrada bajo `measurements/`.
 - Modelar el salón real o modificar cualquier escena canónica.
 - Generar geometría a partir de medidas reales o modelar el salón real.
 - Integración MCP o cambios en la configuración de Blender/Codex.
-- Modelar el salón real o añadir datos reales bajo `measurements/`.
+- Modelar el salón real o añadir nuevas medidas reales bajo `measurements/` fuera de las autorizaciones específicas del slice.
 - Instalar Blender, MCP, Python, paquetes, addons, LiDAR o herramientas de captura.
 - Cambiar `README.md`, `PROJECT_CONTEXT.md` o la configuración local; no modificar
-  medidas reales fuera de los artefactos sintéticos de este slice.
+  otras medidas reales fuera de los campos autorizados de este slice.
 - Convertir las tolerancias propuestas en estándar definitivo sin aprobación y validación.
 - Añadir fotografías personales, planos privados o assets externos al repositorio.
 
@@ -152,8 +152,9 @@ superior es:
 - `floor_area` es opcional y puede ser una medida `derived`.
 
 El fixture ejecutable de este slice, que muestra todos los estados y un
-retranqueo, está en `measurements/fixtures/room-v1-synthetic.json`. No se crea
-ningún archivo de medidas reales.
+retranqueo, está en `measurements/fixtures/room-v1-synthetic.json`. El JSON
+real autorizado de `living-room-main` conserva la altura suelo-techo medida,
+pero no añade todavía las alturas de los openings ni otras medidas verticales.
 
 ### Evolucion aditiva room-v1.1
 
@@ -397,7 +398,7 @@ admitir geometría real que requiera huecos constructivos.
 ## Cobertura actual y validaciones futuras
 
 El validador y el generador cubren estas reglas para el fixture sintético; las
-reglas deberán ampliarse antes de admitir datos reales:
+reglas deberán ampliarse antes de admitir datos reales adicionales o geometría real:
 
 - JSON válido, `schema_version` compatible e IDs únicos.
 - Unidades explícitas y semántica de magnitudes coherente con cada campo.
@@ -443,7 +444,7 @@ las fases posteriores sin reinterpretación silenciosa:
 9. La arquitectura parser/validator/generator y sus validaciones futuras están definidas, con un primer generador sintético ejecutable.
 10. El fixture sintético 002 versionado incluye retranqueo, `estimated`, `derived` y un elemento fijo opcional.
 11. El plan separa diseño, fixture, validador, generador, validaciones y procedimiento real.
-12. El flujo no depende de rutas personales, no contiene medidas reales, no modifica MCP/Codex y mantiene fuera de alcance el modelado real.
+12. El flujo no depende de rutas personales, no contiene medidas reales adicionales fuera de la altura general autorizada de `living-room-main`, no modifica MCP/Codex y mantiene fuera de alcance el modelado real.
 13. La escena sintética derivada conserva unidades, colecciones, metadata, determinismo y validación numérica documentados.
 
 ## Riesgos T2 y mitigaciones
@@ -483,8 +484,9 @@ las fases posteriores sin reinterpretación silenciosa:
   admitir geometría real.
 - Revisar el baseline de tolerancias con evidencia de una primera sesión real,
   sin confundir esa revisión con la precisión almacenada o matemática.
-- Mantener sin decidir el nombre y la ubicación exacta del primer archivo real:
-  solo se abrirá esa decisión después de completar schema v1, fixture sintético,
-  parser/validator, generación Blender sintética y validación determinista.
+- Mantener fuera de alcance nuevas medidas reales y decisiones de modelado hasta
+  completar la captura vertical pendiente; el archivo canónico de
+  `living-room-main` y su ubicación ya están decididos para la altura autorizada.
 - Revisar y aprobar la implementación sintética del parser/validador y del
-  generador Blender antes de admitir datos reales.
+  generador Blender antes de admitir datos reales adicionales o generar una
+  escena real actualizada.

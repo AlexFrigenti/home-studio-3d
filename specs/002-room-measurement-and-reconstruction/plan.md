@@ -170,21 +170,27 @@ fallback de proxy explícito, no cambia el dato canónico.
 
 **Autorización:** aprobación humana específica posterior del room ID, nombre/ubicación del archivo, medidas, fotos y primera ejecución del generador; esta fase no se ejecuta ahora.
 
-### Siguiente fase propuesta — Geometría vertical real (no iniciada)
+### Siguiente fase propuesta — Geometría vertical real (en curso)
 
 **Objetivo:** sustituir progresivamente los fallbacks y proxies verticales de
 `living-room-main` por medidas reales aportadas por el usuario, conservando la
-trazabilidad de cada cambio y sin introducir datos nuevos en esta fase.
+trazabilidad de cada cambio y sin introducir datos fuera de autorizaciones
+específicas.
 
-**Estado inicial conocido:** la altura de habitación mantiene
-`observed.status=unknown` y `observed.value=null`; la geometría usa `3.00 m`
-como `derived` con fallback explícito. P1/P2 y V1–V4 mantienen proxies
-verticales; los datos horizontales canónicos no se reinterpretan.
+**Estado actual:** la altura suelo terminado → techo terminado de
+`living-room-main` está registrada como `3.00 m`, con incertidumbre `±0.01 m`,
+`status=measured`, `method=manual_tape` y sesión vertical `2026-09-07`.
+El generation plan usa `3.00 m` como altura observada y geométrica `measured`,
+sin fallback. P1/P2 y V1–V4 mantienen proxies verticales; los datos
+horizontales canónicos no se reinterpretan.
 
-**Captura futura:** registrar altura suelo-techo; altura y profundidad accesible
-de P1/P2; altura de hueco, alféizar y profundidad accesible de V1–V4; y espesor
-de pared solo donde pueda medirse con fiabilidad. El sentido de apertura de las
-puertas queda como dato opcional futuro, no obligatorio para esta fase.
+**Captura realizada:** altura suelo-techo registrada en el JSON canónico con
+`source_id=living-room-main-2026-09-07-vertical-session-01-height-floor-to-ceiling`.
+
+**Captura pendiente:** altura y profundidad accesible de P1/P2; altura de
+hueco, alféizar y profundidad accesible de V1–V4; y espesor de pared solo donde
+pueda medirse con fiabilidad. El sentido de apertura de las puertas queda como
+dato opcional futuro, no obligatorio para esta fase.
 
 **Contrato de estados:** conservar estrictamente `measured`, `estimated`,
 `derived` y `unknown`. Una medida no disponible permanece `unknown`; ningún
@@ -197,10 +203,12 @@ generation plan → Blender. Blender solo materializa datos validados y derivado
 no es fuente de verdad ni se permiten correcciones manuales de la escena. Si
 una profundidad o espesor continúa desconocido, podrá seguir usándose su
 fallback de generación documentado (`0.06 m` para profundidad de opening y
-`0.10 m` para espesor de pared). Las alturas verticales continuarán siendo
-proxies mientras no exista una medida real.
+`0.10 m` para espesor de pared). Las alturas verticales de los openings
+continuarán siendo proxies mientras no exista una medida real para cada uno.
+No se ha realizado una nueva generación Blender tras incorporar la altura
+general medida.
 
-**Criterio de inicio:** antes de capturar o editar el JSON real se necesita
+**Criterio de continuidad:** cada nueva captura o edición del JSON real necesita
 autorización específica para la sesión, la evidencia y los campos a actualizar.
 No se exige desmontar nada para obtener una medida; lo inaccesible permanece
 `unknown`.
