@@ -2,7 +2,7 @@
 
 > Clasificación: T2 — contrato canónico de medidas, unidades y coordenadas
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: schema JSON v1 y v1.1, fixtures sintéticos, validador y generación de planes implementados; `measurements/rooms/living-room-main.json` contiene ahora la altura general, las medidas verticales autorizadas de P1/P2/V1/V2/V3/V4 y seis espesores de pared medidos en jambas, pero no se ha regenerado Blender tras esa actualización.
+> Estado: schema JSON v1 y v1.1, fixtures sintéticos, validador, generación de planes y checkpoint real autorizado implementados; `measurements/rooms/living-room-main.json` contiene la altura general, las medidas verticales autorizadas de P1/P2/V1/V2/V3/V4 y seis espesores de pared medidos en jambas. La variante real derivada fue regenerada y validada sin modificar el JSON canónico.
 
 ## Objetivo
 
@@ -10,7 +10,9 @@ Definir un sistema reproducible para pasar de medidas reales tomadas en casa a
 una representación 1:1 en Blender. El slice establece el formato canónico de
 `measurements/`, el sistema de coordenadas por habitación, la forma de
 registrar incertidumbre, el flujo de captura, las validaciones y la arquitectura
-futura de generación. No modela todavía el salón real.
+futura de generación. El checkpoint autorizado de `living-room-main` incluye una
+variante derivada para validación; siguen fuera de alcance el mobiliario, la
+decoración y la geometría constructiva de openings.
 
 ## Problema
 
@@ -41,8 +43,8 @@ entre observación, incertidumbre, geometría derivada y evidencia.
 ### Fuera de alcance
 
 - Transcribir o versionar nuevas medidas reales en `measurements/` fuera de autorizaciones específicas; la altura general autorizada de `living-room-main` ya está registrada bajo `measurements/`.
-- Modelar el salón real o modificar cualquier escena canónica.
-- Generar geometría a partir de medidas reales o modelar el salón real.
+- Modelar el salón real fuera de las autorizaciones específicas del checkpoint o modificar cualquier escena canónica.
+- Generar geometría real fuera de los derivados autorizados y versionados del checkpoint de `living-room-main`.
 - Integración MCP o cambios en la configuración de Blender/Codex.
 - Modelar el salón real o añadir nuevas medidas reales bajo `measurements/` fuera de las autorizaciones específicas del slice.
 - Instalar Blender, MCP, Python, paquetes, addons, LiDAR o herramientas de captura.
@@ -387,21 +389,42 @@ measurement file → parser/validator → bpy generator → .blend
   posible mediante nombres/metadata no ambiguos.
 
 Este slice materializa el primer generador en
-`blender/scripts/measurements/generate_room.py`. Consume únicamente el fixture
-validado y guarda la escena derivada en
-`blender/scenes/tests/002-room-v1-generated.blend`. Las paredes y el suelo se
-construyen desde los puntos ordenados de `boundary.segments`; el espesor
-desconocido usa un fallback de proxy explícito de `0.10 m`, conservando el
-estado original `unknown`. Las puertas y ventanas se representan como proxies
-geométricos coloreados y colocados sobre su segmento, no como booleanos que
-recorten la pared. Los elementos fijos usan proxies simples y metadata de
-trazabilidad. Esta limitación queda documentada y deberá resolverse antes de
-admitir geometría real que requiera huecos constructivos.
+`blender/scripts/measurements/generate_room.py`. Para el fixture sintético,
+consume el JSON validado y guarda la escena derivada en
+`blender/scenes/tests/002-room-v1-generated.blend`. El mismo pipeline se usó en
+el checkpoint autorizado de `living-room-main`, cuya variante derivada está en
+`blender/scenes/review/2026-09-07-living-room-main-v1.1-regenerated.blend`.
+Las paredes y el suelo se construyen desde los puntos ordenados de
+`boundary.segments`; el espesor desconocido usa un fallback de proxy explícito
+de `0.10 m`, conservando el estado original `unknown`. Las puertas y ventanas
+se representan como proxies geométricos coloreados y colocados sobre su
+segmento, no como booleanos que recorten la pared. Los elementos fijos usan
+proxies simples y metadata de trazabilidad. La representación no constructiva
+de openings sigue siendo una limitación futura para fases que requieran huecos
+constructivos, no una deuda de las medidas verticales actuales.
+
+### Checkpoint autorizado de `living-room-main`
+
+La variante real se generó desde `measurements/rooms/living-room-main.json` con
+schema `1.1`. Conserva 22 segmentos, 6 openings, winding antihorario, las
+reconciliaciones explícitas de `wall-05` y `wall-16`, y los estados observados
+sin promociones silenciosas. La generación y la validación de escena fueron
+`GENERATION_VALID` y `SCENE_VALID`; la regeneración fue determinista y el QA
+visual y el framing top-orthographic fueron `PASS`.
+
+Los seis espesores accesibles y fiables son `0.08 m measured`; los otros 16
+conservan `thickness=unknown` y usan únicamente el fallback geométrico derivado
+de `0.10 m`. Los seis openings mantienen `proxy_only=true` y
+`constructive_geometry=false`; esto describe la representación visual no
+constructiva y no significa que falten alturas, alféizares o profundidades
+medidas. El preview versionado es
+`renders/previews/2026-09-07-living-room-main-v1.1-regenerated/qa-top-orthographic.png`.
 
 ## Cobertura actual y validaciones futuras
 
-El validador y el generador cubren estas reglas para el fixture sintético; las
-reglas deberán ampliarse antes de admitir datos reales adicionales o geometría real:
+El validador y el generador cubren estas reglas para el fixture sintético y el
+checkpoint autorizado de `living-room-main`; las reglas deberán ampliarse antes
+de admitir datos reales adicionales o geometría constructiva:
 
 - JSON válido, `schema_version` compatible e IDs únicos.
 - Unidades explícitas y semántica de magnitudes coherente con cada campo.
@@ -447,7 +470,7 @@ las fases posteriores sin reinterpretación silenciosa:
 9. La arquitectura parser/validator/generator y sus validaciones futuras están definidas, con un primer generador sintético ejecutable.
 10. El fixture sintético 002 versionado incluye retranqueo, `estimated`, `derived` y un elemento fijo opcional.
 11. El plan separa diseño, fixture, validador, generador, validaciones y procedimiento real.
-12. El flujo no depende de rutas personales, no contiene medidas reales adicionales fuera de las autorizaciones explícitas para `living-room-main`, no modifica MCP/Codex y mantiene fuera de alcance el modelado real.
+12. El flujo no depende de rutas personales, no contiene medidas reales adicionales fuera de las autorizaciones explícitas para `living-room-main`, no modifica MCP/Codex y mantiene fuera de alcance cualquier derivado real no autorizado.
 13. La escena sintética derivada conserva unidades, colecciones, metadata, determinismo y validación numérica documentados.
 
 ## Riesgos T2 y mitigaciones
@@ -478,13 +501,14 @@ las fases posteriores sin reinterpretación silenciosa:
 - Blender no redefine medidas reales.
 - Toda discrepancia queda registrada como warning/fail o decisión explícita.
 - Las fotos no sustituyen medidas sin escala conocida y trazabilidad.
-- No se modela el salón real en este slice.
+- No se modela mobiliario ni decoración, y no se crean openings constructivos en
+  el checkpoint real; cualquier derivado real requiere autorización explícita.
 
 ## Decisiones pendientes
 
 - Revisar el contrato implementado de schema v1 antes de admitir datos reales.
 - Revisar la estrategia de proxies de openings y fallback de espesores antes de
-  admitir geometría real.
+  admitir geometría constructiva o nuevas habitaciones reales.
 - Revisar el baseline de tolerancias con evidencia de una primera sesión real,
   sin confundir esa revisión con la precisión almacenada o matemática.
 - Mantener fuera de alcance nuevas medidas reales y decisiones de modelado fuera
@@ -492,6 +516,7 @@ las fases posteriores sin reinterpretación silenciosa:
   su ubicación ya están decididos para la altura y las lecturas verticales
   autorizadas. Los espesores de pared de los otros segmentos y otras capturas
   condicionadas siguen pendientes.
-- Revisar y aprobar la implementación sintética del parser/validador y del
-  generador Blender antes de admitir datos reales adicionales o generar una
-  escena real actualizada.
+- Mantener el contrato sintético y revisar el generador antes de admitir datos
+  reales adicionales o geometría constructiva. El checkpoint autorizado de
+  `living-room-main` ya dispone de variante derivada, validación de escena,
+  determinismo y QA visual documentados.

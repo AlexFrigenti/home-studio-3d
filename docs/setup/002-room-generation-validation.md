@@ -1,8 +1,9 @@
 # Validación del generador de room-v1
 
 Este documento describe el primer flujo ejecutable del slice
-`002-room-measurement-and-reconstruction`. Es una prueba sintética y no
-representa el salón real.
+`002-room-measurement-and-reconstruction`. El flujo base es sintético; el
+checkpoint real autorizado de `living-room-main` se documenta explícitamente
+más abajo y conserva la misma semántica de trazabilidad y validación.
 
 ## Flujo y entrada
 
@@ -72,15 +73,28 @@ siendo representaciones visuales, `proxy_only=true` y
 En el JSON real, el espesor medido en las jambas es `0.08 m ±0.01 m` para
 `wall-00`, `wall-06`, `wall-07`, `wall-08`, `wall-14` y `wall-20`; los otros 16
 muros conservan `thickness=unknown` y usan el fallback geométrico de `0.10 m`.
-Estas lecturas no modifican las profundidades de los openings. No se ha
-realizado una nueva generación Blender tras incorporar estas medidas.
+Estas lecturas no modifican las profundidades de los openings. La escena real
+se regeneró posteriormente desde el JSON canónico, se validó y quedó
+versionada junto con su preview.
+
+La escena es
+`blender/scenes/review/2026-09-07-living-room-main-v1.1-regenerated.blend`, con
+SHA-256
+`79D9ECCFE874A0DFA507638871462F260C6BD678C8A5E78860461B3A71911DC5`; el
+preview es
+`renders/previews/2026-09-07-living-room-main-v1.1-regenerated/qa-top-orthographic.png`,
+con SHA-256
+`E11C9C6B17D0B243705217EC0A73D8523A5F02C46342333131B0421ED4818072`.
+La generación, validación de escena, determinismo, QA visual y framing fueron
+`PASS`.
 
 Los openings se representan en v1 como cuboides de proxy, colocados en el
 segmento referenciado usando `offset`, `width`, `height` y `sill_height`.
 Quedan en el lado interior de la pared y no ejecutan booleanos ni pretenden
 ser huecos constructivos. La profundidad desconocida usa un proxy derivado
-de `0.06 m`. Esta limitación debe resolverse antes de admitir geometría real
-que requiera carpintería o cortes constructivos.
+de `0.06 m`. Esta limitación solo debe resolverse antes de admitir geometría
+constructiva que requiera carpintería o cortes booleanos; no es una deuda de
+medición vertical del checkpoint actual.
 
 En `room-v1.1`, si la geometría vertical observada de un opening es
 `unknown`, el plan conserva la posición y el ancho horizontales observados y
@@ -184,6 +198,8 @@ Cycles. La inspección visual busca forma de la habitación, retranqueo,
 proxies de openings y fixed elements, penetraciones graves y objetos
 residuales. No es una validación estética.
 
-Quedan fuera de esta fase los datos reales, el modelado del salón, decoración,
-assets externos, booleanos constructivos, integración MCP/Codex y cualquier
-redefinición de medidas canónicas.
+Quedan fuera del flujo sintético el modelado de mobiliario y decoración, los
+assets externos, los booleanos constructivos, la integración MCP/Codex y
+cualquier redefinición de medidas canónicas. El checkpoint real autorizado no
+promueve los 16 espesores `unknown`, no activa proxies verticales y conserva
+`proxy_only=true` y `constructive_geometry=false` para los seis openings.

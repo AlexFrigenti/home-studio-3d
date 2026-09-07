@@ -4,13 +4,15 @@
 
 Este documento registra el checkpoint de la primera reconstrucción real del
 salón principal dentro del slice `002-room-measurement-and-reconstruction`.
-La escena y el preview descritos aquí son evidencia histórica; las actualizaciones
-de altura, geometría vertical y espesores de la sesión del 2026-09-07 no los
-regeneran ni añaden modelado adicional.
+La primera escena y su preview histórico se conservan como referencia. La
+variante regenerada posterior incorpora las medidas de altura, geometría
+vertical y espesores de la sesión del 2026-09-07 sin modificar el JSON
+canónico ni añadir mobiliario o decoración.
 
 - Input canónico: `measurements/rooms/living-room-main.json`
 - Schema: `1.1`
 - HEAD fuente del checkpoint Blender histórico: `69b39a69cadd36a07f8b674bf993a64c86c2e228`
+- HEAD de la variante regenerada y versionada: `714079f114fefff2d79ba526fc0743d6e8337849`
 - Unidades: metros (`m`)
 - Boundary: 22 segmentos, winding antihorario
 - Openings: 6
@@ -87,22 +89,21 @@ Fallbacks explícitos:
 
 - Tests de `tests/measurements`: `61/61 PASS` tras actualizar la expectativa
   histórica del plan de `living-room-main`.
-- `GENERATION_VALID`: PASS en el checkpoint Blender histórico; no se ha
-  reejecutado tras incorporar las nuevas medidas verticales y espesores.
-- `SCENE_VALID`: PASS en el checkpoint Blender histórico; no se ha reejecutado
-  tras incorporar las nuevas medidas verticales y espesores.
-- Firma de escena: `6122a4811a8cbce931b05e6e4f52c9a45dd3170e6eb9fb73d7d1fc41ddc05ef3`.
-- Determinismo: PASS; las generaciones repetidas produjeron la misma firma.
-- Escena derivada: `blender/scenes/review/2026-09-07-living-room-main-v1.1-generated.blend`.
-- Preview ortográfico aprobado:
-  `renders/previews/2026-09-07-living-room-main-v1.1/qa-top-orthographic-v2.png`.
-- QA visual final: `14/14 PASS`.
+- `GENERATION_VALID`: PASS en la variante regenerada desde el JSON canónico.
+- `SCENE_VALID`: PASS en la variante regenerada.
+- Determinismo: PASS; las generaciones repetidas conservaron la misma firma.
+- Escena derivada versionada: `blender/scenes/review/2026-09-07-living-room-main-v1.1-regenerated.blend`.
+- SHA-256 de la escena: `79D9ECCFE874A0DFA507638871462F260C6BD678C8A5E78860461B3A71911DC5`.
+- Preview ortográfico versionado:
+  `renders/previews/2026-09-07-living-room-main-v1.1-regenerated/qa-top-orthographic.png`.
+- SHA-256 del preview: `E11C9C6B17D0B243705217EC0A73D8523A5F02C46342333131B0421ED4818072`.
+- QA visual y framing top-orthographic: `PASS`; habitación completa, sin
+  bordes recortados, retranqueos y 6 openings visibles.
 - Revisión humana del usuario: aprobada.
 
-La captura perspectiva inicial (`viewport-overview.png`) conserva valor
-histórico limitado por su encuadre recortado. La captura intermedia
-`qa-top-orthographic.png` no forma parte de la evidencia versionada por su
-encuadre incorrecto. La evidencia aprobada es `qa-top-orthographic-v2.png`.
+La captura perspectiva inicial (`viewport-overview.png`) y el preview
+top-orthographic histórico conservan valor de referencia limitado. La evidencia
+actual aprobada es la variante `-regenerated` indicada arriba.
 
 ## Limitaciones y exclusiones
 
@@ -120,12 +121,12 @@ encuadre incorrecto. La evidencia aprobada es `qa-top-orthographic-v2.png`.
 - Las profundidades de los openings no se han cambiado por estas lecturas de
   espesor de jamba.
 - No hay booleanos ni geometría constructiva de openings.
-- No se ha realizado una nueva generación Blender tras incorporar estas
-  nuevas medidas verticales y espesores.
+- La generación posterior a estas medidas está completada y validada; la escena
+  y el preview regenerados están versionados en rutas diferenciadas.
 - No se ha añadido mobiliario ni decoración.
 - No se ha inferido geometría a partir de fotografías.
 - No se han incorporado assets externos.
 
-El checkpoint Blender histórico queda como:
+El checkpoint actual queda como:
 
-`ESCENA REAL HISTÓRICA APTA PARA REVISIÓN; REGENERACIÓN PENDIENTE TRAS INCORPORAR LAS NUEVAS MEDIDAS VERTICALES`
+`ESCENA REAL VERTICAL APTA PARA REVISIÓN; T2.12 Y T2.12-V CERRADAS; T2.13 PENDIENTE`

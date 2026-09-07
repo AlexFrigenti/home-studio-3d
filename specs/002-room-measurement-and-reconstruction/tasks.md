@@ -2,7 +2,7 @@
 
 > Clasificación: T2
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: schema JSON v1, fixture sintético, validador y primer generador Blender implementados; la altura general y las medidas verticales de los seis openings de `living-room-main` ya están registradas como medidas reales, y los espesores de pared siguen abiertos.
+> Estado: schema JSON v1/v1.1, fixtures, validador, generación de planes y checkpoint real autorizado de `living-room-main` implementados; T2.12 y T2.12-V están cerradas documentalmente y T2.13 permanece pendiente.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -113,22 +113,23 @@ y detenerse ante una discrepancia no resuelta.
 
 ## T2.12 — Preparar el primer salón real
 
-- **Estado:** `[~]`
+- **Estado:** `[x]`
 - **Objetivo:** preparar y avanzar la primera captura real manteniendo sus medidas canónicas y derivados aislados bajo `measurements/`.
 - **Archivos:** `measurements/rooms/living-room-main.json`; cualquier `.blend` derivado conserva ubicación y snapshot explícitos.
 - **Validación:** schema, procedimiento, incertidumbres, privacidad, trazabilidad y plan de rollback aprobados.
 - **Rollback:** conservar el registro original; revertir solo representaciones derivadas.
-- **Autorización:** aprobación específica recibida para registrar la altura general medida y transcribir las lecturas verticales de P1, P2, V1, V2, V3 y V4; el uso de Blender sigue pendiente de autorización/captura según proceda.
+- **Autorización:** aprobación específica recibida para registrar la altura general y las lecturas verticales; la variante Blender derivada posterior fue autorizada, generada y validada sin modificar la fuente canónica.
 - **Evidencia actual:** `docs/setup/002-real-room-measurement-field-sheet.md` y `measurements/rooms/living-room-main.json`. El JSON contiene la altura suelo-techo `2.50 m ±0.01 m`, `measured` mediante `manual_tape` en la sesión vertical `2026-09-07`; esta segunda comprobación corrige la lectura previa de `3.00 m`, que queda superseded. También contiene las lecturas medidas de P1 (`2.00 m` de altura, `0.08 m` de profundidad), P2 (`2.30 m`, `0.05 m`), V1 y V2 (`0.92 m` de alféizar, `1.39 m` de altura y `0.08 m` de profundidad en ambos casos), y V3/V4 (`0.86 m` de alféizar, `1.25 m` de altura y `0.06 m` de profundidad en ambos casos). En las jambas de esos seis huecos se midió `thickness=0.08 m ±0.01 m`, `measured`, para `wall-00`, `wall-06`, `wall-07`, `wall-08`, `wall-14` y `wall-20`; los otros 16 muros permanecen `unknown`.
 - **Decisiones previas aprobadas:** `room_id`=`living-room-main`; nombre humano=`Salón principal`; `session_id`=`2026-09-06-session-01`; instrumento principal=cinta métrica; soporte auxiliar=croquis manual en papel; unidad canónica=`m`; incertidumbre base para una lectura directa normal y accesible con cinta=`±0.01 m`; ruta del JSON=`measurements/rooms/living-room-main.json`; sesión vertical adicional=`2026-09-07`.
 - **Regla de incertidumbre aprobada:** `±0.01 m` no redondea automáticamente las lecturas; accesos peores, geometría difícil o menor confianza requieren una incertidumbre mayor adecuada; `estimated` debe identificarse y conservar una incertidumbre acorde con la estimación; si un dato no puede medirse o estimarse con confianza suficiente, usar `unknown`; no inventar precisión ni inferir valores silenciosamente.
 - **Instancia de sesión:** no se crea una copia específica; la hoja canónica permanece reutilizable porque el contrato actual no define una ubicación ni convención para instancias documentales de sesiones. El JSON canónico conserva la trazabilidad de la altura, de las seis lecturas verticales y de los seis espesores medidos en jambas.
-- **Bloqueo restante:** los espesores de los otros 16 segmentos siguen pendientes de captura o transcripción; no se ha regenerado Blender tras las nuevas medidas verticales y espesores. T2.12 permanece `[~]`.
-- **Pendiente antes de cerrar:** revisar las evidencias, resolver los espesores restantes que puedan medirse con fiabilidad y ejecutar los derivados autorizados cuando se autorice la regeneración.
+- **Evidencia de cierre:** validator real `VALID`, generation plan `PASS`, `GENERATION_VALID`, `SCENE_VALID`, determinismo `PASS` y QA visual `PASS`. La escena derivada está versionada en `blender/scenes/review/2026-09-07-living-room-main-v1.1-regenerated.blend` y el preview en `renders/previews/2026-09-07-living-room-main-v1.1-regenerated/qa-top-orthographic.png`; las reconciliaciones de `wall-05` y `wall-16` permanecen explícitas y los estados `unknown` no se promocionan.
+- **Espesores no medidos:** los otros 16 segmentos conservan `thickness.status=unknown` y usan únicamente el fallback geométrico derivado de `0.10 m`. El contrato permite conservarlos así cuando no sean accesibles o fiables; no constituyen un bloqueo de T2.12.
+- **Cierre:** se preservan trazabilidad, privacidad, autoridad de `measurements/` y rollback de derivados. Las futuras capturas de espesores solo se realizarán si son accesibles y fiables.
 
 ## T2.12-V — Preparar captura de geometría vertical real
 
-- **Estado:** `[~]` — altura general, los seis openings y sus espesores de jamba capturados y registrados; quedan pendientes los espesores de pared restantes y la regeneración/validación Blender autorizada.
+- **Estado:** `[x]` — altura general, verticales de los seis openings, espesores fiables de jamba y variante Blender derivada capturados, registrados y validados.
 - **Objetivo:** definir una captura gradual de alturas, alféizares, profundidades y espesores reales para sustituir proxies/fallbacks solo cuando exista evidencia suficiente.
 - **Instrumento y registro:** para cada lectura futura anotar instrumento, valor y unidad, `status` (`measured`, `estimated`, `derived` o `unknown`), incertidumbre y una nota sobre accesibilidad o dificultad. No exigir mediciones que requieran desmontar elementos.
 - **Habitación:** la segunda comprobación de altura suelo → techo quedó capturada en la sesión vertical `2026-09-07` con `value=2.50`, `status=measured`, `uncertainty=0.01` y `method=manual_tape`; corrige la lectura previa de `3.00 m`. La geometría efectiva es `2.50 m` `measured` y el fallback de altura general no se aplica a `living-room-main`.
@@ -146,12 +147,15 @@ y detenerse ante una discrepancia no resuelta.
   8. espesores de pared únicamente en puntos fiables.
 - **Regla de no inventar:** una altura o profundidad que no pueda medirse permanece `unknown`; Blender puede continuar mostrando el proxy y el pipeline puede continuar usando fallbacks documentados. Una aproximación visual nunca se convierte en `measured`.
 - **Pipeline:** cualquier actualización futura seguirá JSON canónico → validator → generation plan → Blender. No se corrige la escena manualmente ni se promocionan estados de forma implícita.
-- **Validación realizada:** diff y trazabilidad del JSON, validator, suite Python y generation plan revisados; no se ha regenerado Blender tras incorporar las nuevas medidas verticales y espesores.
-- **Decisiones pendientes:** espesores realmente accesibles, sentido de apertura opcional y autorización específica para regenerar una variante derivada.
+- **Validación realizada:** diff y trazabilidad del JSON, validator `VALID`, suite Python `61/61 PASS`, generation plan `PASS`, `GENERATION_VALID`, `SCENE_VALID`, determinismo `PASS` y QA visual `PASS` sobre la variante regenerada. No hay proxies verticales activos.
+- **Tratamiento de unknown:** los 16 espesores restantes siguen `unknown` con fallback geométrico `0.10 m derived`; medirlos no era obligatorio cuando no fueran accesibles o fiables y no es un bloqueo de T2.12-V.
+- **Semántica de openings:** `proxy_only=true` y `constructive_geometry=false` indican representación visual no constructiva; no implican falta de medidas verticales ni fallo de esta tarea.
+- **Decisiones futuras no bloqueantes:** espesores adicionales solo si son accesibles, sentido de apertura opcional y eventual geometría constructiva de openings.
 
 ## T2.13 — Cerrar el slice y preparar PR
 
 - **Estado:** `[ ]`
+- **Precondición:** T2.12 y T2.12-V están cerradas documentalmente; esta tarea de revisión final y preparación de PR sigue pendiente.
 - **Objetivo:** revisar scope, documentación, riesgos, invariantes y gates; dejar la PR lista sin empezar el siguiente slice.
 - **Archivos:** solo los artefactos aprobados de este checkpoint, sin ampliar el alcance.
 - **Validación:** `git diff --check`, `git status --short`, diff completo, ausencia de secretos, ausencia de datos reales nuevos bajo `measurements/`, revisión de los binarios/preview derivados y revisión contra `.quality/QUALITY.md`/`CONTRIBUTING.md`.

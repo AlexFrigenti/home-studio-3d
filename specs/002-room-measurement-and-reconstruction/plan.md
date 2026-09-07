@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Definir y después implementar un contrato JSON versionado para convertir medidas reales en una representación Blender 1:1 reproducible, sin capturar todavía el salón real.
+**Goal:** Definir y después implementar un contrato JSON versionado para convertir medidas reales en una representación Blender 1:1 reproducible, incluyendo el checkpoint autorizado de `living-room-main` y sin mezclar mobiliario ni decoración.
 
 **Architecture:** Un archivo JSON por habitación será la fuente estructurada. Un parser/validador separado comprobará schema, unidades, topología e incertidumbre antes de que un generador `bpy` produzca una escena derivada en colecciones controladas; la decoración quedará separada de la arquitectura.
 
@@ -20,7 +20,7 @@
 - La geometría debe soportar paredes no paralelas, L, retranqueos, pilares y segmentos múltiples.
 - Las puertas y ventanas se anclan a `wall_id` y offset desde el inicio del segmento.
 - No se corregirán medidas reales para hacer que Blender encaje.
-- No se capturarán medidas reales ni se modelará el salón en las fases documentales de este slice.
+- Las medidas reales y sus derivados solo se incorporan mediante autorizaciones específicas; el checkpoint de `living-room-main` es una variante derivada, no una escena canónica.
 - No se instalarán herramientas ni se modificarán medidas reales o escenas canónicas; la escena sintética derivada de esta fase tiene destino de prueba explícito.
 - Todas las rutas versionadas deben ser relativas al repo o expresadas mediante variables, nunca rutas personales absolutas.
 
@@ -43,8 +43,8 @@
   `blender/scenes/tests/002-room-v1-generated.blend` y
   `renders/previews/002-room-v1-generated/viewport-overview.png`.
 - Crear: `docs/setup/002-room-generation-validation.md`.
-- Modificar: ningún dato real, escena, asset ni configuración existente.
-- Escenas/assets/medidas reales: `No aplica`; el único `.blend` de esta fase es la escena sintética indicada y no se crean fotos ni datos reales bajo `measurements/`.
+- Modificar: ningún schema, validator, generator, test, configuración MCP ni escena canónica.
+- El checkpoint real autorizado añade únicamente el JSON canónico ya aprobado y sus derivados versionados separados; no se crean fotos ni datos personales bajo `measurements/`.
 
 ### Archivos previstos para fases posteriores
 
@@ -168,9 +168,9 @@ fallback de proxy explícito, no cambia el dato canónico.
 
 **Rollback:** conservar el original de medidas, crear variantes, revertir únicamente derivados; nunca reescribir el dato real para ajustar la escena.
 
-**Autorización:** aprobación humana específica posterior del room ID, nombre/ubicación del archivo, medidas, fotos y primera ejecución del generador; esta fase no se ejecuta ahora.
+**Autorización:** aprobación humana específica del room ID, ubicación, medidas y primera ejecución del generador recibida para `living-room-main`. La fase queda completada para este checkpoint; futuras habitaciones requieren autorización independiente.
 
-### Siguiente fase propuesta — Geometría vertical real (en curso)
+### Checkpoint — Geometría vertical real de `living-room-main` (completado)
 
 **Objetivo:** sustituir progresivamente los fallbacks y proxies verticales de
 `living-room-main` por medidas reales aportadas por el usuario, conservando la
@@ -201,11 +201,11 @@ mediciones físicas en las jambas de P1/P2/V1/V2/V3/V4: `0.08 m`,
 segmentos permanecen `unknown` y conservan el fallback geométrico de `0.10 m`.
 El espesor de muro no sustituye ni modifica la profundidad de un opening.
 
-**Captura pendiente:** queda pendiente el espesor de pared de los segmentos
-restantes solo donde pueda medirse con fiabilidad. Las capturas transcritas de
-P1, P2, V1, V2, V3 y V4 requieren mantener revisión y trazabilidad antes de
-usarse en derivados. El sentido de apertura de las puertas queda como dato
-opcional futuro, no obligatorio para esta fase.
+**Captura futura no bloqueante:** el espesor de pared de los segmentos restantes
+solo se medirá si resulta accesible y fiable. Las capturas transcritas de P1,
+P2, V1, V2, V3 y V4 conservan su revisión y trazabilidad. El sentido de
+apertura de las puertas queda como dato opcional futuro, no obligatorio para
+esta fase.
 
 **Contrato de estados:** conservar estrictamente `measured`, `estimated`,
 `derived` y `unknown`. Una medida no disponible permanece `unknown`; ningún
@@ -220,9 +220,17 @@ una profundidad o espesor continúa desconocido, podrá seguir usándose su
 fallback de generación documentado (`0.06 m` para profundidad de opening y
 `0.10 m` para espesor de pared). Actualmente todas las profundidades verticales
 de los openings de `living-room-main` están medidas; el fallback de profundidad
-permanece disponible para otros datos `unknown`.
-No se ha realizado una nueva generación Blender tras incorporar las nuevas
-medidas verticales y espesores.
+permanece disponible para otros datos `unknown`. La variante Blender posterior
+a estas medidas está regenerada, validada y versionada junto con su preview; no
+se modificó manualmente.
+
+**Evidencia de cierre:** `GENERATION_VALID`, `SCENE_VALID`, determinismo y QA
+visual `PASS`. La escena está en
+`blender/scenes/review/2026-09-07-living-room-main-v1.1-regenerated.blend` y el
+preview en `renders/previews/2026-09-07-living-room-main-v1.1-regenerated/qa-top-orthographic.png`.
+Los 16 espesores restantes siguen `unknown` con fallback geométrico `0.10 m
+derived`; no son una deuda bloqueante porque el criterio solo exige capturar
+espesores cuando sean accesibles y fiables.
 
 **Criterio de continuidad:** cada nueva captura o edición del JSON real necesita
 autorización específica para la sesión, la evidencia y los campos a actualizar.
