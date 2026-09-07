@@ -1,0 +1,284 @@
+{
+  "schema_version": "1.0",
+  "room_id": "fixture_002_recessed_room",
+  "name": "Synthetic recessed room",
+  "units": "m",
+  "measured_at": "2026-09-06",
+  "measurement_method": "manual_tape",
+  "coordinate_system": {
+    "origin": {
+      "type": "interior_finished_floor_corner",
+      "corner_id": "corner-01",
+      "point_m": [0.0, 0.0, 0.0],
+      "adjacent_segment_ids": ["wall-01", "wall-08"],
+      "selection_rule": "longest_uninterrupted_reference_wall"
+    },
+    "axes": {
+      "x": "wall-01_start_to_end",
+      "y": "right_handed_perpendicular_to_x",
+      "z": "vertical_up",
+      "handedness": "right"
+    },
+    "boundary_orientation": "counterclockwise_viewed_from_above",
+    "floor_z_m": 0
+  },
+  "height": {
+    "value": 2.5,
+    "status": "measured",
+    "uncertainty": 0.005,
+    "method": "manual_tape",
+    "source_id": "synthetic-002-height"
+  },
+  "floor_area": {
+    "value": 19.7,
+    "status": "derived",
+    "method": "shoelace",
+    "formula": "shoelace(boundary.segments)",
+    "depends_on": [
+      "wall-01",
+      "wall-02",
+      "wall-03",
+      "wall-04",
+      "wall-05",
+      "wall-06",
+      "wall-07",
+      "wall-08"
+    ],
+    "note": "20 m2 principal menos el retranqueo sintético de 0.3 m2"
+  },
+  "boundary": {
+    "winding": "counterclockwise_viewed_from_above",
+    "segments": [
+      {
+        "id": "wall-01",
+        "start_m": [0.0, 0.0, 0.0],
+        "end_m": [5.0, 0.0, 0.0],
+        "length": {
+          "value": 5.0,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-wall-01"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se captura en este fixture"
+        }
+      },
+      {
+        "id": "wall-02",
+        "start_m": [5.0, 0.0, 0.0],
+        "end_m": [5.0, 4.0, 0.0],
+        "length": {
+          "value": 4.0,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-wall-02"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured"
+        }
+      },
+      {
+        "id": "wall-03",
+        "start_m": [5.0, 4.0, 0.0],
+        "end_m": [3.0, 4.0, 0.0],
+        "length": {
+          "value": 2.0,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-wall-03"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured"
+        }
+      },
+      {
+        "id": "wall-04",
+        "start_m": [3.0, 4.0, 0.0],
+        "end_m": [3.0, 3.7, 0.0],
+        "length": {
+          "value": 0.3,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-wall-04"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured"
+        }
+      },
+      {
+        "id": "wall-05",
+        "start_m": [3.0, 3.7, 0.0],
+        "end_m": [2.0, 3.7, 0.0],
+        "length": {
+          "value": 1.0,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-wall-05"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured"
+        }
+      },
+      {
+        "id": "wall-06",
+        "start_m": [2.0, 3.7, 0.0],
+        "end_m": [2.0, 4.0, 0.0],
+        "length": {
+          "value": 0.3,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-wall-06"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured"
+        }
+      },
+      {
+        "id": "wall-07",
+        "start_m": [2.0, 4.0, 0.0],
+        "end_m": [0.0, 4.0, 0.0],
+        "length": {
+          "value": 2.0,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-wall-07"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured"
+        }
+      },
+      {
+        "id": "wall-08",
+        "start_m": [0.0, 4.0, 0.0],
+        "end_m": [0.0, 0.0, 0.0],
+        "length": {
+          "value": 4.0,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-wall-08"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured"
+        }
+      }
+    ]
+  },
+  "openings": {
+    "doors": [
+      {
+        "id": "door-01",
+        "wall_id": "wall-01",
+        "offset": {
+          "value": 1.0,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-door"
+        },
+        "width": {
+          "value": 0.9,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-door"
+        },
+        "height": {
+          "value": 2.1,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-door"
+        },
+        "depth": {
+          "status": "unknown",
+          "method": "not_captured"
+        },
+        "opening_direction": "unknown"
+      }
+    ],
+    "windows": [
+      {
+        "id": "window-01",
+        "wall_id": "wall-02",
+        "offset": {
+          "value": 1.0,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-window"
+        },
+        "width": {
+          "value": 1.2,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-window"
+        },
+        "height": {
+          "value": 1.0,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-window"
+        },
+        "sill_height": {
+          "value": 0.9,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-window"
+        },
+        "depth": {
+          "status": "unknown",
+          "method": "not_captured"
+        }
+      }
+    ]
+  },
+  "fixed_elements": [
+    {
+      "id": "socket-01",
+      "type": "socket",
+      "anchor": {
+        "wall_id": "wall-02",
+        "offset": {
+          "value": 2.8,
+          "status": "measured",
+          "uncertainty": 0.005,
+          "method": "manual_tape",
+          "source_id": "synthetic-002-socket"
+        }
+      },
+      "height": {
+        "value": 0.3,
+        "status": "estimated",
+        "uncertainty": 0.02,
+        "method": "manual_tape",
+        "source_id": "synthetic-002-socket",
+        "note": "Altura aproximada para probar la incertidumbre explícita"
+      },
+      "note": "Elemento fijo sintético; no representa un circuito eléctrico"
+    }
+  ],
+  "notes": [
+    "Habitación sintética aproximadamente 5 x 4 m con retranqueo de 1 x 0.3 m.",
+    "El fixture prueba estados measured, estimated, derived y unknown."
+  ]
+}

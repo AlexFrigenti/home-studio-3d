@@ -1,0 +1,756 @@
+{
+  "schema_version": "1.1",
+  "room_id": "living-room-main",
+  "name": "Salón principal",
+  "units": "m",
+  "measured_at": "2026-09-06",
+  "measurement_method": "manual_tape",
+  "coordinate_system": {
+    "origin": {
+      "type": "interior_finished_floor_corner",
+      "corner_id": "corner-00",
+      "point_m": [0.0, 0.0, 0.0],
+      "adjacent_segment_ids": ["wall-21", "wall-00"],
+      "selection_rule": "approved_canonical_start_corner_from_session_sketch"
+    },
+    "axes": {
+      "x": "right_on_canonical_sketch",
+      "y": "up_on_canonical_sketch",
+      "z": "vertical_up",
+      "handedness": "right"
+    },
+    "boundary_orientation": "counterclockwise_viewed_from_above",
+    "floor_z_m": 0
+  },
+  "height": {
+    "value": 2.50,
+    "status": "measured",
+    "uncertainty": 0.01,
+    "method": "manual_tape",
+    "note": "new physical measurement; finished-floor to finished-ceiling reading from vertical measurement session 2026-09-07; corrects the previous 3.00 m reading, which is superseded, and keeps the geometry fallback disabled for this room.",
+    "source_id": "living-room-main-2026-09-07-vertical-session-02-height-floor-to-ceiling-correction"
+  },
+  "boundary": {
+    "winding": "counterclockwise_viewed_from_above",
+    "segments": [
+      {
+        "id": "wall-21",
+        "start_m": [0.0, 0.0, 0.0],
+        "end_m": [0.0, 2.75, 0.0],
+        "length": {
+          "value": 2.75,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-21-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-20",
+        "start_m": [0.0, 2.75, 0.0],
+        "end_m": [-0.94, 2.75, 0.0],
+        "length": {
+          "value": 0.94,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-20-length"
+        },
+        "thickness": {
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco V1 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-20-thickness-jamb-v1"
+        }
+      },
+      {
+        "id": "wall-19",
+        "start_m": [-0.94, 2.75, 0.0],
+        "end_m": [-0.94, 2.41, 0.0],
+        "length": {
+          "value": 0.34,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-19-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-18",
+        "start_m": [-0.94, 2.41, 0.0],
+        "end_m": [-1.47, 2.41, 0.0],
+        "length": {
+          "value": 0.53,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-18-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-17",
+        "start_m": [-1.47, 2.41, 0.0],
+        "end_m": [-1.47, 2.71, 0.0],
+        "length": {
+          "value": 0.30,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-17-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-16",
+        "start_m": [-1.47, 2.71, 0.0],
+        "end_m": [-2.46, 2.71, 0.0],
+        "length": {
+          "value": 1.00,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-16-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        },
+        "reconciled_geometry": {
+          "length": {
+            "value": 0.99,
+            "status": "derived",
+            "method": "authorized_orthogonal_closure",
+            "formula": "wall-16.length.value + delta_m",
+            "depends_on": [
+              "wall-16.length",
+              "boundary.reconciliation.observed_residual_m"
+            ],
+            "source_id": "living-room-main-2026-09-06-session-01-closure-wall-16",
+            "note": "Valor geométrico autorizado para cierre; no es una nueva lectura física."
+          },
+          "delta_m": -0.01,
+          "reason": "Cierre ortogonal autorizado conservando la observación física de 1.00 m.",
+          "reconciliation_id": "living-room-main-closure-2026-09-06-session-01"
+        }
+      },
+      {
+        "id": "wall-15",
+        "start_m": [-2.46, 2.71, 0.0],
+        "end_m": [-2.46, 4.05, 0.0],
+        "length": {
+          "value": 1.34,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-15-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-14",
+        "start_m": [-2.46, 4.05, 0.0],
+        "end_m": [-6.09, 4.05, 0.0],
+        "length": {
+          "value": 3.63,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-14-length"
+        },
+        "thickness": {
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco V2 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-14-thickness-jamb-v2"
+        }
+      },
+      {
+        "id": "wall-13",
+        "start_m": [-6.09, 4.05, 0.0],
+        "end_m": [-6.09, 1.94, 0.0],
+        "length": {
+          "value": 2.11,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-13-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-12",
+        "start_m": [-6.09, 1.94, 0.0],
+        "end_m": [-6.34, 1.94, 0.0],
+        "length": {
+          "value": 0.25,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-12-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-11",
+        "start_m": [-6.34, 1.94, 0.0],
+        "end_m": [-6.34, 2.27, 0.0],
+        "length": {
+          "value": 0.33,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-11-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-10",
+        "start_m": [-6.34, 2.27, 0.0],
+        "end_m": [-6.71, 2.27, 0.0],
+        "length": {
+          "value": 0.37,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-10-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-09",
+        "start_m": [-6.71, 2.27, 0.0],
+        "end_m": [-6.71, 2.90, 0.0],
+        "length": {
+          "value": 0.63,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-09-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-08",
+        "start_m": [-6.71, 2.90, 0.0],
+        "end_m": [-8.03, 2.90, 0.0],
+        "length": {
+          "value": 1.32,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-08-length"
+        },
+        "thickness": {
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco V4 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-08-thickness-jamb-v4"
+        }
+      },
+      {
+        "id": "wall-07",
+        "start_m": [-8.03, 2.90, 0.0],
+        "end_m": [-8.03, -0.79, 0.0],
+        "length": {
+          "value": 3.69,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-07-length"
+        },
+        "thickness": {
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco V3 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-07-thickness-jamb-v3"
+        }
+      },
+      {
+        "id": "wall-06",
+        "start_m": [-8.03, -0.79, 0.0],
+        "end_m": [-6.38, -0.79, 0.0],
+        "length": {
+          "value": 1.65,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-06-length"
+        },
+        "thickness": {
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco P2 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-06-thickness-jamb-p2"
+        }
+      },
+      {
+        "id": "wall-05",
+        "start_m": [-6.38, -0.79, 0.0],
+        "end_m": [-6.38, -0.32, 0.0],
+        "length": {
+          "value": 0.45,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-05-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        },
+        "reconciled_geometry": {
+          "length": {
+            "value": 0.47,
+            "status": "derived",
+            "method": "authorized_orthogonal_closure",
+            "formula": "wall-05.length.value + delta_m",
+            "depends_on": [
+              "wall-05.length",
+              "boundary.reconciliation.observed_residual_m"
+            ],
+            "source_id": "living-room-main-2026-09-06-session-01-closure-wall-05",
+            "note": "Valor geométrico autorizado para cierre; no es una nueva lectura física."
+          },
+          "delta_m": 0.02,
+          "reason": "Cierre ortogonal autorizado conservando la observación física de 0.45 m.",
+          "reconciliation_id": "living-room-main-closure-2026-09-06-session-01"
+        }
+      },
+      {
+        "id": "wall-04",
+        "start_m": [-6.38, -0.32, 0.0],
+        "end_m": [-6.13, -0.32, 0.0],
+        "length": {
+          "value": 0.25,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-04-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-03",
+        "start_m": [-6.13, -0.32, 0.0],
+        "end_m": [-6.13, -1.30, 0.0],
+        "length": {
+          "value": 0.98,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-03-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-02",
+        "start_m": [-6.13, -1.30, 0.0],
+        "end_m": [-2.50, -1.30, 0.0],
+        "length": {
+          "value": 3.63,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-02-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-01",
+        "start_m": [-2.50, -1.30, 0.0],
+        "end_m": [-2.50, 0.0, 0.0],
+        "length": {
+          "value": 1.30,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-01-length"
+        },
+        "thickness": {
+          "status": "unknown",
+          "method": "not_captured",
+          "note": "No se midió el espesor de muro."
+        }
+      },
+      {
+        "id": "wall-00",
+        "start_m": [-2.50, 0.0, 0.0],
+        "end_m": [0.0, 0.0, 0.0],
+        "length": {
+          "value": 2.50,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-wall-00-length"
+        },
+        "thickness": {
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco P1 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-00-thickness-jamb-p1"
+        }
+      }
+    ],
+    "reconciliation": {
+      "id": "living-room-main-closure-2026-09-06-session-01",
+      "method": "authorized_orthogonal_closure",
+      "observed_residual_m": [-0.01, -0.02, 0.0],
+      "observed_residual_norm_m": 0.022360679775,
+      "reconciled_residual_m": [0.0, 0.0, 0.0],
+      "reconciled_residual_norm_m": 0.0,
+      "authorized_max_adjustment_m": 0.05,
+      "accepted_residual_tolerance_m": 0.000001,
+      "adjusted_segment_ids": ["wall-05", "wall-16"],
+      "formula": "observed closure residual plus explicit wall-05 and wall-16 deltas equals zero",
+      "depends_on": [
+        "wall-00.length",
+        "wall-01.length",
+        "wall-02.length",
+        "wall-03.length",
+        "wall-04.length",
+        "wall-05.length",
+        "wall-06.length",
+        "wall-07.length",
+        "wall-08.length",
+        "wall-09.length",
+        "wall-10.length",
+        "wall-11.length",
+        "wall-12.length",
+        "wall-13.length",
+        "wall-14.length",
+        "wall-15.length",
+        "wall-16.length",
+        "wall-17.length",
+        "wall-18.length",
+        "wall-19.length",
+        "wall-20.length",
+        "wall-21.length",
+        "wall-05.reconciled_geometry.length",
+        "wall-16.reconciled_geometry.length"
+      ],
+      "source_id": "living-room-main-2026-09-06-session-01-closure-global",
+      "reason": "Cierre ortogonal autorizado; conserva las observaciones físicas y limita la geometría reconciliada a wall-05 y wall-16."
+    }
+  },
+  "openings": {
+    "doors": [
+      {
+        "id": "door-main",
+        "wall_id": "wall-00",
+        "offset": {
+          "value": 0.45,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-p1-wall-offset"
+        },
+        "width": {
+          "value": 1.60,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-p1-width"
+        },
+        "height": {
+          "value": 2.00,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-p1-height"
+        },
+        "depth": {
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-p1-depth"
+        },
+        "opening_direction": "unknown"
+      },
+      {
+        "id": "door-terrace",
+        "wall_id": "wall-06",
+        "offset": {
+          "value": 0.0,
+          "status": "derived",
+          "method": "canonical_offset_from_reversed_partition",
+          "formula": "wall-06.length.value - 1.10 - width.value",
+          "depends_on": ["wall-06.length"],
+          "source_id": "living-room-main-2026-09-06-session-01-p2-canonical-offset",
+          "note": "La puerta ocupa el extremo canónico; el reparto físico original fue 1.10 m de pared y 0.55 m de puerta."
+        },
+        "width": {
+          "value": 0.55,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-p2-width"
+        },
+        "height": {
+          "value": 2.30,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-p2-height"
+        },
+        "depth": {
+          "value": 0.05,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-p2-depth"
+        },
+        "opening_direction": "unknown"
+      }
+    ],
+    "windows": [
+      {
+        "id": "window-v1",
+        "wall_id": "wall-20",
+        "offset": {
+          "value": 0.10,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-v1-wall-offset",
+          "note": "Reparto confirmado: 0.10 m de pared + 0.74 m de ventana + 0.10 m de pared = 0.94 m."
+        },
+        "width": {
+          "value": 0.74,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-v1-width"
+        },
+        "height": {
+          "value": 1.39,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v1-height"
+        },
+        "depth": {
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v1-depth"
+        },
+        "sill_height": {
+          "value": 0.92,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v1-sill-height"
+        },
+        "opening_direction": "unknown"
+      },
+      {
+        "id": "window-v2",
+        "wall_id": "wall-14",
+        "offset": {
+          "value": 0.64,
+          "status": "derived",
+          "method": "canonical_offset_from_reversed_partition",
+          "formula": "wall-14.length.value - 0.59 - width.value",
+          "depends_on": ["wall-14.length"],
+          "source_id": "living-room-main-2026-09-06-session-01-v2-canonical-offset",
+          "note": "El orden físico horario aprobado es 0.59 m de pared + 2.40 m de ventana + 0.64 m de pared; al invertir el wall, el extremo inicial canónico corresponde al lado de 0.64 m."
+        },
+        "width": {
+          "value": 2.40,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-v2-width"
+        },
+        "height": {
+          "value": 1.39,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v2-height"
+        },
+        "depth": {
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v2-depth"
+        },
+        "sill_height": {
+          "value": 0.92,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v2-sill-height"
+        },
+        "opening_direction": "unknown"
+      },
+      {
+        "id": "window-v3",
+        "wall_id": "wall-07",
+        "offset": {
+          "value": 0.0,
+          "status": "derived",
+          "method": "full_segment_opening",
+          "formula": "opening starts at canonical segment start because width equals wall-07.length.value",
+          "depends_on": ["wall-07.length"],
+          "source_id": "living-room-main-2026-09-06-session-01-v3-canonical-offset"
+        },
+        "width": {
+          "value": 3.69,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-v3-width"
+        },
+        "height": {
+          "value": 1.25,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v3-height"
+        },
+        "depth": {
+          "value": 0.06,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v3-depth"
+        },
+        "sill_height": {
+          "value": 0.86,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v3-sill-height"
+        },
+        "opening_direction": "unknown"
+      },
+      {
+        "id": "window-v4",
+        "wall_id": "wall-08",
+        "offset": {
+          "value": 0.0,
+          "status": "derived",
+          "method": "full_segment_opening",
+          "formula": "opening starts at canonical segment start because width equals wall-08.length.value",
+          "depends_on": ["wall-08.length"],
+          "source_id": "living-room-main-2026-09-06-session-01-v4-canonical-offset"
+        },
+        "width": {
+          "value": 1.32,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-06-session-01-v4-width"
+        },
+        "height": {
+          "value": 1.25,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v4-height"
+        },
+        "depth": {
+          "value": 0.06,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v4-depth"
+        },
+        "sill_height": {
+          "value": 0.86,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v4-sill-height"
+        },
+        "opening_direction": "unknown"
+      }
+    ]
+  },
+  "fixed_elements": [],
+  "notes": [
+    "session_id: 2026-09-06-session-01.",
+    "Instrumento: cinta métrica; soporte auxiliar de captura: croquis en papel.",
+    "Las medidas directas normales usan incertidumbre base de 0.01 m.",
+    "El boundary canónico es antihorario y recorre los segmentos en el orden wall-21 a wall-00; los IDs lógicos se conservan.",
+    "Las coordenadas start_m/end_m son derivadas del recorrido ortogonal aprobado y de las longitudes geométricas efectivas; no son lecturas directas.",
+    "El residual observado en los ejes canónicos es [-0.01, -0.02, 0.0] m; solo wall-05 y wall-16 tienen reconciliación explícita.",
+    "wall-05 conserva 0.45 m como observación física; 0.47 m solo es geometría derivada autorizada para cierre.",
+    "wall-16 conserva 1.00 m como observación física; 0.99 m solo es geometría derivada autorizada para cierre y no una nueva lectura.",
+    "V2 conserva el reparto físico confirmado 0.59 + 2.40 + 0.64 = 3.63 m; al invertir el recorrido, el offset canónico es 0.64 derived y el flanco opuesto es 0.59.",
+    "No se capturaron diagonales ni verticales canónicas; no se incorporan estimaciones verticales auxiliares ni elementos fijos no medidos."
+  ]
+}

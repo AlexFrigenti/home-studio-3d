@@ -1,0 +1,205 @@
+# Validación del generador de room-v1
+
+Este documento describe el primer flujo ejecutable del slice
+`002-room-measurement-and-reconstruction`. El flujo base es sintético; el
+checkpoint real autorizado de `living-room-main` se documenta explícitamente
+más abajo y conserva la misma semántica de trazabilidad y validación.
+
+## Flujo y entrada
+
+La entrada canónica es:
+
+`measurements/fixtures/room-v1-synthetic.json`
+
+El flujo es:
+
+`JSON de measurements → validate_measurements.py → generate_room.py → .blend derivado`
+
+`blender/scripts/measurements/generate_room.py` carga el JSON, reutiliza
+`validate_measurements.py` y no crea ni modifica la escena hasta que la
+validación pasa. También rechaza longitudes que no coincidan con las
+coordenadas, límites imposibles y salidas/previews ya existentes.
+
+La ejecución controlada desde la raíz del repositorio es equivalente a:
+
+```text
+<BLENDER_HOME>\blender.exe --background --factory-startup --offline-mode --python blender\scripts\measurements\generate_room.py -- --input measurements\fixtures\room-v1-synthetic.json --output blender\scenes\tests\002-room-v1-generated.blend --preview renders\previews\002-room-v1-generated\viewport-overview.png
+```
+
+El generador no usa red, subprocess, addons, assets externos ni MCP. La
+escena usa `METRIC`, `scale_length=1.0` y metros como unidad interna.
+
+## Estructura y geometría
+
+La colección raíz es `HS3D_ROOM_<room_id>` y contiene:
+
+- `Architecture`: un suelo poligonal y una pared prismática por segmento
+  ordenado del boundary;
+- `Openings`: un proxy geométrico por puerta o ventana;
+- `FixedElements`: un proxy por elemento fijo anclado;
+- `Validation`: cámara y luz técnica del preview.
+
+Las caras interiores de las paredes coinciden con los segmentos del boundary.
+Para un boundary antihorario, el espesor se extiende hacia la derecha del
+segmento, es decir, hacia el exterior. El suelo conserva todos los puntos del
+polígono y por eso representa el retranqueo del fixture, en lugar de reducirlo
+a un rectángulo.
+
+El fixture no captura espesor de pared. El generador usa `0.10 m` únicamente
+como geometría derivada de proxy, conserva `hs3d_thickness_source_status =
+unknown` y marca el fallback explícitamente. No se convierte en una medida
+`measured`.
+
+En documentos `room-v1.1`, una habitación cuya medida `height` sea `unknown`
+puede materializarse con el proxy geométrico explícito de `3.00 m` definido por
+`generate_room.py`. El generation plan conserva `observed_height_m = null` y
+`observed_height_status = unknown`, y separa `geometry_height_m = 3.00`,
+`geometry_height_status = derived` y los metadatos de fallback, motivo y
+procedencia. Este valor solo sirve para materialización provisional; no cambia
+el JSON canónico, no es una estimación y no convierte la altura desconocida en
+`measured` ni `estimated`. Una futura lectura física sustituirá el proxy durante
+la generación sin alterar esta semántica.
+
+Para `living-room-main`, la segunda comprobación física de altura de la sesión
+vertical 2026-09-07 está registrada como `2.50 m`, `uncertainty=0.01 m`,
+`status=measured` y `method=manual_tape`. Corrige la lectura previa de `3.00 m`,
+que queda superseded. Su generation plan usa `2.50 m` como altura observada y
+geométrica `measured`, sin activar el fallback general.
+El fallback de `3.00 m` se conserva para otros documentos v1.1 cuya altura siga
+siendo `unknown`. En el JSON real, P1, P2, V1, V2, V3 y V4 tienen sus medidas
+verticales y profundidades observadas como `measured`. Los seis openings siguen
+siendo representaciones visuales, `proxy_only=true` y
+`constructive_geometry=false`, pero ya no mantienen proxies verticales activos.
+En el JSON real, el espesor medido en las jambas es `0.08 m ±0.01 m` para
+`wall-00`, `wall-06`, `wall-07`, `wall-08`, `wall-14` y `wall-20`; los otros 16
+muros conservan `thickness=unknown` y usan el fallback geométrico de `0.10 m`.
+Estas lecturas no modifican las profundidades de los openings. La escena real
+se regeneró posteriormente desde el JSON canónico, se validó y quedó
+versionada junto con su preview.
+
+La escena es
+`blender/scenes/review/2026-09-07-living-room-main-v1.1-regenerated.blend`, con
+SHA-256
+`79D9ECCFE874A0DFA507638871462F260C6BD678C8A5E78860461B3A71911DC5`; el
+preview es
+`renders/previews/2026-09-07-living-room-main-v1.1-regenerated/qa-top-orthographic.png`,
+con SHA-256
+`E11C9C6B17D0B243705217EC0A73D8523A5F02C46342333131B0421ED4818072`.
+La generación, validación de escena, determinismo, QA visual y framing fueron
+`PASS`.
+
+Los openings se representan en v1 como cuboides de proxy, colocados en el
+segmento referenciado usando `offset`, `width`, `height` y `sill_height`.
+Quedan en el lado interior de la pared y no ejecutan booleanos ni pretenden
+ser huecos constructivos. La profundidad desconocida usa un proxy derivado
+de `0.06 m`. Esta limitación solo debe resolverse antes de admitir geometría
+constructiva que requiera carpintería o cortes booleanos; no es una deuda de
+medición vertical del checkpoint actual.
+
+En `room-v1.1`, si la geometría vertical observada de un opening es
+`unknown`, el plan conserva la posición y el ancho horizontales observados y
+usa una banda visual derivada de `0.10 m` de altura. Si el antepecho también es
+desconocido, la banda se coloca de forma determinista en el centro de la altura
+geométrica de la habitación; no se presenta como antepecho medido. El plan y
+la metadata separan los valores observados de las dimensiones visuales, marcan
+`proxy_only = true` y `constructive_geometry = false`, y registran el método y
+la razón `unknown vertical opening geometry; visualization proxy only`.
+Este marcador permite revisar ubicación y ancho horizontal, pero no representa
+las dimensiones constructivas del hueco ni ejecuta booleanos. Una futura
+captura vertical real sustituirá el proxy durante la generación; no existe
+autoestimación.
+
+El elemento fijo sintético se genera como proxy simple. Para un anclaje de
+pared, su posición usa `wall_id` y `anchor.offset`; `height` se interpreta
+como altura del centro del proxy. Sus dimensiones visuales (`0.12 × 0.06 ×
+0.12 m`) son de representación, no nuevas medidas del fixture.
+
+## Metadata y trazabilidad
+
+La raíz, subcolecciones y objetos guardan propiedades `hs3d_*`, entre ellas:
+
+- `room_id`, versión del generador, schema y unidades;
+- ruta de input relativa al repositorio, nunca una ruta personal absoluta;
+- `source_id`, estado original y estado geométrico derivado;
+- `wall_id`, offset, width, height, sill height y sus estados para openings;
+- fórmula/dependencias del área derivada;
+- firma lógica del plan y el índice de estados presentes.
+
+Los cuatro estados del contrato (`measured`, `estimated`, `derived`,
+`unknown`) permanecen distinguibles en la escena. Un valor `unknown` no se
+lee como medida real; solo puede aparecer un fallback explícito donde esta
+v1 lo documenta.
+
+## Determinismo y validación numérica
+
+`build_generation_plan(room)` es una representación JSON-serializable estable
+y `logical_signature(plan)` la canoniza con claves ordenadas. Cada ejecución
+controlada elimina únicamente la colección raíz y datablocks con prefijo
+`HS3D_`, crea nombres estables y deja transformaciones de malla aplicadas.
+
+`generate_room.py` realiza dos generaciones dentro de la misma escena limpia,
+valida ambas y compara sus firmas de escena. Solo después guarda el archivo
+de prueba:
+
+`blender/scenes/tests/002-room-v1-generated.blend`
+
+`blender/scripts/measurements/validate_generated_room.py` abre el `.blend` en
+modo background y comprueba sin guardar cambios:
+
+- unidades y colecciones;
+- puntos del boundary, suelo, paredes y altura;
+- posiciones/offsets y referencias de puerta/ventana;
+- elemento fijo, estados, source IDs y ausencia de duplicados.
+
+La tolerancia de estas comparaciones de geometría derivada es `1e-6 m`. Es
+una tolerancia matemática de comparación y no una afirmación sobre la
+incertidumbre física de las medidas.
+
+## Evolucion room-v1.1: medida observada y geometria reconciliada
+
+`measurements/schema/room-v1.1.schema.json` es una evolucion aditiva y
+retrocompatible. Los documentos `schema_version: "1.0"` siguen usando la
+semantica original. En v1.1, un segmento puede conservar su `length` observado
+y declarar opcionalmente `reconciled_geometry.length` para la longitud efectiva
+que usara el generador:
+
+`reconciled_geometry.length.value` si existe; en otro caso `length.value`.
+
+La reconciliacion siempre es `derived`, conserva la observacion sin
+sobrescribirla y exige delta firmado, formula, dependencias, `source_id`,
+motivo e identificador de reconciliacion. Tambien exige el bloque global
+`boundary.reconciliation`, que registra los residuos de cierre observado y
+reconciliado, el limite autorizado por segmento y la tolerancia final. El
+validador recalcula estos valores y rechaza discrepancias, dependencias no
+resolubles o ajustes fuera de tolerancia.
+
+No existe un optimizador automatico: toda reconciliacion requiere autorizacion
+y trazabilidad explicitas. La geometria generada conserva por separado los
+valores y estados observados y efectivos. Los datos que no necesitan esta
+separacion pueden continuar en room-v1.
+
+Las referencias `depends_on` de v1.1 usan una gramatica cerrada: `segment_id`,
+`segment_id.length`, `segment_id.reconciled_geometry.length`,
+`boundary.reconciliation` o `boundary.reconciliation.<residual_field>`, donde
+`residual_field` es uno de `observed_residual_m`,
+`observed_residual_norm_m`, `reconciled_residual_m` o
+`reconciled_residual_norm_m`. El validador resuelve unicamente estas rutas,
+rechaza rutas desconocidas o malformadas y detecta autorreferencias y ciclos
+entre reconciliaciones. `formula` es declarativa y no se evalua.
+
+## Preview y limitaciones
+
+El preview técnico se guarda en:
+
+`renders/previews/002-room-v1-generated/viewport-overview.png`
+
+Usa una cámara fija y Eevee Next (Workbench queda como fallback); no usa
+Cycles. La inspección visual busca forma de la habitación, retranqueo,
+proxies de openings y fixed elements, penetraciones graves y objetos
+residuales. No es una validación estética.
+
+Quedan fuera del flujo sintético el modelado de mobiliario y decoración, los
+assets externos, los booleanos constructivos, la integración MCP/Codex y
+cualquier redefinición de medidas canónicas. El checkpoint real autorizado no
+promueve los 16 espesores `unknown`, no activa proxies verticales y conserva
+`proxy_only=true` y `constructive_geometry=false` para los seis openings.
