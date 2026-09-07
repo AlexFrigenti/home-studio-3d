@@ -5,8 +5,8 @@
 Este documento registra el checkpoint de la primera reconstrucción real del
 salón principal dentro del slice `002-room-measurement-and-reconstruction`.
 La escena y el preview descritos aquí son evidencia histórica; las actualizaciones
-de altura y de geometría vertical de la sesión del 2026-09-07 no los regeneran ni
-añaden modelado adicional.
+de altura, geometría vertical y espesores de la sesión del 2026-09-07 no los
+regeneran ni añaden modelado adicional.
 
 - Input canónico: `measurements/rooms/living-room-main.json`
 - Schema: `1.1`
@@ -30,6 +30,18 @@ añaden modelado adicional.
 - `wall-05`: observado `0.45 m` (`measured`); geometría `0.47 m` (`derived`, reconciliada).
 - `wall-16`: observado `1.00 m` (`measured`); geometría `0.99 m` (`derived`, reconciliada).
 - `V2` (`window-v2`): `wall-14`, offset observado `0.64 m`, width `2.40 m`.
+
+## Actualización de espesores reales (sesión vertical 2026-09-07)
+
+- Se midió físicamente con cinta métrica el espesor visible en la jamba de cada
+  uno de los seis huecos autorizados: `0.08 m ±0.01 m`, `measured`,
+  `manual_tape`.
+- Muros actualizados: `wall-00` (P1), `wall-06` (P2), `wall-07` (V3),
+  `wall-08` (V4), `wall-14` (V2) y `wall-20` (V1).
+- Los otros 16 segmentos conservan `thickness.status=unknown`; no se extrapola
+  el valor de las jambas.
+- El espesor de muro y la profundidad del opening son magnitudes distintas;
+  por ejemplo, P2 conserva `depth=0.05 m` aunque `wall-06.thickness=0.08 m`.
 - En el checkpoint Blender histórico, la altura observada era `unknown`, valor
   `null`, y la altura geométrica era `3.00 m`, `derived`, con fallback explícito.
 - Estado actual del JSON: altura observada `2.50 m` (`measured`) y altura
@@ -76,9 +88,9 @@ Fallbacks explícitos:
 - Tests de `tests/measurements`: `61/61 PASS` tras actualizar la expectativa
   histórica del plan de `living-room-main`.
 - `GENERATION_VALID`: PASS en el checkpoint Blender histórico; no se ha
-  reejecutado tras incorporar las nuevas medidas verticales.
+  reejecutado tras incorporar las nuevas medidas verticales y espesores.
 - `SCENE_VALID`: PASS en el checkpoint Blender histórico; no se ha reejecutado
-  tras incorporar las nuevas medidas verticales.
+  tras incorporar las nuevas medidas verticales y espesores.
 - Firma de escena: `6122a4811a8cbce931b05e6e4f52c9a45dd3170e6eb9fb73d7d1fc41ddc05ef3`.
 - Determinismo: PASS; las generaciones repetidas produjeron la misma firma.
 - Escena derivada: `blender/scenes/review/2026-09-07-living-room-main-v1.1-generated.blend`.
@@ -102,10 +114,14 @@ encuadre incorrecto. La evidencia aprobada es `qa-top-orthographic-v2.png`.
   transcritas al JSON canónico.
 - Los seis openings siguen siendo proxies visuales, pero ya no quedan proxies
   verticales activos.
+- El espesor observado `0.08 m ±0.01 m` está transcrito para `wall-00`,
+  `wall-06`, `wall-07`, `wall-08`, `wall-14` y `wall-20`; los otros 16 muros
+  permanecen `unknown` y usan el fallback geométrico `0.10 m`.
+- Las profundidades de los openings no se han cambiado por estas lecturas de
+  espesor de jamba.
 - No hay booleanos ni geometría constructiva de openings.
 - No se ha realizado una nueva generación Blender tras incorporar estas
-  nuevas medidas verticales.
-- El espesor `unknown` de pared usa el fallback proxy de `0.10 m`.
+  nuevas medidas verticales y espesores.
 - No se ha añadido mobiliario ni decoración.
 - No se ha inferido geometría a partir de fotografías.
 - No se han incorporado assets externos.

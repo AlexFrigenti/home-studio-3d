@@ -69,7 +69,11 @@ siendo `unknown`. En el JSON real, P1, P2, V1, V2, V3 y V4 tienen sus medidas
 verticales y profundidades observadas como `measured`. Los seis openings siguen
 siendo representaciones visuales, `proxy_only=true` y
 `constructive_geometry=false`, pero ya no mantienen proxies verticales activos.
-No se ha realizado una nueva generación Blender tras incorporar estas medidas.
+En el JSON real, el espesor medido en las jambas es `0.08 m ±0.01 m` para
+`wall-00`, `wall-06`, `wall-07`, `wall-08`, `wall-14` y `wall-20`; los otros 16
+muros conservan `thickness=unknown` y usan el fallback geométrico de `0.10 m`.
+Estas lecturas no modifican las profundidades de los openings. No se ha
+realizado una nueva generación Blender tras incorporar estas medidas.
 
 Los openings se representan en v1 como cuboides de proxy, colocados en el
 segmento referenciado usando `offset`, `width`, `height` y `sill_height`.

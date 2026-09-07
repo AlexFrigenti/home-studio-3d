@@ -2,7 +2,7 @@
 
 > Clasificación: T2 — contrato canónico de medidas, unidades y coordenadas
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: schema JSON v1 y v1.1, fixtures sintéticos, validador y generación de planes implementados; `measurements/rooms/living-room-main.json` contiene ahora la altura general y las medidas verticales autorizadas de P1/P2/V1/V2/V3/V4, pero no se ha regenerado Blender tras esa actualización.
+> Estado: schema JSON v1 y v1.1, fixtures sintéticos, validador y generación de planes implementados; `measurements/rooms/living-room-main.json` contiene ahora la altura general, las medidas verticales autorizadas de P1/P2/V1/V2/V3/V4 y seis espesores de pared medidos en jambas, pero no se ha regenerado Blender tras esa actualización.
 
 ## Objetivo
 
@@ -155,7 +155,9 @@ El fixture ejecutable de este slice, que muestra todos los estados y un
 retranqueo, está en `measurements/fixtures/room-v1-synthetic.json`. El JSON
 real autorizado de `living-room-main` conserva la altura suelo-techo medida e
 incorpora las medidas verticales autorizadas de P1, P2, V1, V2, V3 y V4. Ya no
-quedan medidas verticales de openings pendientes en este JSON.
+quedan medidas verticales de openings pendientes en este JSON. También conserva
+`thickness=0.08 m measured` para `wall-00`, `wall-06`, `wall-07`, `wall-08`,
+`wall-14` y `wall-20`; los otros segmentos permanecen `unknown`.
 
 ### Evolucion aditiva room-v1.1
 
@@ -488,8 +490,8 @@ las fases posteriores sin reinterpretación silenciosa:
 - Mantener fuera de alcance nuevas medidas reales y decisiones de modelado fuera
   de las autorizaciones explícitas; el archivo canónico de `living-room-main` y
   su ubicación ya están decididos para la altura y las lecturas verticales
-  autorizadas. Los espesores de pared y otras capturas condicionadas siguen
-  pendientes.
+  autorizadas. Los espesores de pared de los otros segmentos y otras capturas
+  condicionadas siguen pendientes.
 - Revisar y aprobar la implementación sintética del parser/validador y del
   generador Blender antes de admitir datos reales adicionales o generar una
   escena real actualizada.

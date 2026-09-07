@@ -194,11 +194,18 @@ de P1, P2, V1, V2, V3 y V4, registradas en el JSON canónico con
 `status=measured`, `uncertainty=0.01` y `method=manual_tape`. V3 y V4 tienen
 alféizar `0.86 m`, altura `1.25 m` y profundidad `0.06 m`.
 
-**Captura pendiente:** queda pendiente el espesor de pared solo donde pueda
-medirse con fiabilidad. Las capturas transcritas de P1, P2, V1, V2, V3 y V4
-requieren mantener revisión y trazabilidad antes de usarse en derivados. El
-sentido de apertura de las puertas queda como dato opcional futuro, no
-obligatorio para esta fase.
+**Espesores de pared transcritos:** la sesión vertical `2026-09-07` aportó
+mediciones físicas en las jambas de P1/P2/V1/V2/V3/V4: `0.08 m`,
+`status=measured`, `uncertainty=0.01` y `method=manual_tape`. Solo se actualizaron
+`wall-00`, `wall-06`, `wall-07`, `wall-08`, `wall-14` y `wall-20`; los otros 16
+segmentos permanecen `unknown` y conservan el fallback geométrico de `0.10 m`.
+El espesor de muro no sustituye ni modifica la profundidad de un opening.
+
+**Captura pendiente:** queda pendiente el espesor de pared de los segmentos
+restantes solo donde pueda medirse con fiabilidad. Las capturas transcritas de
+P1, P2, V1, V2, V3 y V4 requieren mantener revisión y trazabilidad antes de
+usarse en derivados. El sentido de apertura de las puertas queda como dato
+opcional futuro, no obligatorio para esta fase.
 
 **Contrato de estados:** conservar estrictamente `measured`, `estimated`,
 `derived` y `unknown`. Una medida no disponible permanece `unknown`; ningún
@@ -215,7 +222,7 @@ fallback de generación documentado (`0.06 m` para profundidad de opening y
 de los openings de `living-room-main` están medidas; el fallback de profundidad
 permanece disponible para otros datos `unknown`.
 No se ha realizado una nueva generación Blender tras incorporar las nuevas
-medidas verticales.
+medidas verticales y espesores.
 
 **Criterio de continuidad:** cada nueva captura o edición del JSON real necesita
 autorización específica para la sesión, la evidencia y los campos a actualizar.

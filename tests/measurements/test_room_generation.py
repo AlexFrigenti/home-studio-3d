@@ -355,6 +355,29 @@ class RoomGenerationPlanTests(unittest.TestCase):
         self.assertEqual(walls["wall-05"]["geometry_length_m"], 0.47)
         self.assertEqual(walls["wall-16"]["observed_length_m"], 1.00)
         self.assertEqual(walls["wall-16"]["geometry_length_m"], 0.99)
+        measured_thicknesses = {
+            "wall-00": 0.08,
+            "wall-06": 0.08,
+            "wall-07": 0.08,
+            "wall-08": 0.08,
+            "wall-14": 0.08,
+            "wall-20": 0.08,
+        }
+        for wall_id, expected_thickness in measured_thicknesses.items():
+            wall = walls[wall_id]
+            self.assertEqual(wall["thickness_m"], expected_thickness)
+            self.assertEqual(wall["thickness_source_status"], "measured")
+            self.assertEqual(wall["thickness_geometry_status"], "measured")
+            self.assertFalse(wall["thickness_fallback"])
+        unknown_thickness_walls = [
+            wall for wall_id, wall in walls.items() if wall_id not in measured_thicknesses
+        ]
+        self.assertEqual(len(unknown_thickness_walls), 16)
+        for wall in unknown_thickness_walls:
+            self.assertEqual(wall["thickness_m"], 0.10)
+            self.assertEqual(wall["thickness_source_status"], "unknown")
+            self.assertEqual(wall["thickness_geometry_status"], "derived")
+            self.assertTrue(wall["thickness_fallback"])
         openings = {opening["id"]: opening for opening in plan["openings"]}
         self.assertEqual(openings["window-v2"]["wall_id"], "wall-14")
         self.assertEqual(openings["window-v2"]["offset_m"], 0.64)

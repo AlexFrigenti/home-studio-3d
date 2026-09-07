@@ -62,9 +62,12 @@
           "source_id": "living-room-main-2026-09-06-session-01-wall-20-length"
         },
         "thickness": {
-          "status": "unknown",
-          "method": "not_captured",
-          "note": "No se midió el espesor de muro."
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco V1 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-20-thickness-jamb-v1"
         }
       },
       {
@@ -181,9 +184,12 @@
           "source_id": "living-room-main-2026-09-06-session-01-wall-14-length"
         },
         "thickness": {
-          "status": "unknown",
-          "method": "not_captured",
-          "note": "No se midió el espesor de muro."
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco V2 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-14-thickness-jamb-v2"
         }
       },
       {
@@ -283,9 +289,12 @@
           "source_id": "living-room-main-2026-09-06-session-01-wall-08-length"
         },
         "thickness": {
-          "status": "unknown",
-          "method": "not_captured",
-          "note": "No se midió el espesor de muro."
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco V4 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-08-thickness-jamb-v4"
         }
       },
       {
@@ -300,9 +309,12 @@
           "source_id": "living-room-main-2026-09-06-session-01-wall-07-length"
         },
         "thickness": {
-          "status": "unknown",
-          "method": "not_captured",
-          "note": "No se midió el espesor de muro."
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco V3 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-07-thickness-jamb-v3"
         }
       },
       {
@@ -317,9 +329,12 @@
           "source_id": "living-room-main-2026-09-06-session-01-wall-06-length"
         },
         "thickness": {
-          "status": "unknown",
-          "method": "not_captured",
-          "note": "No se midió el espesor de muro."
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco P2 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-06-thickness-jamb-p2"
         }
       },
       {
@@ -436,9 +451,12 @@
           "source_id": "living-room-main-2026-09-06-session-01-wall-00-length"
         },
         "thickness": {
-          "status": "unknown",
-          "method": "not_captured",
-          "note": "No se midió el espesor de muro."
+          "value": 0.08,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "note": "Medición física en la jamba del hueco P1 durante la sesión vertical 2026-09-07.",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-wall-00-thickness-jamb-p1"
         }
       }
     ],
