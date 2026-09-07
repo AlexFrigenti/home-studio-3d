@@ -2,7 +2,7 @@
 
 > Clasificación: T2
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: schema JSON v1, fixture sintético, validador y primer generador Blender implementados; la altura general de `living-room-main` ya está registrada como medida real y las tareas verticales restantes siguen abiertas.
+> Estado: schema JSON v1, fixture sintético, validador y primer generador Blender implementados; la altura general y las medidas verticales de los seis openings de `living-room-main` ya están registradas como medidas reales, y los espesores de pared siguen abiertos.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -118,22 +118,22 @@ y detenerse ante una discrepancia no resuelta.
 - **Archivos:** `measurements/rooms/living-room-main.json`; cualquier `.blend` derivado conserva ubicación y snapshot explícitos.
 - **Validación:** schema, procedimiento, incertidumbres, privacidad, trazabilidad y plan de rollback aprobados.
 - **Rollback:** conservar el registro original; revertir solo representaciones derivadas.
-- **Autorización:** aprobación específica recibida para registrar la altura general medida y transcribir las lecturas verticales de P1, P2, V1 y V2; V3/V4 y el uso de Blender siguen pendientes de autorización/captura según proceda.
-- **Evidencia actual:** `docs/setup/002-real-room-measurement-field-sheet.md` y `measurements/rooms/living-room-main.json`. El JSON contiene la altura suelo-techo `2.50 m ±0.01 m`, `measured` mediante `manual_tape` en la sesión vertical `2026-09-07`; esta segunda comprobación corrige la lectura previa de `3.00 m`, que queda superseded. También contiene las lecturas medidas de P1 (`2.00 m` de altura, `0.08 m` de profundidad), P2 (`2.30 m`, `0.05 m`), V1 y V2 (`0.92 m` de alféizar, `1.39 m` de altura y `0.08 m` de profundidad en ambos casos). V3/V4 mantienen sus verticales canónicas `unknown`.
+- **Autorización:** aprobación específica recibida para registrar la altura general medida y transcribir las lecturas verticales de P1, P2, V1, V2, V3 y V4; el uso de Blender sigue pendiente de autorización/captura según proceda.
+- **Evidencia actual:** `docs/setup/002-real-room-measurement-field-sheet.md` y `measurements/rooms/living-room-main.json`. El JSON contiene la altura suelo-techo `2.50 m ±0.01 m`, `measured` mediante `manual_tape` en la sesión vertical `2026-09-07`; esta segunda comprobación corrige la lectura previa de `3.00 m`, que queda superseded. También contiene las lecturas medidas de P1 (`2.00 m` de altura, `0.08 m` de profundidad), P2 (`2.30 m`, `0.05 m`), V1 y V2 (`0.92 m` de alféizar, `1.39 m` de altura y `0.08 m` de profundidad en ambos casos), y V3/V4 (`0.86 m` de alféizar, `1.25 m` de altura y `0.06 m` de profundidad en ambos casos).
 - **Decisiones previas aprobadas:** `room_id`=`living-room-main`; nombre humano=`Salón principal`; `session_id`=`2026-09-06-session-01`; instrumento principal=cinta métrica; soporte auxiliar=croquis manual en papel; unidad canónica=`m`; incertidumbre base para una lectura directa normal y accesible con cinta=`±0.01 m`; ruta del JSON=`measurements/rooms/living-room-main.json`; sesión vertical adicional=`2026-09-07`.
 - **Regla de incertidumbre aprobada:** `±0.01 m` no redondea automáticamente las lecturas; accesos peores, geometría difícil o menor confianza requieren una incertidumbre mayor adecuada; `estimated` debe identificarse y conservar una incertidumbre acorde con la estimación; si un dato no puede medirse o estimarse con confianza suficiente, usar `unknown`; no inventar precisión ni inferir valores silenciosamente.
-- **Instancia de sesión:** no se crea una copia específica; la hoja canónica permanece reutilizable porque el contrato actual no define una ubicación ni convención para instancias documentales de sesiones. El JSON canónico existe y conserva la trazabilidad de la lectura vertical en `height`.
-- **Bloqueo restante:** V3/V4 y los espesores accesibles siguen pendientes de captura o transcripción; no se ha regenerado Blender tras las nuevas medidas. T2.12 permanece `[~]`.
-- **Pendiente antes de cerrar:** completar las capturas verticales pendientes, revisar sus evidencias y ejecutar las validaciones/derivados autorizados.
+- **Instancia de sesión:** no se crea una copia específica; la hoja canónica permanece reutilizable porque el contrato actual no define una ubicación ni convención para instancias documentales de sesiones. El JSON canónico conserva la trazabilidad de la altura y de las seis lecturas verticales.
+- **Bloqueo restante:** los espesores accesibles siguen pendientes de captura o transcripción; no se ha regenerado Blender tras las nuevas medidas. T2.12 permanece `[~]`.
+- **Pendiente antes de cerrar:** revisar las evidencias, resolver los espesores que puedan medirse con fiabilidad y ejecutar los derivados autorizados cuando se autorice la regeneración.
 
 ## T2.12-V — Preparar captura de geometría vertical real
 
-- **Estado:** `[~]` — altura general y P1/P2/V1/V2 capturados y registrados; quedan pendientes V3/V4 y otras lecturas verticales.
+- **Estado:** `[~]` — altura general y los seis openings capturados y registrados; quedan pendientes los espesores de pared donde puedan medirse con fiabilidad.
 - **Objetivo:** definir una captura gradual de alturas, alféizares, profundidades y espesores reales para sustituir proxies/fallbacks solo cuando exista evidencia suficiente.
 - **Instrumento y registro:** para cada lectura futura anotar instrumento, valor y unidad, `status` (`measured`, `estimated`, `derived` o `unknown`), incertidumbre y una nota sobre accesibilidad o dificultad. No exigir mediciones que requieran desmontar elementos.
 - **Habitación:** la segunda comprobación de altura suelo → techo quedó capturada en la sesión vertical `2026-09-07` con `value=2.50`, `status=measured`, `uncertainty=0.01` y `method=manual_tape`; corrige la lectura previa de `3.00 m`. La geometría efectiva es `2.50 m` `measured` y el fallback de altura general no se aplica a `living-room-main`.
 - **Puertas:** P1 y P2 tienen altura y profundidad `measured` transcritas; el sentido de apertura queda como dato opcional futuro.
-- **Ventanas:** V1 y V2 tienen altura de hueco, alféizar y profundidad `measured` transcritas. V3 y V4 siguen pendientes de captura.
+- **Ventanas:** V1, V2, V3 y V4 tienen altura de hueco, alféizar y profundidad `measured` transcritas.
 - **Paredes:** espesor real solo donde pueda medirse de forma fiable; mantener el fallback `0.10 m` mientras permanezca `unknown`.
 - **Checklist breve de campo:**
   1. altura suelo → techo;
@@ -147,7 +147,7 @@ y detenerse ante una discrepancia no resuelta.
 - **Regla de no inventar:** una altura o profundidad que no pueda medirse permanece `unknown`; Blender puede continuar mostrando el proxy y el pipeline puede continuar usando fallbacks documentados. Una aproximación visual nunca se convierte en `measured`.
 - **Pipeline:** cualquier actualización futura seguirá JSON canónico → validator → generation plan → Blender. No se corrige la escena manualmente ni se promocionan estados de forma implícita.
 - **Validación realizada:** diff y trazabilidad del JSON, validator, suite Python y generation plan revisados; no se ha regenerado Blender tras incorporar las nuevas medidas verticales.
-- **Decisiones pendientes:** evidencia e incertidumbre de cada lectura restante; profundidades/espesores realmente accesibles; autorización específica para las siguientes capturas y para regenerar una variante derivada.
+- **Decisiones pendientes:** espesores realmente accesibles, sentido de apertura opcional y autorización específica para regenerar una variante derivada.
 
 ## T2.13 — Cerrar el slice y preparar PR
 

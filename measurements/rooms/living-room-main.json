@@ -657,21 +657,25 @@
           "source_id": "living-room-main-2026-09-06-session-01-v3-width"
         },
         "height": {
-          "status": "unknown",
-          "method": "not_captured",
-          "note": "No medida vertical canónica en esta sesión.",
-          "source_id": "living-room-main-2026-09-06-session-01-v3-height-not-captured"
+          "value": 1.25,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v3-height"
         },
         "depth": {
-          "status": "unknown",
-          "method": "not_captured",
-          "source_id": "living-room-main-2026-09-06-session-01-v3-depth-not-captured"
+          "value": 0.06,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v3-depth"
         },
         "sill_height": {
-          "status": "unknown",
-          "method": "not_captured",
-          "note": "No medida vertical canónica en esta sesión.",
-          "source_id": "living-room-main-2026-09-06-session-01-v3-sill-not-captured"
+          "value": 0.86,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v3-sill-height"
         },
         "opening_direction": "unknown"
       },
@@ -694,21 +698,25 @@
           "source_id": "living-room-main-2026-09-06-session-01-v4-width"
         },
         "height": {
-          "status": "unknown",
-          "method": "not_captured",
-          "note": "No medida vertical canónica en esta sesión.",
-          "source_id": "living-room-main-2026-09-06-session-01-v4-height-not-captured"
+          "value": 1.25,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v4-height"
         },
         "depth": {
-          "status": "unknown",
-          "method": "not_captured",
-          "source_id": "living-room-main-2026-09-06-session-01-v4-depth-not-captured"
+          "value": 0.06,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v4-depth"
         },
         "sill_height": {
-          "status": "unknown",
-          "method": "not_captured",
-          "note": "No medida vertical canónica en esta sesión.",
-          "source_id": "living-room-main-2026-09-06-session-01-v4-sill-not-captured"
+          "value": 0.86,
+          "status": "measured",
+          "uncertainty": 0.01,
+          "method": "manual_tape",
+          "source_id": "living-room-main-2026-09-07-vertical-session-02-v4-sill-height"
         },
         "opening_direction": "unknown"
       }

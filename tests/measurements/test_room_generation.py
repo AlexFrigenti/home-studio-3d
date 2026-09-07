@@ -273,12 +273,35 @@ class RoomGenerationPlanTests(unittest.TestCase):
         self.assertNotIn(result["geometry_height_m"], {2.03, 2.10, 1.20, 0.40, 1.00})
         self.assertEqual(room, original)
 
-    def test_real_room_unknown_sill_and_depth_remain_observed_unknown_with_derived_geometry(self):
-        room = json.loads(REAL_ROOM_PATH.read_text(encoding="utf-8"))
+    def test_v11_unknown_sill_and_depth_remain_observed_unknown_with_derived_geometry(self):
+        room = copy.deepcopy(self.room_v11)
+        opening = copy.deepcopy(room["openings"]["doors"][0])
+        room["openings"]["doors"] = []
+        room["openings"]["windows"] = [opening]
+        opening["id"] = "window-unknown"
+        opening["height"] = {
+            "status": "unknown",
+            "method": "not_captured",
+            "source_id": "synthetic-011-window-height-unknown",
+        }
+        opening["sill_height"] = {
+            "status": "unknown",
+            "method": "not_captured",
+            "source_id": "synthetic-011-window-sill-unknown",
+        }
+        opening["depth"] = {
+            "status": "unknown",
+            "method": "not_captured",
+            "source_id": "synthetic-011-window-depth-unknown",
+        }
 
         plan = self.generator.build_generation_plan(room)
-        result = next(item for item in plan["openings"] if item["id"] == "window-v3")
+        result = next(item for item in plan["openings"] if item["id"] == "window-unknown")
 
+        self.assertIsNone(result["observed_height_m"])
+        self.assertEqual(result["observed_height_status"], "unknown")
+        self.assertEqual(result["geometry_height_status"], "derived")
+        self.assertTrue(result["geometry_height_proxy"])
         self.assertIsNone(result["observed_sill_height_m"])
         self.assertEqual(result["observed_sill_height_status"], "unknown")
         self.assertEqual(result["geometry_sill_height_status"], "derived")
@@ -308,7 +331,7 @@ class RoomGenerationPlanTests(unittest.TestCase):
             self.assertTrue(result["proxy_only"])
             self.assertFalse(result["constructive_geometry"])
 
-    def test_real_room_builds_with_measured_height_and_partial_opening_vertical_data(self):
+    def test_real_room_builds_with_measured_height_and_all_opening_vertical_data(self):
         room = json.loads(REAL_ROOM_PATH.read_text(encoding="utf-8"))
         original = copy.deepcopy(room)
 
@@ -335,12 +358,16 @@ class RoomGenerationPlanTests(unittest.TestCase):
         openings = {opening["id"]: opening for opening in plan["openings"]}
         self.assertEqual(openings["window-v2"]["wall_id"], "wall-14")
         self.assertEqual(openings["window-v2"]["offset_m"], 0.64)
+        self.assertEqual(openings["window-v2"]["width_m"], 2.40)
+        self.assertEqual(openings["window-v2"]["width_status"], "measured")
         self.assertEqual(len(openings), 6)
         expected_measured_verticals = {
             "door-main": {"height": 2.00, "depth": 0.08},
             "door-terrace": {"height": 2.30, "depth": 0.05},
             "window-v1": {"height": 1.39, "depth": 0.08, "sill_height": 0.92},
             "window-v2": {"height": 1.39, "depth": 0.08, "sill_height": 0.92},
+            "window-v3": {"height": 1.25, "depth": 0.06, "sill_height": 0.86},
+            "window-v4": {"height": 1.25, "depth": 0.06, "sill_height": 0.86},
         }
         for opening_id, expected in expected_measured_verticals.items():
             result = openings[opening_id]
@@ -360,28 +387,12 @@ class RoomGenerationPlanTests(unittest.TestCase):
                 self.assertEqual(result["geometry_sill_height_m"], expected["sill_height"])
                 self.assertEqual(result["geometry_sill_height_status"], "measured")
                 self.assertFalse(result["geometry_sill_height_proxy"])
-        for opening_id in ("window-v3", "window-v4"):
-            result = openings[opening_id]
-            self.assertIsNone(result["observed_height_m"])
-            self.assertEqual(result["observed_height_status"], "unknown")
-            self.assertEqual(
-                result["geometry_height_m"],
-                self.generator.DEFAULT_OPENING_VISUAL_BAND_HEIGHT_M,
-            )
-            self.assertEqual(result["geometry_height_status"], "derived")
-            self.assertTrue(result["geometry_height_proxy"])
-            self.assertIsNone(result["observed_sill_height_m"])
-            self.assertEqual(result["observed_sill_height_status"], "unknown")
-            self.assertTrue(result["geometry_sill_height_proxy"])
-            self.assertIsNone(result["observed_depth_m"])
-            self.assertEqual(result["observed_depth_status"], "unknown")
-            self.assertEqual(result["geometry_depth_m"], self.generator.DEFAULT_OPENING_DEPTH_M)
-            self.assertEqual(result["geometry_depth_status"], "derived")
-            self.assertTrue(result["geometry_depth_proxy"])
         self.assertEqual(
             sum(1 for opening in openings.values() if opening["geometry_height_proxy"]),
-            2,
+            0,
         )
+        self.assertTrue(all(not opening["geometry_sill_height_proxy"] for opening in openings.values()))
+        self.assertTrue(all(not opening["geometry_depth_proxy"] for opening in openings.values()))
         self.assertTrue(all(opening["proxy_only"] for opening in openings.values()))
         self.assertTrue(all(not opening["constructive_geometry"] for opening in openings.values()))
         self.assertEqual(room, original)

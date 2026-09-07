@@ -65,12 +65,11 @@ vertical 2026-09-07 está registrada como `2.50 m`, `uncertainty=0.01 m`,
 que queda superseded. Su generation plan usa `2.50 m` como altura observada y
 geométrica `measured`, sin activar el fallback general.
 El fallback de `3.00 m` se conserva para otros documentos v1.1 cuya altura siga
-siendo `unknown`. En el JSON real, P1, P2, V1 y V2 ya tienen sus medidas
-verticales y profundidades observadas como `measured`; V3 y V4 continúan con
-verticales `unknown`. Los seis openings siguen siendo representaciones
-visuales, `proxy_only=true` y `constructive_geometry=false`; solo V3 y V4
-mantienen proxies verticales y de profundidad. No se ha realizado una nueva
-generación Blender tras incorporar estas medidas.
+siendo `unknown`. En el JSON real, P1, P2, V1, V2, V3 y V4 tienen sus medidas
+verticales y profundidades observadas como `measured`. Los seis openings siguen
+siendo representaciones visuales, `proxy_only=true` y
+`constructive_geometry=false`, pero ya no mantienen proxies verticales activos.
+No se ha realizado una nueva generación Blender tras incorporar estas medidas.
 
 Los openings se representan en v1 como cuboides de proxy, colocados en el
 segmento referenciado usando `offset`, `width`, `height` y `sill_height`.

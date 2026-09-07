@@ -4,9 +4,9 @@
 
 Este documento registra el checkpoint de la primera reconstrucción real del
 salón principal dentro del slice `002-room-measurement-and-reconstruction`.
-La escena y el preview descritos aquí son evidencia histórica; la actualización
-de altura de la sesión vertical del 2026-09-07 no los regenera ni añade
-modelado adicional.
+La escena y el preview descritos aquí son evidencia histórica; las actualizaciones
+de altura y de geometría vertical de la sesión del 2026-09-07 no los regeneran ni
+añaden modelado adicional.
 
 - Input canónico: `measurements/rooms/living-room-main.json`
 - Schema: `1.1`
@@ -41,10 +41,9 @@ disponible en el generador para otros documentos v1.1 con altura `unknown`.
 
 Los seis openings conservan sus offsets y widths canónicos y siguen siendo
 proxies visuales sin booleanos constructivos (`proxy_only=true`,
-`constructive_geometry=false`). P1, P2, V1 y V2 ya tienen sus medidas
-verticales y profundidades observadas como `measured`; V3 y V4 mantienen
-geometría vertical y profundidad de proxy porque sus lecturas siguen
-`unknown`.
+`constructive_geometry=false`). P1, P2, V1, V2, V3 y V4 tienen sus medidas
+verticales y profundidades observadas como `measured`; ya no quedan proxies
+verticales activos en el generation plan de `living-room-main`.
 
 Openings generados:
 
@@ -63,12 +62,11 @@ Estado vertical canónico:
 - P2: altura `2.30 m` y profundidad `0.05 m`, `measured`.
 - V1: alféizar `0.92 m`, altura `1.39 m` y profundidad `0.08 m`, `measured`.
 - V2: alféizar `0.92 m`, altura `1.39 m` y profundidad `0.08 m`, `measured`.
-- V3 y V4: alturas, alféizares y profundidades observadas `unknown`; siguen
-  usando proxies verticales.
+- V3: alféizar `0.86 m`, altura `1.25 m` y profundidad `0.06 m`, `measured`.
+- V4: alféizar `0.86 m`, altura `1.25 m` y profundidad `0.06 m`, `measured`.
 
 Fallbacks explícitos:
 
-- Profundidad desconocida de V3 y V4: proxy derivado de `0.06 m`.
 - Espesor de pared desconocido: proxy derivado de `0.10 m`.
 - Altura general de `living-room-main`: no aplica tras la lectura física del
   2026-09-07.
@@ -100,14 +98,13 @@ encuadre incorrecto. La evidencia aprobada es `qa-top-orthographic-v2.png`.
   `manual_tape`, sesión vertical `2026-09-07`; la lectura previa de `3.00 m`
   fue corregida por una segunda comprobación física.
 - El fallback general de altura no se aplica actualmente a `living-room-main`.
-- P1, P2, V1 y V2 tienen alturas verticales reales transcritas al JSON
-  canónico; V3 y V4 siguen sin alturas verticales reales.
-- Los seis openings siguen siendo proxies visuales; V3 y V4 conservan además
-  proxies verticales.
+- P1, P2, V1, V2, V3 y V4 tienen alturas, alféizares y profundidades reales
+  transcritas al JSON canónico.
+- Los seis openings siguen siendo proxies visuales, pero ya no quedan proxies
+  verticales activos.
 - No hay booleanos ni geometría constructiva de openings.
 - No se ha realizado una nueva generación Blender tras incorporar estas
   nuevas medidas verticales.
-- La profundidad `unknown` de V3 y V4 usa el fallback proxy de `0.06 m`.
 - El espesor `unknown` de pared usa el fallback proxy de `0.10 m`.
 - No se ha añadido mobiliario ni decoración.
 - No se ha inferido geometría a partir de fotografías.
