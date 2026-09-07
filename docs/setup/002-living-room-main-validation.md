@@ -31,7 +31,7 @@ canónico ni añadir mobiliario o decoración.
 
 - `wall-05`: observado `0.45 m` (`measured`); geometría `0.47 m` (`derived`, reconciliada).
 - `wall-16`: observado `1.00 m` (`measured`); geometría `0.99 m` (`derived`, reconciliada).
-- `V2` (`window-v2`): `wall-14`, offset observado `0.64 m`, width `2.40 m`.
+- `V2` (`window-v2`): `wall-14`, offset `0.64 m` con `status=derived`, derivado de la orientación canónica y la referencia del opening; no es una lectura física directa. Width `2.40 m` con `status=measured`.
 
 ## Actualización de espesores reales (sesión vertical 2026-09-07)
 

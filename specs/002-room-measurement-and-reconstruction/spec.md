@@ -506,7 +506,7 @@ las fases posteriores sin reinterpretación silenciosa:
 
 ## Decisiones pendientes
 
-- Revisar el contrato implementado de schema v1 antes de admitir datos reales.
+- Revisar el contrato implementado de schema v1 antes de admitir datos reales adicionales, nuevas habitaciones o necesidades contractuales no cubiertas por v1.1; el dato real canónico autorizado de `living-room-main` ya está versionado bajo schema 1.1.
 - Revisar la estrategia de proxies de openings y fallback de espesores antes de
   admitir geometría constructiva o nuevas habitaciones reales.
 - Revisar el baseline de tolerancias con evidencia de una primera sesión real,
