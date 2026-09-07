@@ -1,8 +1,10 @@
 # Tareas: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2
-> Estado: diseño y planificación preparados; no se ha iniciado implementación.
-> El slice 002 permanece cerrado e integrado en `main`; estas tareas pertenecen a un slice posterior y no se marcan como completadas en esta sesión.
+> Estado: T3.01 y T3.02 implementadas y validadas; la comparación funcional,
+> el adapter Blender y las fases posteriores siguen pendientes.
+> El slice 002 permanece cerrado e integrado en `main`; las tareas completadas
+> aquí se limitan al contrato puro de T3.01/T3.02.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -13,10 +15,15 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 ## T3.01 — Aprobar contrato y modelo de autoridad
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** aprobar la jerarquía room → generation plan → scene y el
   contrato de la representación normalizada.
 - **Archivos previstos:** `spec.md`, `plan.md`, pruebas de contrato futuras.
+- **Evidencia:** `compare_room_scene.py` fija la autoridad
+  `measurements/` → generation plan → scene mediante `SourceContext` y
+  `Provenance`, sin importar `bpy`, leer `.blend` ni promover scene a
+  measurement. Los tests de contrato cubren estados, fallback,
+  reconciliación representable y separación de contextos.
 - **Validación:** revisión humana de authority model, estados, provenance,
   fallback, reconciliación y límites scene → measurement.
 - **Rollback:** retirar solo la documentación del slice 003.
@@ -24,12 +31,16 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 ## T3.02 — Definir `ComparisonReport` y findings
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** fijar `report_version`, `valid`, room/schema/generator
   versions, `scene_adapter_version`, `comparison_stage`,
   `source_context`, discrepancies, warnings, info y summary.
 - **Archivos previstos:** `blender/scripts/measurements/compare_room_scene.py`,
   `tests/measurements/test_room_scene_comparison.py`.
+- **Evidencia:** el módulo y `test_room_scene_comparison.py` fijan el
+  contrato serializable de reportes, findings, severidades, stages,
+  versiones independientes, tolerancias lineales/areales/exactas y orden
+  determinista; 13 tests puros pasan sin Blender.
 - **Validación:** serialización estable, sin timestamps variables, contexto
   observed/effective_geometry/scene, listas ordenadas y códigos documentados.
 - **Rollback:** eliminar el módulo y sus pruebas sin tocar el generator.
@@ -148,5 +159,6 @@ capturas reales o geometría constructiva sin una autorización independiente.
 - Fotografías, EXIF, LiDAR y fotogrametría.
 - Cambios en MCP o `get_addon_status`.
 
-Todas las tareas T3 permanecen `[ ]` hasta que una implementación posterior
-sea autorizada y validada. Esta preparación documental no inicia el slice.
+T3.03 y posteriores permanecen `[ ]` hasta que una implementación posterior
+sea autorizada y validada. T3.01/T3.02 cubren únicamente el contrato puro;
+esta fase no inicia la comparación funcional ni la integración Blender.
