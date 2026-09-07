@@ -39,10 +39,12 @@ La segunda medida física sustituye la lectura anterior de `3.00 m` y deja sin
 efecto el fallback únicamente para `living-room-main`. El fallback permanece
 disponible en el generador para otros documentos v1.1 con altura `unknown`.
 
-Los seis openings conservan sus offsets y widths canónicos. Su geometría
-vertical es únicamente un proxy visual de `0.10 m`; el estado vertical
-observado permanece `unknown`, `proxy_only=true` y
-`constructive_geometry=false`. No se ejecutan booleanos constructivos.
+Los seis openings conservan sus offsets y widths canónicos y siguen siendo
+proxies visuales sin booleanos constructivos (`proxy_only=true`,
+`constructive_geometry=false`). P1, P2, V1 y V2 ya tienen sus medidas
+verticales y profundidades observadas como `measured`; V3 y V4 mantienen
+geometría vertical y profundidad de proxy porque sus lecturas siguen
+`unknown`.
 
 Openings generados:
 
@@ -55,9 +57,18 @@ Openings generados:
 | V3 (`window-v3`) | `wall-07` | 0.00 m | 3.69 m |
 | V4 (`window-v4`) | `wall-08` | 0.00 m | 1.32 m |
 
+Estado vertical canónico:
+
+- P1: altura `2.00 m` y profundidad `0.08 m`, `measured`.
+- P2: altura `2.30 m` y profundidad `0.05 m`, `measured`.
+- V1: alféizar `0.92 m`, altura `1.39 m` y profundidad `0.08 m`, `measured`.
+- V2: alféizar `0.92 m`, altura `1.39 m` y profundidad `0.08 m`, `measured`.
+- V3 y V4: alturas, alféizares y profundidades observadas `unknown`; siguen
+  usando proxies verticales.
+
 Fallbacks explícitos:
 
-- Profundidad desconocida de openings: proxy derivado de `0.06 m`.
+- Profundidad desconocida de V3 y V4: proxy derivado de `0.06 m`.
 - Espesor de pared desconocido: proxy derivado de `0.10 m`.
 - Altura general de `living-room-main`: no aplica tras la lectura física del
   2026-09-07.
@@ -67,9 +78,9 @@ Fallbacks explícitos:
 - Tests de `tests/measurements`: `61/61 PASS` tras actualizar la expectativa
   histórica del plan de `living-room-main`.
 - `GENERATION_VALID`: PASS en el checkpoint Blender histórico; no se ha
-  reejecutado tras incorporar la corrección de altura.
+  reejecutado tras incorporar las nuevas medidas verticales.
 - `SCENE_VALID`: PASS en el checkpoint Blender histórico; no se ha reejecutado
-  tras incorporar la corrección de altura.
+  tras incorporar las nuevas medidas verticales.
 - Firma de escena: `6122a4811a8cbce931b05e6e4f52c9a45dd3170e6eb9fb73d7d1fc41ddc05ef3`.
 - Determinismo: PASS; las generaciones repetidas produjeron la misma firma.
 - Escena derivada: `blender/scenes/review/2026-09-07-living-room-main-v1.1-generated.blend`.
@@ -89,14 +100,14 @@ encuadre incorrecto. La evidencia aprobada es `qa-top-orthographic-v2.png`.
   `manual_tape`, sesión vertical `2026-09-07`; la lectura previa de `3.00 m`
   fue corregida por una segunda comprobación física.
 - El fallback general de altura no se aplica actualmente a `living-room-main`.
-- P1, P2, V1, V2, V3 y V4 siguen sin alturas verticales reales en el JSON
-  canónico; la sesión actual incluye capturas de P1, P2, V1 y V2 aún no
-  autorizadas ni transcritas.
-- Las alturas verticales de los openings son proxies visuales.
+- P1, P2, V1 y V2 tienen alturas verticales reales transcritas al JSON
+  canónico; V3 y V4 siguen sin alturas verticales reales.
+- Los seis openings siguen siendo proxies visuales; V3 y V4 conservan además
+  proxies verticales.
 - No hay booleanos ni geometría constructiva de openings.
-- No se ha realizado una nueva generación Blender tras incorporar esta
-  corrección de altura.
-- La profundidad `unknown` usa el fallback proxy de `0.06 m`.
+- No se ha realizado una nueva generación Blender tras incorporar estas
+  nuevas medidas verticales.
+- La profundidad `unknown` de V3 y V4 usa el fallback proxy de `0.06 m`.
 - El espesor `unknown` de pared usa el fallback proxy de `0.10 m`.
 - No se ha añadido mobiliario ni decoración.
 - No se ha inferido geometría a partir de fotografías.
@@ -104,4 +115,4 @@ encuadre incorrecto. La evidencia aprobada es `qa-top-orthographic-v2.png`.
 
 El checkpoint Blender histórico queda como:
 
-`ESCENA REAL HISTÓRICA APTA PARA REVISIÓN; REGENERACIÓN PENDIENTE TRAS CORREGIR LA ALTURA`
+`ESCENA REAL HISTÓRICA APTA PARA REVISIÓN; REGENERACIÓN PENDIENTE TRAS INCORPORAR LAS NUEVAS MEDIDAS VERTICALES`

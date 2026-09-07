@@ -2,7 +2,7 @@
 
 > Clasificación: T2 — contrato canónico de medidas, unidades y coordenadas
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: schema JSON v1 y v1.1, fixtures sintéticos, validador y generación de planes implementados; `measurements/rooms/living-room-main.json` contiene ahora la altura general física autorizada, pero no se ha regenerado Blender tras esa actualización.
+> Estado: schema JSON v1 y v1.1, fixtures sintéticos, validador y generación de planes implementados; `measurements/rooms/living-room-main.json` contiene ahora la altura general y las medidas verticales autorizadas de P1/P2/V1/V2, pero no se ha regenerado Blender tras esa actualización.
 
 ## Objetivo
 
@@ -153,8 +153,9 @@ superior es:
 
 El fixture ejecutable de este slice, que muestra todos los estados y un
 retranqueo, está en `measurements/fixtures/room-v1-synthetic.json`. El JSON
-real autorizado de `living-room-main` conserva la altura suelo-techo medida,
-pero no añade todavía las alturas de los openings ni otras medidas verticales.
+real autorizado de `living-room-main` conserva la altura suelo-techo medida e
+incorpora las medidas verticales autorizadas de P1, P2, V1 y V2. V3 y V4 no
+añaden todavía medidas verticales canónicas.
 
 ### Evolucion aditiva room-v1.1
 
@@ -444,7 +445,7 @@ las fases posteriores sin reinterpretación silenciosa:
 9. La arquitectura parser/validator/generator y sus validaciones futuras están definidas, con un primer generador sintético ejecutable.
 10. El fixture sintético 002 versionado incluye retranqueo, `estimated`, `derived` y un elemento fijo opcional.
 11. El plan separa diseño, fixture, validador, generador, validaciones y procedimiento real.
-12. El flujo no depende de rutas personales, no contiene medidas reales adicionales fuera de la altura general autorizada de `living-room-main`, no modifica MCP/Codex y mantiene fuera de alcance el modelado real.
+12. El flujo no depende de rutas personales, no contiene medidas reales adicionales fuera de las autorizaciones explícitas para `living-room-main`, no modifica MCP/Codex y mantiene fuera de alcance el modelado real.
 13. La escena sintética derivada conserva unidades, colecciones, metadata, determinismo y validación numérica documentados.
 
 ## Riesgos T2 y mitigaciones
@@ -484,9 +485,10 @@ las fases posteriores sin reinterpretación silenciosa:
   admitir geometría real.
 - Revisar el baseline de tolerancias con evidencia de una primera sesión real,
   sin confundir esa revisión con la precisión almacenada o matemática.
-- Mantener fuera de alcance nuevas medidas reales y decisiones de modelado hasta
-  completar la captura vertical pendiente; el archivo canónico de
-  `living-room-main` y su ubicación ya están decididos para la altura autorizada.
+- Mantener fuera de alcance nuevas medidas reales y decisiones de modelado fuera
+  de las autorizaciones explícitas; el archivo canónico de `living-room-main` y
+  su ubicación ya están decididos para la altura y las lecturas verticales
+  autorizadas. V3/V4 y otras capturas siguen pendientes.
 - Revisar y aprobar la implementación sintética del parser/validador y del
   generador Blender antes de admitir datos reales adicionales o generar una
   escena real actualizada.

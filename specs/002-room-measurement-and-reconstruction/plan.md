@@ -182,21 +182,24 @@ específicas.
 incertidumbre `±0.01 m`, `status=measured`, `method=manual_tape` y sesión
 vertical `2026-09-07`. Corrige la lectura previa de `3.00 m`, que queda
 superseded. El generation plan usa `2.50 m` como altura observada y geométrica
-`measured`, sin fallback. P1/P2 y V1–V4 mantienen proxies verticales; los
-datos horizontales canónicos no se reinterpretan.
+`measured`, sin fallback. P1/P2 y V1/V2 ya tienen medidas verticales reales
+autorizadas y transcritas; V3/V4 mantienen proxies verticales. Los datos
+horizontales canónicos no se reinterpretan.
 
 **Captura realizada:** altura suelo-techo registrada en el JSON canónico con
 `source_id=living-room-main-2026-09-07-vertical-session-02-height-floor-to-ceiling-correction`.
 
-**Capturas de sesión aún no transcritas:** la sesión actual también contiene
-lecturas de P1, P2, V1 y V2. No están autorizadas para este cambio, permanecen
-fuera del JSON canónico y sus campos verticales siguen `unknown`.
+**Capturas verticales transcritas:** la sesión actual aportó lecturas de P1,
+P2, V1 y V2, que ya están autorizadas y registradas en el JSON canónico con
+`status=measured`, `uncertainty=0.01` y `method=manual_tape`. V3/V4 siguen sin
+medidas verticales canónicas.
 
-**Captura pendiente:** V3 y V4 todavía no tienen esas lecturas de sesión
-autorizadas; también queda pendiente el espesor de pared solo donde pueda
-medirse con fiabilidad. Las capturas de P1, P2, V1 y V2 requieren revisión y
-autorización antes de transcribirse. El sentido de apertura de las puertas
-queda como dato opcional futuro, no obligatorio para esta fase.
+**Captura pendiente:** V3 y V4 todavía no tienen lecturas verticales
+canónicas; también queda pendiente el espesor de pared solo donde pueda
+medirse con fiabilidad. Las capturas transcritas de P1, P2, V1 y V2 requieren
+mantener revisión y trazabilidad antes de usarse en derivados. El sentido de
+apertura de las puertas queda como dato opcional futuro, no obligatorio para
+esta fase.
 
 **Contrato de estados:** conservar estrictamente `measured`, `estimated`,
 `derived` y `unknown`. Una medida no disponible permanece `unknown`; ningún
@@ -211,8 +214,8 @@ una profundidad o espesor continúa desconocido, podrá seguir usándose su
 fallback de generación documentado (`0.06 m` para profundidad de opening y
 `0.10 m` para espesor de pared). Las alturas verticales de los openings
 continuarán siendo proxies mientras no exista una medida real para cada uno.
-No se ha realizado una nueva generación Blender tras incorporar la corrección
-de altura general medida.
+No se ha realizado una nueva generación Blender tras incorporar las nuevas
+medidas verticales.
 
 **Criterio de continuidad:** cada nueva captura o edición del JSON real necesita
 autorización específica para la sesión, la evidencia y los campos a actualizar.
