@@ -23,12 +23,12 @@
     "floor_z_m": 0
   },
   "height": {
-    "value": 3.00,
+    "value": 2.50,
     "status": "measured",
     "uncertainty": 0.01,
     "method": "manual_tape",
-    "note": "floor-to-ceiling physical measurement; finished-floor to finished-ceiling physical reading from vertical measurement session 2026-09-07; replaces the previous unknown observation and disables the geometry fallback for this room only.",
-    "source_id": "living-room-main-2026-09-07-vertical-session-01-height-floor-to-ceiling"
+    "note": "new physical measurement; finished-floor to finished-ceiling reading from vertical measurement session 2026-09-07; corrects the previous 3.00 m reading, which is superseded, and keeps the geometry fallback disabled for this room.",
+    "source_id": "living-room-main-2026-09-07-vertical-session-02-height-floor-to-ceiling-correction"
   },
   "boundary": {
     "winding": "counterclockwise_viewed_from_above",

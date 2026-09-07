@@ -17,13 +17,13 @@ modelado adicional.
 
 ## Actualización de altura real (sesión vertical 2026-09-07)
 
-- Altura suelo terminado → techo terminado: `3.00 m`, incertidumbre `±0.01 m`.
+- Altura suelo terminado → techo terminado: `2.50 m`, incertidumbre `±0.01 m`.
 - Estado y método: `measured` / `manual_tape`.
-- `source_id`: `living-room-main-2026-09-07-vertical-session-01-height-floor-to-ceiling`.
-- El generation plan actual de `living-room-main` usa `3.00 m` como medida
+- `source_id`: `living-room-main-2026-09-07-vertical-session-02-height-floor-to-ceiling-correction`.
+- El generation plan actual de `living-room-main` usa `2.50 m` como medida
   observada y geométrica `measured`; el fallback general de altura no se activa.
-- El valor coincide numéricamente con el antiguo fallback, pero su procedencia
-  actual es una lectura física independiente.
+- Esta segunda comprobación física corrige la lectura anterior de `3.00 m`, que
+  queda superseded como autoridad observada.
 
 ## Reconciliaciones y generation plan
 
@@ -32,12 +32,12 @@ modelado adicional.
 - `V2` (`window-v2`): `wall-14`, offset observado `0.64 m`, width `2.40 m`.
 - En el checkpoint Blender histórico, la altura observada era `unknown`, valor
   `null`, y la altura geométrica era `3.00 m`, `derived`, con fallback explícito.
-- Estado actual del JSON: altura observada `3.00 m` (`measured`) y altura
-  geométrica efectiva `3.00 m` (`measured`), sin fallback.
+- Estado actual del JSON: altura observada `2.50 m` (`measured`) y altura
+  geométrica efectiva `2.50 m` (`measured`), sin fallback.
 
-La medida física actual sustituye el estado `unknown` y deja sin efecto el
-fallback únicamente para `living-room-main`. El fallback permanece disponible
-en el generador para otros documentos v1.1 con altura `unknown`.
+La segunda medida física sustituye la lectura anterior de `3.00 m` y deja sin
+efecto el fallback únicamente para `living-room-main`. El fallback permanece
+disponible en el generador para otros documentos v1.1 con altura `unknown`.
 
 Los seis openings conservan sus offsets y widths canónicos. Su geometría
 vertical es únicamente un proxy visual de `0.10 m`; el estado vertical
@@ -67,9 +67,9 @@ Fallbacks explícitos:
 - Tests de `tests/measurements`: `61/61 PASS` tras actualizar la expectativa
   histórica del plan de `living-room-main`.
 - `GENERATION_VALID`: PASS en el checkpoint Blender histórico; no se ha
-  reejecutado tras incorporar la altura medida.
+  reejecutado tras incorporar la corrección de altura.
 - `SCENE_VALID`: PASS en el checkpoint Blender histórico; no se ha reejecutado
-  tras incorporar la altura medida.
+  tras incorporar la corrección de altura.
 - Firma de escena: `6122a4811a8cbce931b05e6e4f52c9a45dd3170e6eb9fb73d7d1fc41ddc05ef3`.
 - Determinismo: PASS; las generaciones repetidas produjeron la misma firma.
 - Escena derivada: `blender/scenes/review/2026-09-07-living-room-main-v1.1-generated.blend`.
@@ -85,13 +85,17 @@ encuadre incorrecto. La evidencia aprobada es `qa-top-orthographic-v2.png`.
 
 ## Limitaciones y exclusiones
 
-- La altura general real de la habitación está medida: `3.00 m ±0.01 m`,
-  `manual_tape`, sesión vertical `2026-09-07`.
+- La altura general real de la habitación está medida: `2.50 m ±0.01 m`,
+  `manual_tape`, sesión vertical `2026-09-07`; la lectura previa de `3.00 m`
+  fue corregida por una segunda comprobación física.
 - El fallback general de altura no se aplica actualmente a `living-room-main`.
-- P1, P2, V1, V2, V3 y V4 siguen sin alturas verticales reales.
+- P1, P2, V1, V2, V3 y V4 siguen sin alturas verticales reales en el JSON
+  canónico; la sesión actual incluye capturas de P1, P2, V1 y V2 aún no
+  autorizadas ni transcritas.
 - Las alturas verticales de los openings son proxies visuales.
 - No hay booleanos ni geometría constructiva de openings.
-- No se ha realizado una nueva generación Blender tras incorporar esta altura.
+- No se ha realizado una nueva generación Blender tras incorporar esta
+  corrección de altura.
 - La profundidad `unknown` usa el fallback proxy de `0.06 m`.
 - El espesor `unknown` de pared usa el fallback proxy de `0.10 m`.
 - No se ha añadido mobiliario ni decoración.
@@ -100,4 +104,4 @@ encuadre incorrecto. La evidencia aprobada es `qa-top-orthographic-v2.png`.
 
 El checkpoint Blender histórico queda como:
 
-`ESCENA REAL HISTÓRICA APTA PARA REVISIÓN; REGENERACIÓN PENDIENTE TRAS ACTUALIZAR LA ALTURA`
+`ESCENA REAL HISTÓRICA APTA PARA REVISIÓN; REGENERACIÓN PENDIENTE TRAS CORREGIR LA ALTURA`

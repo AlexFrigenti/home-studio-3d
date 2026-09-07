@@ -314,18 +314,18 @@ class RoomGenerationPlanTests(unittest.TestCase):
 
         plan = self.generator.build_generation_plan(room)
 
-        self.assertEqual(room["height"]["value"], 3.00)
+        self.assertEqual(room["height"]["value"], 2.50)
         self.assertEqual(room["height"]["status"], "measured")
         self.assertEqual(room["height"]["uncertainty"], 0.01)
         self.assertEqual(room["height"]["method"], "manual_tape")
         self.assertEqual(len(plan["walls"]), 22)
         self.assertEqual(len(plan["openings"]), 6)
-        self.assertEqual(plan["observed_height_m"], 3.00)
+        self.assertEqual(plan["observed_height_m"], 2.50)
         self.assertEqual(plan["observed_height_status"], "measured")
-        self.assertEqual(plan["geometry_height_m"], 3.00)
+        self.assertEqual(plan["geometry_height_m"], 2.50)
         self.assertEqual(plan["geometry_height_status"], "measured")
         self.assertFalse(plan["geometry_height_fallback"])
-        self.assertEqual(plan["height_m"], 3.00)
+        self.assertEqual(plan["height_m"], 2.50)
         self.assertEqual(plan["height_status"], "measured")
         walls = {wall["id"]: wall for wall in plan["walls"]}
         self.assertEqual(walls["wall-05"]["observed_length_m"], 0.45)
