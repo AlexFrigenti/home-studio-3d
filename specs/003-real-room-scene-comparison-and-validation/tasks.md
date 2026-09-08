@@ -1,10 +1,10 @@
 # Tareas: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2
-> Estado: T3.01 y T3.02 implementadas y validadas; la comparación funcional,
+> Estado: T3.01, T3.02 y T3.03 implementadas y validadas; la comparación funcional,
 > el adapter Blender y las fases posteriores siguen pendientes.
 > El slice 002 permanece cerrado e integrado en `main`; las tareas completadas
-> aquí se limitan al contrato puro de T3.01/T3.02.
+> aquí se limitan al contrato y la política matemática de T3.01–T3.03.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -48,7 +48,7 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 ## T3.03 — Fijar tolerancias y reglas de estados
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** aplicar `1e-6 m` como tolerancia computacional inicial y
   separar incertidumbre física de representación plan → escena; definir la
   tolerancia de áreas en `m²` mediante propagación desde coordenadas.
@@ -56,6 +56,12 @@ capturas reales o geometría constructiva sin una autorización independiente.
 - **Validación:** casos dentro/fuera de tolerancia; magnitudes lineales,
   vectores y áreas dimensionalmente correctas; estados exactos; `unknown` no
   se convierte en valor; fallback y derived conservan contexto.
+- **Evidencia:** `compare_room_scene.py` centraliza `MATH_TOLERANCE_M = 1e-6`
+  para magnitudes lineales y expone comparadores puros para valores lineales,
+  áreas y estados exactos. `area_tolerance_from_polygon` aplica el bound
+  determinista de Shoelace en `m²`, recentrado en el bounding box expected para
+  invariancia ante traslación; la incertidumbre observacional no relaja la
+  tolerancia computacional. Hay 21 tests puros específicos para esta tarea.
 - **Rollback:** revertir solo las reglas del comparador.
 - **Fuera:** cambiar `MATH_TOLERANCE_M` global del validator existente.
 
@@ -159,6 +165,7 @@ capturas reales o geometría constructiva sin una autorización independiente.
 - Fotografías, EXIF, LiDAR y fotogrametría.
 - Cambios en MCP o `get_addon_status`.
 
-T3.03 y posteriores permanecen `[ ]` hasta que una implementación posterior
-sea autorizada y validada. T3.01/T3.02 cubren únicamente el contrato puro;
-esta fase no inicia la comparación funcional ni la integración Blender.
+T3.04 y posteriores permanecen `[ ]` hasta que una implementación posterior
+sea autorizada y validada. T3.01–T3.03 cubren únicamente el contrato y la
+política matemática; esta fase no inicia la comparación funcional ni la
+integración Blender.

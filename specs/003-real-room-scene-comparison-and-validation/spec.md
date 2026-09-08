@@ -1,7 +1,9 @@
 # Especificación: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2 — comparación determinista entre medidas, plan de generación y escena derivada.
-> Estado: diseño preparado; no se ha implementado código ni se han creado nuevos artefactos.
+> Estado: contrato y política matemática de T3.01–T3.03 implementados; la
+> comparación funcional, el adapter Blender y la integración de escena siguen
+> pendientes.
 
 ## Objetivo
 
@@ -293,12 +295,23 @@ La incertidumbre física y la tolerancia computacional son conceptos distintos:
   alféizares, profundidades, espesores y coordenadas derivadas.
 - Los vectores se comparan componente a componente con esa tolerancia.
 - Las áreas se comparan en `m²`, nunca con una tolerancia expresada en metros.
-  Para un polígono con coordenadas esperadas `(x_i, y_i)` y tolerancia lineal
-  `τ = 1e-6 m`, la tolerancia computacional derivada inicial será:
+  Para un polígono esperado con coordenadas `(x_i, y_i)` y tolerancia lineal
+  `τ = 1e-6 m`, se calcula una referencia única `r = (r_x, r_y)` como el
+  centro de su bounding box:
 
-  `τ_area = 0.5 × Σ_i(τ × (|x_i| + |y_i| + |x_(i+1)| + |y_(i+1)|) + 2τ²)`.
+  `r_x = (min_i x_i + max_i x_i) / 2`,
+  `r_y = (min_i y_i + max_i y_i) / 2`.
 
-  La fórmula expresa propagación dimensional de coordenadas a área. Si una
+  Se usan las coordenadas recentradas `x'_i = x_i - r_x` y
+  `y'_i = y_i - r_y`. La tolerancia computacional derivada es:
+
+  `τ_area = 0.5 × Σ_i(τ × (|x'_i| + |y'_i| + |x'_(i+1)| + |y'_(i+1)|) + 2τ²)`.
+
+  La misma referencia calculada desde el polígono esperado debe reutilizarse
+  para el polígono actual; no se recalcula independientemente. La traslación
+  común conserva las diferencias de coordenadas y el área de Shoelace, por lo
+  que la cota es invariante ante traslación y sigue siendo conservadora. La
+  fórmula expresa propagación dimensional de coordenadas a área. Si una
   comparación de área no puede derivarse de coordenadas normalizadas, debe
   declarar una tolerancia explícita en `m²` y no reutilizar `1e-6 m`.
 - Estados, flags, IDs, fórmulas, dependencias y nombres se comparan

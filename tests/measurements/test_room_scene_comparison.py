@@ -15,9 +15,15 @@ if str(MEASUREMENT_SCRIPTS) not in sys.path:
 from compare_room_scene import (  # noqa: E402
     ComparisonReport,
     Finding,
+    MATH_TOLERANCE_M,
     Provenance,
     SourceContext,
     Tolerance,
+    area_tolerance_from_polygon,
+    exact_equal,
+    linear_tolerance,
+    within_area_tolerance,
+    within_linear_tolerance,
 )
 
 
@@ -366,6 +372,133 @@ class ComparisonContractTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             Tolerance.from_dict({"kind": "computational", "value_m": 1e-6, "value_m2": 1e-6})
+
+
+class TolerancePolicyTests(unittest.TestCase):
+    RECTANGLE = [(0.0, 0.0), (2.0, 0.0), (2.0, 1.0), (0.0, 1.0)]
+
+    def test_default_linear_tolerance_is_one_micrometre(self):
+        self.assertEqual(MATH_TOLERANCE_M, 1e-6)
+        self.assertEqual(linear_tolerance(), 1e-6)
+
+    def test_exact_linear_equality_passes(self):
+        self.assertTrue(within_linear_tolerance(0.08, 0.08))
+
+    def test_linear_difference_below_tolerance_passes(self):
+        self.assertTrue(within_linear_tolerance(1.0, 1.0 + 0.5e-6))
+
+    def test_linear_difference_at_tolerance_passes(self):
+        self.assertTrue(within_linear_tolerance(1.0, 1.0 + 1e-6))
+
+    def test_linear_difference_above_tolerance_fails(self):
+        self.assertFalse(within_linear_tolerance(1.0, 1.0 + 1.1e-6))
+
+    def test_linear_negative_zero_is_normalized(self):
+        self.assertEqual(linear_tolerance(-0.0), 0.0)
+        self.assertTrue(within_linear_tolerance(-0.0, 0.0))
+
+    def test_non_finite_or_non_numeric_linear_values_are_rejected(self):
+        for value in (math.nan, math.inf, -math.inf):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    within_linear_tolerance(value, 0.0)
+        with self.assertRaises(TypeError):
+            within_linear_tolerance("0.08", 0.08)
+
+    def test_area_tolerance_is_serialized_in_square_metres(self):
+        tolerance = area_tolerance_from_polygon(self.RECTANGLE)
+        self.assertGreater(tolerance, 0.0)
+        self.assertEqual(
+            Tolerance.area(tolerance).to_dict(),
+            {"kind": "computational", "value_m2": tolerance},
+        )
+
+    def test_non_degenerate_polygon_has_positive_area_bound(self):
+        self.assertGreater(area_tolerance_from_polygon(self.RECTANGLE), 0.0)
+
+    def test_area_tolerance_is_deterministic(self):
+        self.assertEqual(
+            area_tolerance_from_polygon(self.RECTANGLE),
+            area_tolerance_from_polygon(tuple(self.RECTANGLE)),
+        )
+
+    def test_area_tolerance_is_invariant_under_common_translation(self):
+        translated_one = [(x + 1000.0, y - 750.0) for x, y in self.RECTANGLE]
+        translated_two = [(x - 325.5, y + 1200.25) for x, y in self.RECTANGLE]
+        expected = area_tolerance_from_polygon(self.RECTANGLE)
+
+        self.assertAlmostEqual(
+            area_tolerance_from_polygon(translated_one),
+            expected,
+            delta=1e-12,
+        )
+        self.assertAlmostEqual(
+            area_tolerance_from_polygon(translated_two),
+            expected,
+            delta=1e-12,
+        )
+
+    def test_area_tolerance_scales_with_geometry(self):
+        scaled = [(x * 2.0, y * 2.0) for x, y in self.RECTANGLE]
+        base_tolerance = area_tolerance_from_polygon(self.RECTANGLE)
+        scaled_tolerance = area_tolerance_from_polygon(scaled)
+        self.assertGreater(scaled_tolerance, base_tolerance)
+        self.assertAlmostEqual(scaled_tolerance / base_tolerance, 2.0, places=5)
+
+    def test_cyclic_vertex_order_keeps_area_bound(self):
+        rotated = self.RECTANGLE[2:] + self.RECTANGLE[:2]
+        self.assertEqual(
+            area_tolerance_from_polygon(self.RECTANGLE),
+            area_tolerance_from_polygon(rotated),
+        )
+
+    def test_malformed_polygons_are_rejected(self):
+        for polygon in ([], [(0.0, 0.0)], [(0.0, 0.0), (1.0, 0.0)]):
+            with self.subTest(polygon=polygon):
+                with self.assertRaises(ValueError):
+                    area_tolerance_from_polygon(polygon)
+        for polygon in (
+            [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0, 0.0)],
+            [(0.0, 0.0), (1.0, 0.0), "invalid"],
+        ):
+            with self.subTest(polygon=polygon):
+                with self.assertRaises((TypeError, ValueError)):
+                    area_tolerance_from_polygon(polygon)
+
+    def test_exact_comparison_does_not_use_numeric_tolerance(self):
+        self.assertTrue(exact_equal("measured", "measured"))
+        self.assertFalse(exact_equal("measured", "derived"))
+        with self.assertRaises(TypeError):
+            within_linear_tolerance("measured", "measured")
+
+    def test_observational_uncertainty_does_not_relax_computational_tolerance(self):
+        self.assertFalse(within_linear_tolerance(0.08, 0.09))
+
+    def test_valid_2d_list_and_tuple_coordinates_are_accepted(self):
+        self.assertGreater(area_tolerance_from_polygon(self.RECTANGLE), 0.0)
+        self.assertGreater(area_tolerance_from_polygon(tuple(self.RECTANGLE)), 0.0)
+
+    def test_3d_coordinates_are_rejected(self):
+        polygon = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
+        with self.assertRaises(ValueError):
+            area_tolerance_from_polygon(polygon)
+
+    def test_degenerate_polygon_has_explicit_non_negative_bound(self):
+        polygon = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)]
+        tolerance = area_tolerance_from_polygon(polygon)
+        self.assertGreaterEqual(tolerance, 0.0)
+        self.assertTrue(within_area_tolerance(0.0, 0.0, polygon))
+
+    def test_zero_coordinate_tolerance_has_zero_area_bound(self):
+        self.assertEqual(area_tolerance_from_polygon(self.RECTANGLE, 0.0), 0.0)
+
+    def test_non_finite_area_inputs_are_rejected(self):
+        for value in (math.nan, math.inf, -math.inf):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    area_tolerance_from_polygon([(0.0, 0.0), (value, 0.0), (0.0, 1.0)])
+        with self.assertRaises(ValueError):
+            area_tolerance_from_polygon(self.RECTANGLE, math.nan)
 
 
 if __name__ == "__main__":

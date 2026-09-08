@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+MATH_TOLERANCE_M = 1e-6
 REPORT_VERSION = "room-scene-comparison-1"
 SCENE_ADAPTER_VERSION = "room-scene-adapter-1"
 COMPARISON_STAGES = ("room_to_plan", "plan_to_scene")
@@ -66,6 +67,119 @@ def _stable_json(value: Any) -> str:
     )
 
 
+def _finite_number(value: Any, field_name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{field_name} must be a finite number")
+    normalized = float(value)
+    if not math.isfinite(normalized):
+        raise ValueError(f"{field_name} must be a finite number")
+    return 0.0 if normalized == 0.0 else normalized
+
+
+def _non_negative_tolerance(value: Any, field_name: str) -> float:
+    normalized = _finite_number(value, field_name)
+    if normalized < 0.0:
+        raise ValueError(f"{field_name} must be non-negative")
+    return normalized
+
+
+def linear_tolerance(tolerance_m: float = MATH_TOLERANCE_M) -> float:
+    """Return a validated computational tolerance in metres."""
+
+    return _non_negative_tolerance(tolerance_m, "linear tolerance")
+
+
+def within_linear_tolerance(
+    expected: float,
+    actual: float,
+    tolerance_m: float = MATH_TOLERANCE_M,
+) -> bool:
+    """Compare finite linear values without using observational uncertainty."""
+
+    expected_value = _finite_number(expected, "expected linear value")
+    actual_value = _finite_number(actual, "actual linear value")
+    tolerance = linear_tolerance(tolerance_m)
+    return abs(actual_value - expected_value) <= tolerance
+
+
+def _validated_polygon(vertices: Any) -> list[tuple[float, float]]:
+    if not isinstance(vertices, (list, tuple)):
+        raise TypeError("polygon must be a list or tuple of 2D vertices")
+    if len(vertices) < 3:
+        raise ValueError("polygon must contain at least three vertices")
+
+    normalized: list[tuple[float, float]] = []
+    for index, vertex in enumerate(vertices):
+        if not isinstance(vertex, (list, tuple)):
+            raise TypeError(f"polygon vertex {index} must be a list or tuple")
+        if len(vertex) != 2:
+            raise ValueError(f"polygon vertex {index} must have exactly two coordinates")
+        normalized.append(
+            (
+                _finite_number(vertex[0], f"polygon vertex {index} x"),
+                _finite_number(vertex[1], f"polygon vertex {index} y"),
+            )
+        )
+    return normalized
+
+
+def area_tolerance_from_polygon(
+    vertices: Any,
+    coordinate_tolerance_m: float = MATH_TOLERANCE_M,
+) -> float:
+    """Return a conservative Shoelace area bound in square metres.
+
+    The reference is the expected polygon's bounding-box center. Coordinates
+    are translated by that single reference before applying the bound; a
+    plan-to-scene comparison must reuse this reference for expected and
+    actual polygons rather than recomputing it for each side.
+
+    For each coordinate perturbation bounded by ``tau`` metres, the absolute
+    error of one Shoelace cross-product pair is bounded by
+    ``tau * (|x_i| + |y_i| + |x_next| + |y_next|) + 2 * tau**2``.
+    Summing those bounds and multiplying by one half gives a deterministic
+    bound with units of square metres.
+    """
+
+    points = _validated_polygon(vertices)
+    tau = linear_tolerance(coordinate_tolerance_m)
+    reference_x = 0.5 * min(point[0] for point in points) + 0.5 * max(
+        point[0] for point in points
+    )
+    reference_y = 0.5 * min(point[1] for point in points) + 0.5 * max(
+        point[1] for point in points
+    )
+    centered_points = [
+        (x - reference_x, y - reference_y) for x, y in points
+    ]
+    return 0.5 * sum(
+        tau * (abs(x_i) + abs(y_i) + abs(x_next) + abs(y_next)) + 2.0 * tau**2
+        for (x_i, y_i), (x_next, y_next) in zip(
+            centered_points, centered_points[1:] + centered_points[:1]
+        )
+    )
+
+
+def within_area_tolerance(
+    expected_area_m2: float,
+    actual_area_m2: float,
+    vertices: Any,
+    coordinate_tolerance_m: float = MATH_TOLERANCE_M,
+) -> bool:
+    """Compare areas using the coordinate-derived square-metre bound."""
+
+    expected = _finite_number(expected_area_m2, "expected area")
+    actual = _finite_number(actual_area_m2, "actual area")
+    tolerance_m2 = area_tolerance_from_polygon(vertices, coordinate_tolerance_m)
+    return abs(actual - expected) <= tolerance_m2
+
+
+def exact_equal(expected: Any, actual: Any) -> bool:
+    """Compare non-numeric contract values without applying a tolerance."""
+
+    return _stable_json(_normalize_json_value(expected)) == _stable_json(_normalize_json_value(actual))
+
+
 @dataclass(frozen=True)
 class Tolerance:
     """A finding tolerance with an explicit dimensional semantic."""
@@ -83,10 +197,11 @@ class Tolerance:
             raise ValueError(f"unsupported tolerance kind: {self.kind!r}")
         if self.unit not in {"m", "m2"}:
             raise ValueError("computational tolerance unit must be 'm' or 'm2'")
-        if not isinstance(self.value, (int, float)) or isinstance(self.value, bool):
-            raise TypeError("computational tolerance value must be numeric")
-        if not math.isfinite(float(self.value)) or self.value < 0:
-            raise ValueError("computational tolerance value must be finite and non-negative")
+        object.__setattr__(
+            self,
+            "value",
+            _non_negative_tolerance(self.value, "computational tolerance value"),
+        )
 
     @classmethod
     def linear(cls, value_m: float) -> "Tolerance":
