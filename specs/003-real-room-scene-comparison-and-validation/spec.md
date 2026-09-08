@@ -1,9 +1,9 @@
 # Especificación: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2 — comparación determinista entre medidas, plan de generación y escena derivada.
-> Estado: contrato y política matemática de T3.01–T3.03 implementados; la
-> comparación funcional, el adapter Blender y la integración de escena siguen
-> pendientes.
+> Estado: contrato, política matemática y comparación pura room → plan de
+> T3.01–T3.04 implementados; el adapter Blender y la integración de escena
+> siguen pendientes.
 
 ## Objetivo
 
@@ -162,6 +162,37 @@ cada finding debe declarar `comparison_stage`:
   fallbacks y selección de geometría efectiva.
 - `plan_to_scene`: comprueba entidades, geometría, metadata, unidades, flags y
   representación normalizada de la escena.
+
+La fase `room_to_plan` está implementada en `compare_room_to_plan(room, plan)`.
+Compara por IDs los segmentos, openings y elementos fijos, verifica la
+identidad del plan, unidades, coordenadas, altura, suelo, valores efectivos,
+estados, source IDs y flags de proxy/fallback disponibles en el plan. No lee
+archivos, no importa `bpy` y no muta ninguna de las dos entradas. Para
+`room-v1`, el valor duplicado `plan.height_status` no se usa como autoridad
+porque el plan histórico puede sobrescribirlo al procesar metadata de un
+elemento fijo; se verifican `height_m` y los estados de altura por pared. El
+plan `room-v1.1` sí exige sus campos explícitos de altura observada y
+geometría.
+
+### Límite de provenance en T3.04
+
+T3.04 no inventa provenance que el generation plan no transporte. La garantía
+actual es el subconjunto siguiente:
+
+- completa y comprobable: IDs, valores geométricos, estados, unidades,
+  source IDs expuestos por el plan, flags de fallback/proxy y metadata de
+  reconciliación expuesta (`geometry_reconciled`, `geometry_source_id`);
+- parcial/agregada: `source_ids` y `status_index` del plan, y el `source_id`
+  único de cada opening/fixed element;
+- no expuesta: `method`, `uncertainty`, `formula`, `depends_on`, `reason`,
+  `reconciliation_id` y source IDs individuales de campos que no tienen una
+  propiedad equivalente en el plan.
+
+Para esos campos la condición es: **not verifiable at room_to_plan with
+generation-plan contract current version**. El comparador no los reconstruye
+desde otros campos ni genera findings afirmando que fueron preservados. La
+provenance completa hasta escena requiere una ampliación posterior y explícita
+del contrato del generation plan antes de cerrar la validación `plan_to_scene`.
 
 La fase no se infiere del mensaje: forma parte del contrato y permite saber en
 qué transición apareció la discrepancia.
@@ -424,6 +455,10 @@ El core debe ser la parte principal de los tests. El adapter y la integración
 Blender se validan con la evidencia disponible y con una ejecución controlada
 solo cuando la tarea de implementación tenga autorización explícita.
 
+La política pura compartida de fallbacks y el cálculo Shoelace viven en
+`blender/scripts/measurements/generation_policy.py`. El generator conserva sus
+nombres históricos mediante aliases; el comparador consume la misma fuente.
+
 ## Compatibilidad y determinismo
 
 - room-v1 se soporta desde el inicio usando sus campos históricos; no se exige
@@ -435,6 +470,9 @@ solo cuando la tarea de implementación tenga autorización explícita.
 - El comparador no cambia schemas ni altera el room recibido.
 - La comparación se hace por `id`; el orden de objetos y colecciones no
   modifica el resultado.
+- T3.04 mantiene la compatibilidad v1 sin exigir campos exclusivos de v1.1;
+  la limitación documentada de `height_status` histórico no cambia el plan ni
+  su golden signature.
 - Findings, summary y cualquier firma usan orden estable, claves ordenadas y
   representación numérica normalizada.
 

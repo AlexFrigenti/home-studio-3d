@@ -111,6 +111,34 @@ Implement room/plan checks and plan/normalized-scene checks without importing
 tolerance, preserve the three provenance contexts and sort findings using
 severity, stage, entity type, entity ID, path and code.
 
+#### T3.04 checkpoint: room-to-plan core
+
+The pure `compare_room_to_plan(room, plan)` transition is implemented in
+`blender/scripts/measurements/compare_room_scene.py`. It consumes validated
+room/plan dictionaries, compares supported entities by canonical ID, preserves
+observed versus effective geometry context, validates v1/v1.1 fallback and
+reconciliation metadata, and leaves `scene` as `null`. It does not read files,
+import `bpy`, or change the generator's plan behavior. Historical v1 uses
+`height_m` and wall height statuses; its duplicated top-level `height_status` is not authoritative
+because the existing plan can overwrite it while processing fixed-element
+metadata. The v1 logical signature remains unchanged. Fallback constants and
+the Shoelace operation are imported from the pure shared
+`blender/scripts/measurements/generation_policy.py`; no second fallback policy
+is maintained in the comparator.
+
+The current plan contract exposes only a subset of field-level provenance.
+T3.04 checks that subset and explicitly records the rest as `not verifiable at
+room_to_plan with generation-plan contract current version`. A future
+provenance-extension task must complete the plan contract before any
+`plan_to_scene` validation is claimed.
+
+#### Future prerequisite before complete plan-to-scene validation
+
+Define and implement an explicit generation-plan provenance extension for
+field-level method, uncertainty, formula, dependencies, reasons,
+reconciliation IDs and individual source IDs. This is not part of T3.04 and
+must not be started together with the Blender adapter.
+
 ### Task 3: Add normalized scene and Blender adapter
 
 Map the existing root collection, four child collections, walls, floor,

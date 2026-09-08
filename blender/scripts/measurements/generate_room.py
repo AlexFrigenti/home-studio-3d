@@ -18,6 +18,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from generation_policy import (
+    OPENING_DEPTH_PROXY_M,
+    OPENING_VISUAL_HEIGHT_PROXY_M,
+    ROOM_HEIGHT_PROXY_M,
+    WALL_THICKNESS_PROXY_M,
+    shoelace_area,
+)
+
 try:  # Blender is optional for the pure-Python test suite.
     import bpy  # type: ignore
 except ImportError:  # pragma: no cover - exercised only outside Blender.
@@ -27,12 +35,12 @@ except ImportError:  # pragma: no cover - exercised only outside Blender.
 GENERATOR_VERSION = "room-v1-generator-1"
 GENERATOR_V11_VERSION = "room-v1.1-generator-1"
 MATH_TOLERANCE_M = 1e-6
-DEFAULT_WALL_THICKNESS_M = 0.10
-DEFAULT_OPENING_DEPTH_M = 0.06
-DEFAULT_OPENING_VISUAL_BAND_HEIGHT_M = 0.10
+DEFAULT_WALL_THICKNESS_M = WALL_THICKNESS_PROXY_M
+DEFAULT_OPENING_DEPTH_M = OPENING_DEPTH_PROXY_M
+DEFAULT_OPENING_VISUAL_BAND_HEIGHT_M = OPENING_VISUAL_HEIGHT_PROXY_M
 OPENING_VISUAL_PROXY_METHOD = "visual_band"
 OPENING_VISUAL_PROXY_REASON = "unknown vertical opening geometry; visualization proxy only"
-DEFAULT_ROOM_HEIGHT_PROXY_M = 3.00
+DEFAULT_ROOM_HEIGHT_PROXY_M = ROOM_HEIGHT_PROXY_M
 ROOM_HEIGHT_PROXY_METHOD = "generator_fallback"
 ROOM_HEIGHT_PROXY_REASON = "unknown room height; explicit generation proxy for materialization"
 DEFAULT_FIXED_WIDTH_M = 0.12
@@ -360,14 +368,7 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
         walls_by_id[segment_id] = wall
 
     floor_points = [_point(segment["start_m"]) for segment in segments]
-    computed_area = abs(
-        sum(
-            floor_points[index][0] * floor_points[(index + 1) % len(floor_points)][1]
-            - floor_points[(index + 1) % len(floor_points)][0] * floor_points[index][1]
-            for index in range(len(floor_points))
-        )
-        / 2.0
-    )
+    computed_area = shoelace_area(floor_points)
     floor_measurement = _measurement(room, "floor_area", fallback=computed_area) if "floor_area" in room else {
         "value_m": computed_area,
         "status": "derived",

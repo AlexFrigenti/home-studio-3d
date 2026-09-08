@@ -1,8 +1,7 @@
-"""Pure, deterministic contracts for room/plan/scene comparison reports.
+"""Pure, deterministic room/plan/scene comparison contracts.
 
-This module intentionally does not import Blender or implement comparison
-logic. It defines the serializable report, finding, provenance and tolerance
-contracts used by later slice-003 tasks.
+The room-to-plan comparison core is implemented here without Blender or file
+I/O. Plan-to-scene comparison and the Blender adapter remain future work.
 """
 
 from __future__ import annotations
@@ -12,6 +11,8 @@ import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
+
+from generation_policy import AUTHORIZED_FALLBACK_VALUES_M, shoelace_area
 
 
 MATH_TOLERANCE_M = 1e-6
@@ -399,6 +400,1399 @@ class Finding:
 
     def to_json(self) -> str:
         return _stable_json(self.to_dict())
+
+
+def _as_mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _as_entities(value: Any) -> list[Mapping[str, Any]]:
+    if not isinstance(value, (list, tuple)):
+        return []
+    return [item for item in value if isinstance(item, Mapping)]
+
+
+def _safe_status(value: Any) -> str | None:
+    return value if value in MEASUREMENT_STATUSES else None
+
+
+def _safe_source_id(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def _measurement(record: Any, field: str) -> Mapping[str, Any]:
+    value = _as_mapping(record).get(field)
+    return value if isinstance(value, Mapping) else {}
+
+
+def _measurement_value(measurement: Mapping[str, Any]) -> float | None:
+    value = measurement.get("value")
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def _measurement_status(measurement: Mapping[str, Any]) -> str | None:
+    return _safe_status(measurement.get("status"))
+
+
+def _measurement_source_id(measurement: Mapping[str, Any]) -> str | None:
+    return _safe_source_id(measurement.get("source_id"))
+
+
+def _observed_value(measurement: Mapping[str, Any]) -> float | None:
+    if _measurement_status(measurement) == "unknown":
+        return None
+    return _measurement_value(measurement)
+
+
+def _source_context(
+    observed_measurement: Mapping[str, Any] | None = None,
+    *,
+    effective_status: Any = None,
+    effective_source_id: Any = None,
+    effective_fallback: Any = None,
+    reconciliation_id: Any = None,
+    effective_geometry_status: Any = None,
+) -> SourceContext:
+    observed = None
+    if observed_measurement is not None:
+        uncertainty = observed_measurement.get("uncertainty")
+        if not isinstance(uncertainty, (int, float)) or isinstance(uncertainty, bool):
+            uncertainty = None
+        observed = Provenance(
+            status=_measurement_status(observed_measurement),
+            source_id=_measurement_source_id(observed_measurement),
+            uncertainty_m=uncertainty,
+        )
+
+    fallback = effective_fallback if isinstance(effective_fallback, bool) else None
+    return SourceContext(
+        observed=observed,
+        effective_geometry=Provenance(
+            status=_safe_status(effective_status),
+            source_id=_safe_source_id(effective_source_id),
+            reconciliation_id=_safe_source_id(reconciliation_id),
+            fallback=fallback,
+            geometry_status=_safe_status(effective_geometry_status),
+        ),
+        scene=None,
+    )
+
+
+def _status_mismatch_code(expected: Any, actual: Any) -> str:
+    if expected == "unknown" and actual == "measured":
+        return "unknown_promoted"
+    if expected == "measured" and actual != "measured":
+        return "measured_downgraded"
+    return "metadata_status_mismatch"
+
+
+def _linear_values_equal(expected: Any, actual: Any, tolerance_m: float = MATH_TOLERANCE_M) -> bool:
+    if isinstance(expected, (list, tuple)) or isinstance(actual, (list, tuple)):
+        if not isinstance(expected, (list, tuple)) or not isinstance(actual, (list, tuple)):
+            return False
+        return len(expected) == len(actual) and all(
+            _linear_values_equal(left, right, tolerance_m)
+            for left, right in zip(expected, actual)
+        )
+    if expected is None or actual is None:
+        return expected is actual
+    if isinstance(expected, bool) or isinstance(actual, bool):
+        return False
+    if not isinstance(expected, (int, float)) or not isinstance(actual, (int, float)):
+        return False
+    return within_linear_tolerance(expected, actual, tolerance_m)
+
+
+def _add_finding(
+    findings: list[Finding],
+    *,
+    code: str,
+    entity_type: str,
+    entity_id: str | None,
+    path: str,
+    expected: Any,
+    actual: Any,
+    context: SourceContext,
+    tolerance: Tolerance | None = None,
+    message: str,
+) -> None:
+    findings.append(
+        Finding(
+            code=code,
+            severity="error",
+            comparison_stage="room_to_plan",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            path=path,
+            expected=expected,
+            actual=actual,
+            tolerance=tolerance,
+            source_context=context,
+            message=message,
+        )
+    )
+
+
+def _compare_exact_field(
+    findings: list[Finding],
+    *,
+    entity_type: str,
+    entity_id: str | None,
+    path: str,
+    expected: Any,
+    actual: Any,
+    context: SourceContext,
+    code: str = "metadata_status_mismatch",
+    message: str = "generation plan metadata differs from canonical room data",
+) -> None:
+    if exact_equal(expected, actual):
+        return
+    _add_finding(
+        findings,
+        code=code,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        path=path,
+        expected=expected,
+        actual=actual,
+        context=context,
+        tolerance=Tolerance.exact(),
+        message=message,
+    )
+
+
+def _compare_linear_field(
+    findings: list[Finding],
+    *,
+    entity_type: str,
+    entity_id: str | None,
+    path: str,
+    expected: Any,
+    actual: Any,
+    context: SourceContext,
+    code: str = "geometry_value_mismatch",
+    message: str = "generation plan geometry differs from canonical room data",
+) -> None:
+    if _linear_values_equal(expected, actual):
+        return
+    _add_finding(
+        findings,
+        code=code,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        path=path,
+        expected=expected,
+        actual=actual,
+        context=context,
+        tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+        message=message,
+    )
+
+
+def _compare_status_field(
+    findings: list[Finding],
+    *,
+    entity_type: str,
+    entity_id: str | None,
+    path: str,
+    expected: Any,
+    actual: Any,
+    context: SourceContext,
+) -> None:
+    if expected == actual:
+        return
+    _add_finding(
+        findings,
+        code=_status_mismatch_code(expected, actual),
+        entity_type=entity_type,
+        entity_id=entity_id,
+        path=path,
+        expected=expected,
+        actual=actual,
+        context=context,
+        tolerance=Tolerance.exact(),
+        message="generation plan measurement status differs from canonical room data",
+    )
+
+
+def _compare_source_id_field(
+    findings: list[Finding],
+    *,
+    entity_type: str,
+    entity_id: str | None,
+    path: str,
+    expected: Any,
+    actual: Any,
+    context: SourceContext,
+) -> None:
+    if expected is None or expected == actual:
+        return
+    _add_finding(
+        findings,
+        code="provenance_missing" if actual is None else "source_id_mismatch",
+        entity_type=entity_type,
+        entity_id=entity_id,
+        path=path,
+        expected=expected,
+        actual=actual,
+        context=context,
+        tolerance=Tolerance.exact(),
+        message="generation plan provenance differs from canonical room data",
+    )
+
+
+def _entity_index(entities: Any) -> tuple[dict[str, Mapping[str, Any]], list[str]]:
+    indexed: dict[str, Mapping[str, Any]] = {}
+    duplicates: list[str] = []
+    for entity in _as_entities(entities):
+        entity_id = entity.get("id")
+        if not isinstance(entity_id, str) or not entity_id:
+            continue
+        if entity_id in indexed:
+            duplicates.append(entity_id)
+        else:
+            indexed[entity_id] = entity
+    return indexed, sorted(set(duplicates))
+
+
+def _compare_entity_ids(
+    findings: list[Finding],
+    *,
+    entity_type: str,
+    plural_path: str,
+    expected_entities: dict[str, Mapping[str, Any]],
+    actual_entities: dict[str, Mapping[str, Any]],
+    context_for_expected: Any = None,
+) -> None:
+    for entity_id in sorted(set(expected_entities) - set(actual_entities)):
+        context = context_for_expected(entity_id) if context_for_expected else SourceContext()
+        _add_finding(
+            findings,
+            code="expected_object_missing",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            path=f"{plural_path}[{entity_id}]",
+            expected=entity_id,
+            actual=None,
+            context=context,
+            tolerance=Tolerance.exact(),
+            message="canonical room entity is missing from the generation plan",
+        )
+    for entity_id in sorted(set(actual_entities) - set(expected_entities)):
+        _add_finding(
+            findings,
+            code="unexpected_object",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            path=f"{plural_path}[{entity_id}]",
+            expected=None,
+            actual=entity_id,
+            context=SourceContext(),
+            tolerance=Tolerance.exact(),
+            message="generation plan contains an unexpected entity",
+        )
+
+
+def _compare_height(
+    room: Mapping[str, Any],
+    plan: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    measurement = _measurement(room, "height")
+    status = _measurement_status(measurement)
+    observed_value = _observed_value(measurement)
+    unknown = status == "unknown"
+    expected_geometry_value = (
+        AUTHORIZED_FALLBACK_VALUES_M[("room", "height")] if unknown else observed_value
+    )
+    context = _source_context(
+        measurement,
+        effective_status="derived" if unknown else status,
+        effective_source_id=_measurement_source_id(measurement),
+        effective_fallback=unknown,
+        effective_geometry_status="derived" if unknown else status,
+    )
+    _compare_linear_field(
+        findings,
+        entity_type="room",
+        entity_id=room.get("room_id"),
+        path="height_m",
+        expected=expected_geometry_value,
+        actual=plan.get("height_m"),
+        context=context,
+        code="room_height_mismatch",
+        message="generation plan room height differs from the authorized geometry height",
+    )
+    # The historical v1 plan has no separate observed/geometry height
+    # metadata, and its duplicated top-level height_status is not reliable
+    # when fixed-element height metadata is present. Wall height statuses are
+    # checked below; v1.1 uses the explicit room-level fields that follow.
+    if _as_mapping(room).get("schema_version") == "1.1":
+        _compare_status_field(
+            findings,
+            entity_type="room",
+            entity_id=room.get("room_id"),
+            path="height_status",
+            expected=status,
+            actual=plan.get("height_status"),
+            context=context,
+        )
+
+    if _as_mapping(room).get("schema_version") != "1.1":
+        return
+
+    _compare_linear_field(
+        findings,
+        entity_type="room",
+        entity_id=room.get("room_id"),
+        path="observed_height_m",
+        expected=observed_value,
+        actual=plan.get("observed_height_m"),
+        context=context,
+        code="room_height_mismatch",
+    )
+    _compare_status_field(
+        findings,
+        entity_type="room",
+        entity_id=room.get("room_id"),
+        path="observed_height_status",
+        expected=status,
+        actual=plan.get("observed_height_status"),
+        context=context,
+    )
+    _compare_source_id_field(
+        findings,
+        entity_type="room",
+        entity_id=room.get("room_id"),
+        path="observed_height_source_id",
+        expected=_measurement_source_id(measurement),
+        actual=plan.get("observed_height_source_id"),
+        context=context,
+    )
+    _compare_linear_field(
+        findings,
+        entity_type="room",
+        entity_id=room.get("room_id"),
+        path="geometry_height_m",
+        expected=expected_geometry_value,
+        actual=plan.get("geometry_height_m"),
+        context=context,
+        code="room_height_mismatch",
+    )
+    _compare_status_field(
+        findings,
+        entity_type="room",
+        entity_id=room.get("room_id"),
+        path="geometry_height_status",
+        expected="derived" if unknown else status,
+        actual=plan.get("geometry_height_status"),
+        context=context,
+    )
+    _compare_exact_field(
+        findings,
+        entity_type="room",
+        entity_id=room.get("room_id"),
+        path="geometry_height_fallback",
+        expected=unknown,
+        actual=plan.get("geometry_height_fallback"),
+        context=context,
+        code="fallback_mismatch",
+        message="generation plan height fallback flag differs from the source status",
+    )
+    if unknown:
+        _compare_linear_field(
+            findings,
+            entity_type="room",
+            entity_id=room.get("room_id"),
+            path="geometry_height_fallback_value_m",
+            expected=expected_geometry_value,
+            actual=plan.get("geometry_height_fallback_value_m"),
+            context=context,
+            code="fallback_value_mismatch",
+            message="generation plan height fallback value differs from the authorized fallback",
+        )
+    else:
+        for field in (
+            "geometry_height_fallback_value_m",
+            "geometry_height_fallback_method",
+            "geometry_height_fallback_reason",
+        ):
+            _compare_exact_field(
+                findings,
+                entity_type="room",
+                entity_id=room.get("room_id"),
+                path=field,
+                expected=None,
+                actual=plan.get(field),
+                context=context,
+                code="fallback_mismatch",
+                message="generation plan must not retain fallback metadata for a known height",
+            )
+
+
+def _compare_wall(
+    room: Mapping[str, Any],
+    segment: Mapping[str, Any],
+    wall: Mapping[str, Any],
+    plan: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    wall_id = segment.get("id")
+    measurement = _measurement(segment, "length")
+    reconciliation = _as_mapping(segment.get("reconciled_geometry"))
+    reconciled_length = _measurement(reconciliation, "length")
+    has_reconciliation = bool(reconciliation)
+    effective_measurement = reconciled_length if has_reconciliation else measurement
+    observed_status = _measurement_status(measurement)
+    effective_status = _measurement_status(effective_measurement)
+    context = _source_context(
+        measurement,
+        effective_status=effective_status,
+        effective_source_id=_measurement_source_id(effective_measurement),
+        effective_fallback=False,
+        reconciliation_id=reconciliation.get("reconciliation_id"),
+        effective_geometry_status=effective_status,
+    )
+
+    _compare_linear_field(
+        findings,
+        entity_type="wall",
+        entity_id=wall_id,
+        path=f"walls[{wall_id}].start_m",
+        expected=segment.get("start_m"),
+        actual=wall.get("start_m"),
+        context=context,
+    )
+    _compare_linear_field(
+        findings,
+        entity_type="wall",
+        entity_id=wall_id,
+        path=f"walls[{wall_id}].end_m",
+        expected=segment.get("end_m"),
+        actual=wall.get("end_m"),
+        context=context,
+    )
+    actual_effective_length = wall.get(
+        "geometry_length_m" if "geometry_length_m" in wall else "length_m"
+    )
+    _compare_linear_field(
+        findings,
+        entity_type="wall",
+        entity_id=wall_id,
+        path=f"walls[{wall_id}].geometry_length_m",
+        expected=_measurement_value(effective_measurement),
+        actual=actual_effective_length,
+        context=context,
+    )
+    if "geometry_length_m" in wall:
+        _compare_linear_field(
+            findings,
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"walls[{wall_id}].length_m",
+            expected=wall.get("geometry_length_m"),
+            actual=wall.get("length_m"),
+            context=context,
+        )
+
+    actual_observed_status = wall.get(
+        "observed_length_status" if "observed_length_status" in wall else "length_status"
+    )
+    _compare_status_field(
+        findings,
+        entity_type="wall",
+        entity_id=wall_id,
+        path=f"walls[{wall_id}].observed_length_status",
+        expected=observed_status,
+        actual=actual_observed_status,
+        context=context,
+    )
+    actual_observed_source_id = wall.get(
+        "observed_source_id" if "observed_source_id" in wall else "source_id"
+    )
+    _compare_source_id_field(
+        findings,
+        entity_type="wall",
+        entity_id=wall_id,
+        path=f"walls[{wall_id}].observed_source_id",
+        expected=_measurement_source_id(measurement),
+        actual=actual_observed_source_id,
+        context=context,
+    )
+
+    if has_reconciliation:
+        _compare_exact_field(
+            findings,
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"walls[{wall_id}].geometry_reconciled",
+            expected=True,
+            actual=wall.get("geometry_reconciled"),
+            context=context,
+            code="reconciliation_mismatch",
+            message="generation plan must select the authorized reconciled wall geometry",
+        )
+        _compare_status_field(
+            findings,
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"walls[{wall_id}].geometry_length_status",
+            expected=effective_status,
+            actual=wall.get("geometry_length_status"),
+            context=context,
+        )
+        expected_geometry_source_id = _measurement_source_id(effective_measurement)
+        actual_geometry_source_id = wall.get("geometry_source_id")
+        if actual_geometry_source_id is None:
+            _add_finding(
+                findings,
+                code="reconciliation_metadata_missing",
+                entity_type="wall",
+                entity_id=wall_id,
+                path=f"walls[{wall_id}].geometry_source_id",
+                expected=expected_geometry_source_id,
+                actual=None,
+                context=context,
+                tolerance=Tolerance.exact(),
+                message="reconciled wall geometry provenance is missing from the generation plan",
+            )
+        else:
+            _compare_source_id_field(
+                findings,
+                entity_type="wall",
+                entity_id=wall_id,
+                path=f"walls[{wall_id}].geometry_source_id",
+                expected=expected_geometry_source_id,
+                actual=actual_geometry_source_id,
+                context=context,
+            )
+        if "reconciliation_id" in wall:
+            _compare_exact_field(
+                findings,
+                entity_type="wall",
+                entity_id=wall_id,
+                path=f"walls[{wall_id}].reconciliation_id",
+                expected=reconciliation.get("reconciliation_id"),
+                actual=wall.get("reconciliation_id"),
+                context=context,
+                code="reconciliation_metadata_missing",
+                message="reconciliation identifier differs from canonical room metadata",
+            )
+    elif "geometry_reconciled" in wall:
+        _compare_exact_field(
+            findings,
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"walls[{wall_id}].geometry_reconciled",
+            expected=False,
+            actual=wall.get("geometry_reconciled"),
+            context=context,
+            code="reconciliation_mismatch",
+            message="generation plan marks a wall as reconciled although the room has no reconciliation",
+        )
+        if "geometry_length_status" in wall:
+            _compare_status_field(
+                findings,
+                entity_type="wall",
+                entity_id=wall_id,
+                path=f"walls[{wall_id}].geometry_length_status",
+                expected=effective_status,
+                actual=wall.get("geometry_length_status"),
+                context=context,
+            )
+
+    thickness = _measurement(segment, "thickness")
+    if not thickness:
+        thickness = {"status": "unknown"}
+    thickness_status = _measurement_status(thickness)
+    thickness_context = _source_context(
+        thickness,
+        effective_status="derived" if thickness_status == "unknown" else thickness_status,
+        effective_fallback=thickness_status == "unknown",
+        effective_geometry_status="derived" if thickness_status == "unknown" else thickness_status,
+    )
+    _compare_status_field(
+        findings,
+        entity_type="wall",
+        entity_id=wall_id,
+        path=f"walls[{wall_id}].thickness_source_status",
+        expected=thickness_status,
+        actual=wall.get("thickness_source_status"),
+        context=thickness_context,
+    )
+    if thickness_status == "unknown":
+        _compare_exact_field(
+            findings,
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"walls[{wall_id}].thickness_fallback",
+            expected=True,
+            actual=wall.get("thickness_fallback"),
+            context=thickness_context,
+            code="fallback_mismatch",
+            message="unknown wall thickness must use the explicit generation fallback",
+        )
+        _compare_status_field(
+            findings,
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"walls[{wall_id}].thickness_geometry_status",
+            expected="derived",
+            actual=wall.get("thickness_geometry_status"),
+            context=thickness_context,
+        )
+        _compare_linear_field(
+            findings,
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"walls[{wall_id}].thickness_m",
+            expected=AUTHORIZED_FALLBACK_VALUES_M[("wall", "thickness")],
+            actual=wall.get("thickness_m"),
+            context=thickness_context,
+            code="fallback_value_mismatch",
+            message="wall thickness fallback differs from the authorized value",
+        )
+    else:
+        _compare_linear_field(
+            findings,
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"walls[{wall_id}].thickness_m",
+            expected=_measurement_value(thickness),
+            actual=wall.get("thickness_m"),
+            context=thickness_context,
+            code="wall_thickness_mismatch",
+        )
+        _compare_status_field(
+            findings,
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"walls[{wall_id}].thickness_geometry_status",
+            expected=thickness_status,
+            actual=wall.get("thickness_geometry_status"),
+            context=thickness_context,
+        )
+        _compare_exact_field(
+            findings,
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"walls[{wall_id}].thickness_fallback",
+            expected=False,
+            actual=wall.get("thickness_fallback"),
+            context=thickness_context,
+            code="fallback_mismatch",
+            message="known wall thickness must not use a generation fallback",
+        )
+
+    room_height = _observed_value(_measurement(room, "height"))
+    if room_height is None:
+        room_height = AUTHORIZED_FALLBACK_VALUES_M[("room", "height")]
+    _compare_linear_field(
+        findings,
+        entity_type="wall",
+        entity_id=wall_id,
+        path=f"walls[{wall_id}].height_m",
+        expected=room_height,
+        actual=wall.get("height_m"),
+        context=context,
+    )
+    _compare_status_field(
+        findings,
+        entity_type="wall",
+        entity_id=wall_id,
+        path=f"walls[{wall_id}].height_status",
+        expected=_measurement_status(_measurement(room, "height")),
+        actual=wall.get("height_status"),
+        context=context,
+    )
+
+
+def _flatten_room_openings(room: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    result: dict[str, Mapping[str, Any]] = {}
+    for kind, key in (("door", "doors"), ("window", "windows")):
+        for opening in _as_entities(_as_mapping(room.get("openings")).get(key)):
+            opening_id = opening.get("id")
+            if isinstance(opening_id, str) and opening_id:
+                result[opening_id] = dict(opening, kind=kind)
+    return result
+
+
+def _compare_opening_measurement(
+    findings: list[Finding],
+    *,
+    opening_id: str,
+    kind: str,
+    room_opening: Mapping[str, Any],
+    plan_opening: Mapping[str, Any],
+    field: str,
+    value_key: str,
+    status_key: str,
+    v11_geometry_value_key: str | None,
+    v11_geometry_status_key: str | None,
+    v11_observed_value_key: str | None,
+    v11_observed_status_key: str | None,
+    v11_proxy_key: str | None,
+    fallback_key: tuple[str, str] | None = None,
+    not_applicable_status: str | None = None,
+) -> None:
+    if field == "sill_height" and kind == "door":
+        measurement: Mapping[str, Any] = {
+            "status": "derived",
+            "value": 0.0,
+        }
+        expected_observed_value = None
+        expected_geometry_value = 0.0
+        expected_status = "derived"
+        expected_observed_status = not_applicable_status or expected_status
+    else:
+        measurement = _measurement(room_opening, field)
+        expected_status = _measurement_status(measurement)
+        expected_observed_value = _observed_value(measurement)
+        expected_geometry_value = None
+        expected_observed_status = expected_status
+    unknown = expected_status == "unknown"
+    expected_geometry_status = "derived" if unknown else expected_status
+    if expected_geometry_value is None:
+        expected_geometry_value = (
+            AUTHORIZED_FALLBACK_VALUES_M[fallback_key]
+            if unknown and fallback_key
+            else expected_observed_value
+        )
+    context = _source_context(
+        measurement,
+        effective_status=expected_geometry_status,
+        effective_fallback=unknown and fallback_key is not None,
+        effective_geometry_status=expected_geometry_status,
+    )
+
+    _compare_status_field(
+        findings,
+        entity_type="opening",
+        entity_id=opening_id,
+        path=f"openings[{opening_id}].{status_key}",
+        expected=expected_status,
+        actual=plan_opening.get(status_key),
+        context=context,
+    )
+    _compare_linear_field(
+        findings,
+        entity_type="opening",
+        entity_id=opening_id,
+        path=f"openings[{opening_id}].{value_key}",
+        expected=expected_geometry_value,
+        actual=plan_opening.get(value_key),
+        context=context,
+        code="fallback_value_mismatch" if unknown and fallback_key else "opening_value_mismatch",
+        message=(
+            "opening fallback geometry differs from the authorized value"
+            if unknown and fallback_key
+            else "opening geometry differs from canonical room data"
+        ),
+    )
+
+    if (
+        v11_geometry_value_key is None
+        or v11_geometry_status_key is None
+        or v11_observed_value_key is None
+        or v11_observed_status_key is None
+        or v11_proxy_key is None
+        or v11_geometry_value_key not in plan_opening
+    ):
+        return
+
+    _compare_linear_field(
+        findings,
+        entity_type="opening",
+        entity_id=opening_id,
+        path=f"openings[{opening_id}].{v11_observed_value_key}",
+        expected=expected_observed_value,
+        actual=plan_opening.get(v11_observed_value_key),
+        context=context,
+        code="opening_value_mismatch",
+    )
+    _compare_status_field(
+        findings,
+        entity_type="opening",
+        entity_id=opening_id,
+        path=f"openings[{opening_id}].{v11_observed_status_key}",
+        expected=expected_observed_status,
+        actual=plan_opening.get(v11_observed_status_key),
+        context=context,
+    )
+    _compare_linear_field(
+        findings,
+        entity_type="opening",
+        entity_id=opening_id,
+        path=f"openings[{opening_id}].{v11_geometry_value_key}",
+        expected=expected_geometry_value,
+        actual=plan_opening.get(v11_geometry_value_key),
+        context=context,
+        code="fallback_value_mismatch" if unknown and fallback_key else "opening_value_mismatch",
+        message=(
+            "opening fallback geometry differs from the authorized value"
+            if unknown and fallback_key
+            else "opening geometry differs from canonical room data"
+        ),
+    )
+    _compare_status_field(
+        findings,
+        entity_type="opening",
+        entity_id=opening_id,
+        path=f"openings[{opening_id}].{v11_geometry_status_key}",
+        expected=expected_geometry_status,
+        actual=plan_opening.get(v11_geometry_status_key),
+        context=context,
+    )
+    if v11_proxy_key in plan_opening:
+        _compare_exact_field(
+            findings,
+            entity_type="opening",
+            entity_id=opening_id,
+            path=f"openings[{opening_id}].{v11_proxy_key}",
+            expected=unknown,
+            actual=plan_opening.get(v11_proxy_key),
+            context=context,
+            code="proxy_flag_mismatch",
+            message="opening geometry proxy flag differs from the canonical source status",
+        )
+
+
+def _compare_opening(
+    room_opening: Mapping[str, Any],
+    plan_opening: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    opening_id = room_opening.get("id")
+    kind = room_opening.get("kind")
+    empty_context = SourceContext()
+    _compare_exact_field(
+        findings,
+        entity_type="opening",
+        entity_id=opening_id,
+        path=f"openings[{opening_id}].kind",
+        expected=kind,
+        actual=plan_opening.get("kind"),
+        context=empty_context,
+        code="metadata_status_mismatch",
+    )
+    _compare_exact_field(
+        findings,
+        entity_type="opening",
+        entity_id=opening_id,
+        path=f"openings[{opening_id}].wall_id",
+        expected=room_opening.get("wall_id"),
+        actual=plan_opening.get("wall_id"),
+        context=empty_context,
+        code="metadata_status_mismatch",
+    )
+
+    room_width = _measurement(room_opening, "width")
+    opening_context = _source_context(
+        room_width,
+        effective_status=_measurement_status(room_width),
+        effective_source_id=_measurement_source_id(room_width),
+        effective_geometry_status=_measurement_status(room_width),
+    )
+    _compare_source_id_field(
+        findings,
+        entity_type="opening",
+        entity_id=opening_id,
+        path=f"openings[{opening_id}].source_id",
+        expected=_measurement_source_id(room_width) or opening_id,
+        actual=plan_opening.get("source_id"),
+        context=opening_context,
+    )
+    _compare_exact_field(
+        findings,
+        entity_type="opening",
+        entity_id=opening_id,
+        path=f"openings[{opening_id}].proxy",
+        expected=True,
+        actual=plan_opening.get("proxy"),
+        context=opening_context,
+        code="proxy_flag_mismatch",
+        message="opening must remain a visualization proxy in the generation plan",
+    )
+
+    common = {
+        "findings": findings,
+        "opening_id": opening_id,
+        "kind": kind,
+        "room_opening": room_opening,
+        "plan_opening": plan_opening,
+    }
+    _compare_opening_measurement(
+        **common,
+        field="offset",
+        value_key="offset_m",
+        status_key="offset_status",
+        v11_geometry_value_key=None,
+        v11_geometry_status_key=None,
+        v11_observed_value_key=None,
+        v11_observed_status_key=None,
+        v11_proxy_key=None,
+    )
+    _compare_opening_measurement(
+        **common,
+        field="width",
+        value_key="width_m",
+        status_key="width_status",
+        v11_geometry_value_key=None,
+        v11_geometry_status_key=None,
+        v11_observed_value_key=None,
+        v11_observed_status_key=None,
+        v11_proxy_key=None,
+    )
+    _compare_opening_measurement(
+        **common,
+        field="height",
+        value_key="height_m",
+        status_key="height_status",
+        v11_geometry_value_key="geometry_height_m",
+        v11_geometry_status_key="geometry_height_status",
+        v11_observed_value_key="observed_height_m",
+        v11_observed_status_key="observed_height_status",
+        v11_proxy_key="geometry_height_proxy",
+        fallback_key=("opening", "height"),
+    )
+    _compare_opening_measurement(
+        **common,
+        field="sill_height",
+        value_key="sill_height_m",
+        status_key="sill_status",
+        v11_geometry_value_key="geometry_sill_height_m",
+        v11_geometry_status_key="geometry_sill_height_status",
+        v11_observed_value_key="observed_sill_height_m",
+        v11_observed_status_key="observed_sill_height_status",
+        v11_proxy_key="geometry_sill_height_proxy",
+        not_applicable_status="not_applicable" if kind == "door" else None,
+    )
+    _compare_opening_measurement(
+        **common,
+        field="depth",
+        value_key="depth_m",
+        status_key="depth_status",
+        v11_geometry_value_key="geometry_depth_m",
+        v11_geometry_status_key="geometry_depth_status",
+        v11_observed_value_key="observed_depth_m",
+        v11_observed_status_key="observed_depth_status",
+        v11_proxy_key="geometry_depth_proxy",
+        fallback_key=("opening", "depth"),
+    )
+
+    if "proxy_only" in plan_opening:
+        _compare_exact_field(
+            findings,
+            entity_type="opening",
+            entity_id=opening_id,
+            path=f"openings[{opening_id}].proxy_only",
+            expected=True,
+            actual=plan_opening.get("proxy_only"),
+            context=opening_context,
+            code="proxy_flag_mismatch",
+            message="opening proxy_only flag differs from the authorized representation",
+        )
+    if "constructive_geometry" in plan_opening:
+        _compare_exact_field(
+            findings,
+            entity_type="opening",
+            entity_id=opening_id,
+            path=f"openings[{opening_id}].constructive_geometry",
+            expected=False,
+            actual=plan_opening.get("constructive_geometry"),
+            context=opening_context,
+            code="constructive_geometry_mismatch",
+            message="constructive opening geometry is outside the current contract",
+        )
+
+
+def _compare_fixed_element(
+    room_element: Mapping[str, Any],
+    plan_element: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    element_id = room_element.get("id")
+    measurement = _measurement(room_element, "height")
+    context = _source_context(
+        measurement,
+        effective_status=_measurement_status(measurement),
+        effective_source_id=_measurement_source_id(measurement),
+        effective_geometry_status=_measurement_status(measurement),
+    )
+    for field in ("type",):
+        _compare_exact_field(
+            findings,
+            entity_type="fixed_element",
+            entity_id=element_id,
+            path=f"fixed_elements[{element_id}].{field}",
+            expected=room_element.get(field),
+            actual=plan_element.get(field),
+            context=context,
+        )
+    _compare_status_field(
+        findings,
+        entity_type="fixed_element",
+        entity_id=element_id,
+        path=f"fixed_elements[{element_id}].status",
+        expected=_measurement_status(measurement),
+        actual=plan_element.get("status"),
+        context=context,
+    )
+    _compare_linear_field(
+        findings,
+        entity_type="fixed_element",
+        entity_id=element_id,
+        path=f"fixed_elements[{element_id}].height_m",
+        expected=_observed_value(measurement),
+        actual=plan_element.get("height_m"),
+        context=context,
+    )
+    _compare_source_id_field(
+        findings,
+        entity_type="fixed_element",
+        entity_id=element_id,
+        path=f"fixed_elements[{element_id}].source_id",
+        expected=_measurement_source_id(measurement) or element_id,
+        actual=plan_element.get("source_id"),
+        context=context,
+    )
+    anchor = _as_mapping(room_element.get("anchor"))
+    plan_anchor = _as_mapping(plan_element.get("anchor"))
+    if "wall_id" in anchor:
+        _compare_exact_field(
+            findings,
+            entity_type="fixed_element",
+            entity_id=element_id,
+            path=f"fixed_elements[{element_id}].anchor.wall_id",
+            expected=anchor.get("wall_id"),
+            actual=plan_anchor.get("wall_id"),
+            context=context,
+        )
+        anchor_offset = _measurement(anchor, "offset")
+        _compare_linear_field(
+            findings,
+            entity_type="fixed_element",
+            entity_id=element_id,
+            path=f"fixed_elements[{element_id}].anchor.offset_m",
+            expected=_observed_value(anchor_offset),
+            actual=plan_anchor.get("offset_m"),
+            context=context,
+        )
+        _compare_status_field(
+            findings,
+            entity_type="fixed_element",
+            entity_id=element_id,
+            path=f"fixed_elements[{element_id}].anchor_status",
+            expected=_measurement_status(anchor_offset),
+            actual=plan_element.get("anchor_status"),
+            context=context,
+        )
+    elif "point_m" in anchor:
+        _compare_linear_field(
+            findings,
+            entity_type="fixed_element",
+            entity_id=element_id,
+            path=f"fixed_elements[{element_id}].anchor.point_m",
+            expected=anchor.get("point_m"),
+            actual=plan_anchor.get("point_m"),
+            context=context,
+        )
+
+
+def _compare_floor(
+    room: Mapping[str, Any],
+    plan: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    segments = _as_entities(_as_mapping(room.get("boundary")).get("segments"))
+    expected_points = [segment.get("start_m") for segment in segments]
+    actual_points = _as_mapping(plan.get("floor")).get("points_m")
+    context = _source_context(
+        _measurement(room, "floor_area"),
+        effective_status=_as_mapping(plan.get("floor")).get("status"),
+        effective_source_id=_as_mapping(plan.get("floor")).get("source_id"),
+        effective_geometry_status=_as_mapping(plan.get("floor")).get("status"),
+    )
+    _compare_linear_field(
+        findings,
+        entity_type="floor",
+        entity_id="floor",
+        path="floor.points_m",
+        expected=expected_points,
+        actual=actual_points,
+        context=context,
+    )
+
+    expected_area_measurement = _measurement(room, "floor_area")
+    expected_area = _measurement_value(expected_area_measurement)
+    if expected_area is None:
+        try:
+            expected_area = shoelace_area(expected_points)
+        except (IndexError, TypeError, ValueError):
+            expected_area = None
+    actual_area = _as_mapping(plan.get("floor")).get("area_m2")
+    try:
+        expected_polygon = [list(point[:2]) for point in expected_points]
+        area_tolerance = area_tolerance_from_polygon(expected_polygon)
+    except (TypeError, ValueError):
+        area_tolerance = None
+    if expected_area is not None and actual_area is not None and area_tolerance is not None:
+        if not within_area_tolerance(expected_area, actual_area, expected_polygon):
+            _add_finding(
+                findings,
+                code="geometry_value_mismatch",
+                entity_type="floor",
+                entity_id="floor",
+                path="floor.area_m2",
+                expected=expected_area,
+                actual=actual_area,
+                context=context,
+                tolerance=Tolerance.area(area_tolerance),
+                message="generation plan floor area differs from canonical room geometry",
+            )
+    elif expected_area != actual_area:
+        _add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="floor",
+            entity_id="floor",
+            path="floor.area_m2",
+            expected=expected_area,
+            actual=actual_area,
+            context=context,
+            tolerance=Tolerance.area(0.0),
+            message="generation plan floor area is unavailable or invalid",
+        )
+
+    expected_status = _measurement_status(expected_area_measurement) or "derived"
+    expected_formula = expected_area_measurement.get("formula") or "shoelace(boundary.segments)"
+    expected_depends_on = expected_area_measurement.get("depends_on") or [
+        segment.get("id") for segment in segments
+    ]
+    floor = _as_mapping(plan.get("floor"))
+    _compare_status_field(
+        findings,
+        entity_type="floor",
+        entity_id="floor",
+        path="floor.status",
+        expected=expected_status,
+        actual=floor.get("status"),
+        context=context,
+    )
+    _compare_source_id_field(
+        findings,
+        entity_type="floor",
+        entity_id="floor",
+        path="floor.source_id",
+        expected=_measurement_source_id(expected_area_measurement),
+        actual=floor.get("source_id"),
+        context=context,
+    )
+    _compare_exact_field(
+        findings,
+        entity_type="floor",
+        entity_id="floor",
+        path="floor.formula",
+        expected=expected_formula,
+        actual=floor.get("formula"),
+        context=context,
+    )
+    _compare_exact_field(
+        findings,
+        entity_type="floor",
+        entity_id="floor",
+        path="floor.depends_on",
+        expected=expected_depends_on,
+        actual=floor.get("depends_on"),
+        context=context,
+    )
+
+
+def compare_room_to_plan(
+    room: dict[str, Any],
+    plan: dict[str, Any],
+) -> ComparisonReport:
+    """Compare a validated canonical room with its pure generation plan.
+
+    The room is the authority for observations and provenance. The plan is
+    checked as a derived interpretation of that data; this function never
+    reads files, imports Blender, mutates either input or compares a scene.
+    """
+
+    room_data = _as_mapping(room)
+    plan_data = _as_mapping(plan)
+    room_id = room_data.get("room_id") or plan_data.get("room_id") or "unknown-room"
+    schema_version = room_data.get("schema_version") or "unknown-schema"
+    expected_plan_version = {
+        "1.0": "room-v1-generator-1",
+        "1.1": "room-v1.1-generator-1",
+    }.get(schema_version)
+    actual_plan_version = plan_data.get("generator_version")
+    report_plan_version = actual_plan_version or expected_plan_version or "unknown-generator"
+    findings: list[Finding] = []
+
+    empty_context = SourceContext()
+    _compare_exact_field(
+        findings,
+        entity_type="room",
+        entity_id=room_id,
+        path="room_id",
+        expected=room_data.get("room_id"),
+        actual=plan_data.get("room_id"),
+        context=empty_context,
+        code="room_id_mismatch",
+        message="generation plan room identity differs from canonical room data",
+    )
+    if expected_plan_version is not None:
+        _compare_exact_field(
+            findings,
+            entity_type="room",
+            entity_id=room_id,
+            path="generator_version",
+            expected=expected_plan_version,
+            actual=actual_plan_version,
+            context=empty_context,
+            code="generation_plan_version_mismatch",
+            message="generation plan version is incompatible with the canonical schema version",
+        )
+    if schema_version == "1.1" or "schema_version" in plan_data:
+        _compare_exact_field(
+            findings,
+            entity_type="room",
+            entity_id=room_id,
+            path="schema_version",
+            expected=schema_version,
+            actual=plan_data.get("schema_version"),
+            context=empty_context,
+            code="schema_version_mismatch",
+            message="generation plan schema version differs from canonical room data",
+        )
+    _compare_exact_field(
+        findings,
+        entity_type="room",
+        entity_id=room_id,
+        path="units",
+        expected=room_data.get("units"),
+        actual=plan_data.get("units"),
+        context=empty_context,
+        code="units_mismatch",
+        message="generation plan units differ from canonical room units",
+    )
+    _compare_exact_field(
+        findings,
+        entity_type="room",
+        entity_id=room_id,
+        path="coordinate_system",
+        expected=room_data.get("coordinate_system"),
+        actual=plan_data.get("coordinate_system"),
+        context=empty_context,
+        code="metadata_status_mismatch",
+    )
+    boundary = _as_mapping(room_data.get("boundary"))
+    if "winding" in plan_data:
+        _compare_exact_field(
+            findings,
+            entity_type="room",
+            entity_id=room_id,
+            path="winding",
+            expected=boundary.get("winding"),
+            actual=plan_data.get("winding"),
+            context=empty_context,
+            code="metadata_status_mismatch",
+        )
+
+    _compare_height(room_data, plan_data, findings)
+
+    room_segments, room_duplicates = _entity_index(boundary.get("segments"))
+    plan_walls, plan_duplicates = _entity_index(plan_data.get("walls"))
+    for entity_id in room_duplicates + plan_duplicates:
+        _add_finding(
+            findings,
+            code="duplicate_entity_id",
+            entity_type="wall",
+            entity_id=entity_id,
+            path=f"walls[{entity_id}]",
+            expected="unique",
+            actual="duplicate",
+            context=SourceContext(),
+            tolerance=Tolerance.exact(),
+            message="generation plan wall identifiers must be unique",
+        )
+    _compare_entity_ids(
+        findings,
+        entity_type="wall",
+        plural_path="walls",
+        expected_entities=room_segments,
+        actual_entities=plan_walls,
+        context_for_expected=lambda entity_id: _source_context(
+            _measurement(room_segments[entity_id], "length"),
+            effective_status=_measurement_status(_measurement(room_segments[entity_id], "length")),
+        ),
+    )
+    for entity_id in sorted(set(room_segments) & set(plan_walls)):
+        _compare_wall(room_data, room_segments[entity_id], plan_walls[entity_id], plan_data, findings)
+
+    _compare_floor(room_data, plan_data, findings)
+
+    room_openings = _flatten_room_openings(room_data)
+    plan_openings, plan_opening_duplicates = _entity_index(plan_data.get("openings"))
+    for entity_id in plan_opening_duplicates:
+        _add_finding(
+            findings,
+            code="duplicate_entity_id",
+            entity_type="opening",
+            entity_id=entity_id,
+            path=f"openings[{entity_id}]",
+            expected="unique",
+            actual="duplicate",
+            context=SourceContext(),
+            tolerance=Tolerance.exact(),
+            message="generation plan opening identifiers must be unique",
+        )
+    _compare_entity_ids(
+        findings,
+        entity_type="opening",
+        plural_path="openings",
+        expected_entities=room_openings,
+        actual_entities=plan_openings,
+    )
+    for entity_id in sorted(set(room_openings) & set(plan_openings)):
+        _compare_opening(room_openings[entity_id], plan_openings[entity_id], findings)
+
+    room_fixed = _entity_index(room_data.get("fixed_elements"))[0]
+    plan_fixed, plan_fixed_duplicates = _entity_index(plan_data.get("fixed_elements"))
+    for entity_id in plan_fixed_duplicates:
+        _add_finding(
+            findings,
+            code="duplicate_entity_id",
+            entity_type="fixed_element",
+            entity_id=entity_id,
+            path=f"fixed_elements[{entity_id}]",
+            expected="unique",
+            actual="duplicate",
+            context=SourceContext(),
+            tolerance=Tolerance.exact(),
+            message="generation plan fixed-element identifiers must be unique",
+        )
+    _compare_entity_ids(
+        findings,
+        entity_type="fixed_element",
+        plural_path="fixed_elements",
+        expected_entities=room_fixed,
+        actual_entities=plan_fixed,
+    )
+    for entity_id in sorted(set(room_fixed) & set(plan_fixed)):
+        _compare_fixed_element(room_fixed[entity_id], plan_fixed[entity_id], findings)
+
+    checked_entities = 2 + len(room_segments) + len(room_openings) + len(room_fixed)
+    return ComparisonReport(
+        room_id=str(room_id),
+        schema_version=str(schema_version),
+        generation_plan_version=str(report_plan_version),
+        comparison_stages=("room_to_plan",),
+        discrepancies=findings,
+        checked_entities=checked_entities,
+    )
 
 
 def _sorted_findings(findings: Any, expected_severity: str) -> tuple[Finding, ...]:

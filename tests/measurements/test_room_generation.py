@@ -12,10 +12,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+MEASUREMENT_SCRIPTS = ROOT / "blender" / "scripts" / "measurements"
 GENERATOR_PATH = ROOT / "blender" / "scripts" / "measurements" / "generate_room.py"
 FIXTURE_PATH = ROOT / "measurements" / "fixtures" / "room-v1-synthetic.json"
 V11_FIXTURE_PATH = ROOT / "measurements" / "fixtures" / "room-v1.1-reconciliation-synthetic.json"
 REAL_ROOM_PATH = ROOT / "measurements" / "rooms" / "living-room-main.json"
+
+if str(MEASUREMENT_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(MEASUREMENT_SCRIPTS))
 
 
 def load_generator_module():

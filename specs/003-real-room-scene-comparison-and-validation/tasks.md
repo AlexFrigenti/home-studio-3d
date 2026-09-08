@@ -1,10 +1,11 @@
 # Tareas: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2
-> Estado: T3.01, T3.02 y T3.03 implementadas y validadas; la comparación funcional,
-> el adapter Blender y las fases posteriores siguen pendientes.
+> Estado: T3.01, T3.02, T3.03 y T3.04 implementadas y validadas; el adapter
+> Blender y las fases posteriores siguen pendientes.
 > El slice 002 permanece cerrado e integrado en `main`; las tareas completadas
-> aquí se limitan al contrato y la política matemática de T3.01–T3.03.
+> aquí se limitan al contrato, la política matemática y la comparación pura de
+> T3.01–T3.04.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -67,13 +68,42 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 ## T3.04 — Implementar comparación room ↔ plan
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** comprobar que el plan refleja valores observados, geometría
   efectiva, reconciliaciones, fallbacks, estados y provenance del room.
 - **Archivos previstos:** `compare_room_scene.py`, tests puros.
 - **Validación:** wall-05, wall-16, V2, espesores medidos/unknown y altura real.
+- **Evidencia:** `compare_room_to_plan(room, plan)` implementa la transición
+  pura sin `bpy`, archivos ni mutación de entradas. Compara por IDs la
+  identidad, unidades, coordenadas, suelo, altura, paredes, openings y
+  elementos fijos; conserva `observed`/`effective_geometry`/`scene=null` en los
+  findings; distingue reconciliaciones, estados y fallbacks; y usa la
+  tolerancia lineal y de área versionadas. Las constantes de fallback y el
+  cálculo Shoelace proceden de `generation_policy.py`, sin duplicar la política
+  del generator. Hay tests específicos, incluido el acceptance case
+  `living-room-main`.
+- **Compatibilidad:** room-v1 no exige campos v1.1. El `height_status` superior
+  del plan v1 histórico no se usa como autoridad porque puede quedar
+  sobrescrito por metadata de elementos fijos; se verifican `height_m` y los
+  estados de altura de las paredes. La provenance no expuesta por el plan queda
+  marcada como `not verifiable at room_to_plan with generation-plan contract
+  current version`; no se reconstruye ni se simula. No se modifica la forma del
+  plan, room-v1 ni la golden.
 - **Rollback:** eliminar la comparación room/plan; conservar `build_generation_plan`.
 - **Fuera:** inferencia o corrección automática del room.
+
+## T3.05-P — Ampliar provenance del generation plan antes de cerrar plan→scene
+
+- **Estado:** `[ ]`
+- **Objetivo:** transportar explícitamente provenance por campo cuando el
+  contrato final requiera validar su conservación hasta la escena.
+- **Alcance futuro:** method, uncertainty, formula, depends_on, reason,
+  reconciliation_id y source IDs individuales; sin reconstruirlos desde
+  agregados.
+- **Dependencia:** debe resolverse y validarse antes de afirmar provenance
+  completa en `plan_to_scene`. No forma parte de T3.04 ni inicia T3.05.
+- **Fuera:** cambios en esta corrección, schemas, datos reales, Blender y
+  adapter.
 
 ## T3.05 — Definir representación normalizada y adapter Blender
 
@@ -165,7 +195,7 @@ capturas reales o geometría constructiva sin una autorización independiente.
 - Fotografías, EXIF, LiDAR y fotogrametría.
 - Cambios en MCP o `get_addon_status`.
 
-T3.04 y posteriores permanecen `[ ]` hasta que una implementación posterior
-sea autorizada y validada. T3.01–T3.03 cubren únicamente el contrato y la
-política matemática; esta fase no inicia la comparación funcional ni la
-integración Blender.
+T3.05 y posteriores permanecen `[ ]` hasta que una implementación posterior
+sea autorizada y validada. T3.01–T3.04 cubren únicamente el contrato, la
+política matemática y la comparación pura room → plan; esta fase no inicia el
+adapter ni la integración Blender.
