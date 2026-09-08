@@ -12,10 +12,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+MEASUREMENT_SCRIPTS = ROOT / "blender" / "scripts" / "measurements"
 GENERATOR_PATH = ROOT / "blender" / "scripts" / "measurements" / "generate_room.py"
 FIXTURE_PATH = ROOT / "measurements" / "fixtures" / "room-v1-synthetic.json"
 V11_FIXTURE_PATH = ROOT / "measurements" / "fixtures" / "room-v1.1-reconciliation-synthetic.json"
 REAL_ROOM_PATH = ROOT / "measurements" / "rooms" / "living-room-main.json"
+
+if str(MEASUREMENT_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(MEASUREMENT_SCRIPTS))
 
 
 def load_generator_module():
@@ -117,13 +121,184 @@ class RoomGenerationPlanTests(unittest.TestCase):
         wall = plan["walls"][0]
 
         self.assertEqual(plan["schema_version"], "1.1")
-        self.assertEqual(plan["generator_version"], "room-v1.1-generator-1")
+        self.assertEqual(plan["generator_version"], "room-v1.1-generator-2")
         self.assertEqual(wall["observed_length_m"], 1.98)
         self.assertEqual(wall["observed_length_status"], "measured")
         self.assertEqual(wall["geometry_length_m"], 2.0)
         self.assertEqual(wall["geometry_length_status"], "derived")
         self.assertTrue(wall["geometry_reconciled"])
         self.assertEqual(wall["length_m"], 2.0)
+
+    def test_v11_plan_exposes_field_level_provenance_without_geometry_value_copies(self):
+        plan = self.generator.build_generation_plan(self.room_v11)
+
+        self.assertEqual(plan["generator_version"], "room-v1.1-generator-2")
+        self.assertIn("provenance", plan)
+        height = plan["provenance"]["room"]["height"]
+        self.assertEqual(height["observed"]["status"], "measured")
+        self.assertEqual(height["observed"]["method"], "manual_tape")
+        self.assertEqual(height["observed"]["uncertainty"], 0.01)
+        self.assertEqual(height["observed"]["source_id"], "synthetic-011-height")
+        self.assertEqual(height["effective_geometry"]["status"], "measured")
+        self.assertEqual(plan["provenance"]["room"]["measurement_method"], "manual_tape")
+        self.assertEqual(plan["provenance"]["room"]["measured_at"], "2026-09-06")
+        self.assertNotIn("value", height["observed"])
+        self.assertNotIn("value_m", height["observed"])
+        self.assertNotIn("value", height["effective_geometry"])
+        self.assertNotIn("value_m", height["effective_geometry"])
+
+    def test_v11_plan_preserves_segment_reconciliation_provenance(self):
+        plan = self.generator.build_generation_plan(self.room_v11)
+        wall = plan["provenance"]["walls"]["wall-00"]["length"]
+
+        self.assertEqual(wall["observed"]["source_id"], "synthetic-011-wall-00")
+        self.assertEqual(wall["effective_geometry"]["status"], "derived")
+        self.assertEqual(wall["effective_geometry"]["method"], "orthogonal_boundary_reconciliation")
+        self.assertEqual(wall["effective_geometry"]["formula"], "length.value + reconciled_geometry.delta_m")
+        self.assertEqual(wall["effective_geometry"]["depends_on"], ["wall-00.length", "boundary.reconciliation"])
+        self.assertEqual(wall["effective_geometry"]["reconciliation_id"], "closure-01")
+        self.assertEqual(wall["effective_geometry"]["delta_m"], 0.02)
+        self.assertEqual(wall["effective_geometry"]["reason"], "Synthetic exact closure")
+        self.assertNotIn("value", wall["effective_geometry"])
+        self.assertNotIn("value_m", wall["effective_geometry"])
+
+    def test_v11_plan_preserves_global_reconciliation_provenance(self):
+        plan = self.generator.build_generation_plan(self.room_v11)
+
+        self.assertEqual(
+            plan["provenance"]["boundary"]["reconciliation"],
+            self.room_v11["boundary"]["reconciliation"],
+        )
+
+    def test_v11_plan_preserves_wall_thickness_provenance_and_fallback_metadata(self):
+        room = copy.deepcopy(self.room_v11)
+        room["boundary"]["segments"][1]["thickness"] = {
+            "status": "unknown",
+            "method": "not_captured",
+            "note": "Synthetic unknown thickness.",
+        }
+        plan = self.generator.build_generation_plan(room)
+        wall = plan["provenance"]["walls"]["wall-01"]["thickness"]
+
+        self.assertEqual(wall["observed"]["status"], "unknown")
+        self.assertEqual(wall["observed"]["method"], "not_captured")
+        self.assertEqual(wall["effective_geometry"]["status"], "derived")
+        self.assertTrue(wall["effective_geometry"]["fallback"])
+        self.assertEqual(wall["effective_geometry"]["fallback_value_m"], 0.10)
+        self.assertEqual(wall["effective_geometry"]["method"], "generator_fallback")
+        self.assertIn("unknown wall thickness", wall["effective_geometry"]["reason"])
+        self.assertNotIn("value", wall["effective_geometry"])
+        self.assertNotIn("value_m", wall["effective_geometry"])
+
+    def test_v11_plan_preserves_opening_field_provenance(self):
+        plan = self.generator.build_generation_plan(self.room_v11)
+        opening = plan["provenance"]["openings"]["door-01"]
+
+        for field in ("offset", "width", "height", "depth"):
+            with self.subTest(field=field):
+                source = self.room_v11["openings"]["doors"][0][field]
+                observed = opening[field]["observed"]
+                for key in ("status", "method", "uncertainty", "note", "formula", "depends_on", "source_id"):
+                    if key in source:
+                        self.assertEqual(observed[key], source[key])
+                self.assertNotIn("value", observed)
+                self.assertNotIn("value_m", observed)
+                self.assertIn("effective_geometry", opening[field])
+
+    def test_v11_plan_preserves_window_sill_provenance(self):
+        room = copy.deepcopy(self.room_v11)
+        window = room["openings"]["doors"].pop()
+        window["id"] = "window-01"
+        window["height"] = {
+            "value": 1.0,
+            "status": "measured",
+            "uncertainty": 0.01,
+            "method": "manual_tape",
+            "source_id": "synthetic-011-window-height",
+        }
+        window["sill_height"] = {
+            "value": 0.9,
+            "status": "measured",
+            "uncertainty": 0.01,
+            "method": "manual_tape",
+            "source_id": "synthetic-011-window-sill",
+        }
+        room["openings"]["windows"] = [window]
+
+        plan = self.generator.build_generation_plan(room)
+        sill = plan["provenance"]["openings"]["window-01"]["sill_height"]
+
+        self.assertEqual(sill["observed"]["status"], "measured")
+        self.assertEqual(sill["observed"]["method"], "manual_tape")
+        self.assertEqual(sill["observed"]["source_id"], "synthetic-011-window-sill")
+        self.assertEqual(sill["effective_geometry"]["status"], "measured")
+        self.assertFalse(sill["effective_geometry"]["fallback"])
+
+    def test_v11_provenance_does_not_duplicate_physical_value_keys(self):
+        plan = self.generator.build_generation_plan(self.room_v11)
+
+        def assert_no_value_keys(value):
+            if isinstance(value, dict):
+                self.assertNotIn("value", value)
+                self.assertNotIn("value_m", value)
+                for child in value.values():
+                    assert_no_value_keys(child)
+            elif isinstance(value, list):
+                for child in value:
+                    assert_no_value_keys(child)
+
+        assert_no_value_keys(plan["provenance"])
+
+    def test_v11_plan_preserves_fixed_element_provenance_when_supported(self):
+        room = copy.deepcopy(self.room_v11)
+        room["fixed_elements"] = [
+            {
+                "id": "socket-01",
+                "type": "socket",
+                "anchor": {
+                    "wall_id": "wall-01",
+                    "offset": {
+                        "value": 1.0,
+                        "status": "measured",
+                        "uncertainty": 0.01,
+                        "method": "manual_tape",
+                        "source_id": "synthetic-011-socket-offset",
+                    },
+                },
+                "height": {
+                    "value": 0.3,
+                    "status": "estimated",
+                    "uncertainty": 0.02,
+                    "method": "visual_estimate",
+                    "note": "Synthetic fixed-element estimate.",
+                    "source_id": "synthetic-011-socket-height",
+                },
+            }
+        ]
+
+        plan = self.generator.build_generation_plan(room)
+        provenance = plan["provenance"]["fixed_elements"]["socket-01"]
+
+        self.assertEqual(provenance["height"]["observed"]["status"], "estimated")
+        self.assertEqual(provenance["height"]["observed"]["method"], "visual_estimate")
+        self.assertEqual(provenance["anchor"]["offset"]["observed"]["source_id"], "synthetic-011-socket-offset")
+
+    def test_v11_plan_preserves_floor_area_provenance_without_value_copy(self):
+        plan = self.generator.build_generation_plan(self.room_v11)
+        floor = plan["provenance"]["room"]["floor_area"]
+
+        self.assertEqual(floor["observed"]["status"], "derived")
+        self.assertEqual(floor["observed"]["method"], "shoelace")
+        self.assertEqual(floor["observed"]["formula"], "shoelace(boundary.segments)")
+        self.assertEqual(floor["observed"]["depends_on"], ["wall-00", "wall-01", "wall-02", "wall-03"])
+        self.assertNotIn("value", floor["observed"])
+        self.assertNotIn("value_m", floor["observed"])
+
+    def test_v1_plan_has_historical_shape_without_provenance_extension(self):
+        plan = self.generator.build_generation_plan(self.room)
+
+        self.assertEqual(plan["generator_version"], "room-v1-generator-1")
+        self.assertNotIn("provenance", plan)
 
     def test_v11_opening_bounds_use_effective_wall_length(self):
         room = copy.deepcopy(self.room_v11)

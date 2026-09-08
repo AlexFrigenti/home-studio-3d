@@ -9,6 +9,7 @@ derived geometry, while openings and fixed elements are traceable proxies.
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import hashlib
 import importlib.util
 import json
@@ -18,23 +19,54 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from generation_policy import (
+    OPENING_DEPTH_PROXY_M,
+    OPENING_DEPTH_PROXY_METHOD,
+    OPENING_DEPTH_PROXY_REASON,
+    OPENING_SILL_CENTERING_FORMULA,
+    OPENING_SILL_CENTERING_METHOD,
+    OPENING_SILL_CENTERING_REASON,
+    OPENING_VISUAL_HEIGHT_PROXY_METHOD,
+    OPENING_VISUAL_HEIGHT_PROXY_REASON,
+    OPENING_VISUAL_HEIGHT_PROXY_M,
+    DOOR_SILL_DERIVATION_FORMULA,
+    DOOR_SILL_DERIVATION_METHOD,
+    FIXED_ELEMENT_HEIGHT_PROXY_METHOD,
+    FIXED_ELEMENT_HEIGHT_PROXY_REASON,
+    FLOOR_AREA_DERIVATION_FORMULA,
+    FLOOR_AREA_DERIVATION_METHOD,
+    FLOOR_AREA_DERIVATION_REASON,
+    GENERATION_PLAN_V11_LEGACY_VERSION,
+    GENERATION_PLAN_V11_VERSION,
+    GENERATION_PLAN_V1_VERSION,
+    effective_geometry_metadata,
+    measurement_metadata,
+    provenance_pair,
+    ROOM_HEIGHT_PROXY_M,
+    ROOM_HEIGHT_PROXY_METHOD,
+    ROOM_HEIGHT_PROXY_REASON,
+    WALL_THICKNESS_PROXY_METHOD,
+    WALL_THICKNESS_PROXY_REASON,
+    WALL_THICKNESS_PROXY_M,
+    shoelace_area,
+)
+
 try:  # Blender is optional for the pure-Python test suite.
     import bpy  # type: ignore
 except ImportError:  # pragma: no cover - exercised only outside Blender.
     bpy = None
 
 
-GENERATOR_VERSION = "room-v1-generator-1"
-GENERATOR_V11_VERSION = "room-v1.1-generator-1"
+GENERATOR_VERSION = GENERATION_PLAN_V1_VERSION
+GENERATOR_V11_LEGACY_VERSION = GENERATION_PLAN_V11_LEGACY_VERSION
+GENERATOR_V11_VERSION = GENERATION_PLAN_V11_VERSION
 MATH_TOLERANCE_M = 1e-6
-DEFAULT_WALL_THICKNESS_M = 0.10
-DEFAULT_OPENING_DEPTH_M = 0.06
-DEFAULT_OPENING_VISUAL_BAND_HEIGHT_M = 0.10
-OPENING_VISUAL_PROXY_METHOD = "visual_band"
-OPENING_VISUAL_PROXY_REASON = "unknown vertical opening geometry; visualization proxy only"
-DEFAULT_ROOM_HEIGHT_PROXY_M = 3.00
-ROOM_HEIGHT_PROXY_METHOD = "generator_fallback"
-ROOM_HEIGHT_PROXY_REASON = "unknown room height; explicit generation proxy for materialization"
+DEFAULT_WALL_THICKNESS_M = WALL_THICKNESS_PROXY_M
+DEFAULT_OPENING_DEPTH_M = OPENING_DEPTH_PROXY_M
+DEFAULT_OPENING_VISUAL_BAND_HEIGHT_M = OPENING_VISUAL_HEIGHT_PROXY_M
+OPENING_VISUAL_PROXY_METHOD = OPENING_VISUAL_HEIGHT_PROXY_METHOD
+OPENING_VISUAL_PROXY_REASON = OPENING_VISUAL_HEIGHT_PROXY_REASON
+DEFAULT_ROOM_HEIGHT_PROXY_M = ROOM_HEIGHT_PROXY_M
 DEFAULT_FIXED_WIDTH_M = 0.12
 DEFAULT_FIXED_DEPTH_M = 0.06
 DEFAULT_FIXED_PROXY_HEIGHT_M = 0.12
@@ -282,6 +314,219 @@ def _oriented_box_geometry(
     return corners
 
 
+def _build_v11_provenance(room: dict[str, Any], plan: dict[str, Any]) -> dict[str, Any]:
+    """Transport field-level room provenance for the additive v1.1 plan."""
+
+    height = room.get("height")
+    if isinstance(height, dict) and plan["geometry_height_fallback"]:
+        height_effective = effective_geometry_metadata(
+            None,
+            geometry_status=plan["geometry_height_status"],
+            fallback=True,
+            fallback_value_m=plan["geometry_height_m"],
+            method=ROOM_HEIGHT_PROXY_METHOD,
+            reason=ROOM_HEIGHT_PROXY_REASON,
+        )
+    else:
+        height_effective = effective_geometry_metadata(
+            height,
+            geometry_status=plan["geometry_height_status"],
+        )
+
+    floor_source = room.get("floor_area")
+    floor = plan["floor"]
+    if isinstance(floor_source, dict) and floor_source.get("status") == "unknown":
+        floor_effective = effective_geometry_metadata(
+            None,
+            geometry_status="derived",
+            fallback=True,
+            fallback_value_m=floor["area_m2"],
+            method=FLOOR_AREA_DERIVATION_METHOD,
+            formula=floor["formula"],
+            depends_on=floor["depends_on"],
+            reason=FLOOR_AREA_DERIVATION_REASON,
+        )
+    elif isinstance(floor_source, dict):
+        floor_effective = effective_geometry_metadata(
+            floor_source,
+            geometry_status=floor["status"],
+        )
+    else:
+        floor_effective = effective_geometry_metadata(
+            None,
+            geometry_status=floor["status"],
+            method=FLOOR_AREA_DERIVATION_METHOD,
+            formula=floor["formula"],
+            depends_on=floor["depends_on"],
+        )
+
+    wall_sources = {
+        segment["id"]: segment
+        for segment in room["boundary"]["segments"]
+    }
+    plan_walls = {wall["id"]: wall for wall in plan["walls"]}
+    walls: dict[str, Any] = {}
+    for wall_id in sorted(wall_sources):
+        segment = wall_sources[wall_id]
+        wall = plan_walls[wall_id]
+        length_source = segment["length"]
+        reconciliation = segment.get("reconciled_geometry")
+        if isinstance(reconciliation, dict):
+            effective_source = reconciliation.get("length")
+            effective = effective_geometry_metadata(
+                effective_source,
+                geometry_status=wall["geometry_length_status"],
+                reconciliation_id=reconciliation["reconciliation_id"],
+                delta_m=reconciliation["delta_m"],
+                reason=reconciliation["reason"],
+            )
+        else:
+            effective = effective_geometry_metadata(
+                length_source,
+                geometry_status=wall["length_status"],
+            )
+
+        thickness_source = segment.get("thickness")
+        if not isinstance(thickness_source, dict) or thickness_source.get("status") == "unknown":
+            thickness_effective = effective_geometry_metadata(
+                None,
+                geometry_status=wall["thickness_geometry_status"],
+                fallback=bool(wall["thickness_fallback"]),
+                fallback_value_m=wall["thickness_m"],
+                method=WALL_THICKNESS_PROXY_METHOD,
+                reason=WALL_THICKNESS_PROXY_REASON,
+            )
+        else:
+            thickness_effective = effective_geometry_metadata(
+                thickness_source,
+                geometry_status=wall["thickness_geometry_status"],
+            )
+        walls[wall_id] = {
+            "length": provenance_pair(length_source, effective),
+            "thickness": provenance_pair(thickness_source, thickness_effective),
+        }
+
+    opening_sources: dict[str, dict[str, Any]] = {}
+    for kind, key in (("door", "doors"), ("window", "windows")):
+        for opening in room["openings"][key]:
+            opening_sources[opening["id"]] = dict(opening, kind=kind)
+    plan_openings = {opening["id"]: opening for opening in plan["openings"]}
+    openings: dict[str, Any] = {}
+    for opening_id in sorted(opening_sources):
+        source = opening_sources[opening_id]
+        opening = plan_openings[opening_id]
+        fields: dict[str, Any] = {}
+        for field, value_key, status_key, geometry_status_key, proxy_key in (
+            ("offset", "offset_m", "offset_status", None, None),
+            ("width", "width_m", "width_status", None, None),
+            ("height", "height_m", "height_status", "geometry_height_status", "geometry_height_proxy"),
+            ("sill_height", "sill_height_m", "sill_status", "geometry_sill_height_status", "geometry_sill_height_proxy"),
+            ("depth", "depth_m", "depth_status", "geometry_depth_status", "geometry_depth_proxy"),
+        ):
+            source_measurement = source.get(field)
+            if field == "sill_height" and source["kind"] == "door":
+                effective = effective_geometry_metadata(
+                    None,
+                    geometry_status=opening[status_key],
+                    method=DOOR_SILL_DERIVATION_METHOD,
+                    formula=DOOR_SILL_DERIVATION_FORMULA,
+                    depends_on=[opening_id],
+                )
+            elif (
+                (not isinstance(source_measurement, dict) or source_measurement.get("status") == "unknown")
+                and proxy_key is not None
+                and opening.get(proxy_key) is True
+            ):
+                if field == "height":
+                    effective = effective_geometry_metadata(
+                        None,
+                        geometry_status=opening[geometry_status_key],
+                        fallback=True,
+                        fallback_value_m=opening[value_key],
+                        method=OPENING_VISUAL_PROXY_METHOD,
+                        reason=OPENING_VISUAL_PROXY_REASON,
+                    )
+                elif field == "depth":
+                    effective = effective_geometry_metadata(
+                        None,
+                        geometry_status=opening[geometry_status_key],
+                        fallback=True,
+                        fallback_value_m=opening[value_key],
+                        method=OPENING_DEPTH_PROXY_METHOD,
+                        reason=OPENING_DEPTH_PROXY_REASON,
+                    )
+                else:
+                    effective = effective_geometry_metadata(
+                        None,
+                        geometry_status=opening[geometry_status_key],
+                        method=OPENING_SILL_CENTERING_METHOD,
+                        formula=OPENING_SILL_CENTERING_FORMULA,
+                        depends_on=["room.height", f"{opening_id}.height"],
+                        reason=OPENING_SILL_CENTERING_REASON,
+                    )
+            else:
+                effective = effective_geometry_metadata(
+                    source_measurement,
+                    geometry_status=opening.get(geometry_status_key, opening[status_key]),
+                )
+            fields[field] = provenance_pair(source_measurement, effective)
+        openings[opening_id] = fields
+
+    fixed_sources = {element["id"]: element for element in room["fixed_elements"]}
+    plan_fixed = {element["id"]: element for element in plan["fixed_elements"]}
+    fixed_elements: dict[str, Any] = {}
+    for element_id in sorted(fixed_sources):
+        source = fixed_sources[element_id]
+        element = plan_fixed[element_id]
+        height_source = source.get("height")
+        if not isinstance(height_source, dict) or height_source.get("status") == "unknown":
+            height_effective = effective_geometry_metadata(
+                None,
+                geometry_status=element["geometry_status"],
+                fallback=True,
+                fallback_value_m=element["height_m"],
+                method=FIXED_ELEMENT_HEIGHT_PROXY_METHOD,
+                reason=FIXED_ELEMENT_HEIGHT_PROXY_REASON,
+            )
+        else:
+            height_effective = effective_geometry_metadata(
+                height_source,
+                geometry_status=element["geometry_status"],
+            )
+        entry: dict[str, Any] = {
+            "height": provenance_pair(height_source, height_effective),
+        }
+        anchor = source.get("anchor")
+        if isinstance(anchor, dict) and "wall_id" in anchor:
+            anchor_offset = anchor.get("offset")
+            entry["anchor"] = {
+                "offset": provenance_pair(
+                    anchor_offset,
+                    effective_geometry_metadata(
+                        anchor_offset,
+                        geometry_status=plan_fixed[element_id]["anchor_status"],
+                    ),
+                )
+            }
+        fixed_elements[element_id] = entry
+
+    room_provenance = {
+        "height": provenance_pair(height, height_effective),
+        "floor_area": provenance_pair(floor_source, floor_effective),
+        "measurement_method": deepcopy(room["measurement_method"]),
+        "measured_at": deepcopy(room["measured_at"]),
+    }
+    return {
+        "room": room_provenance,
+        "boundary": {
+            "reconciliation": deepcopy(room["boundary"].get("reconciliation")),
+        },
+        "walls": walls,
+        "openings": openings,
+        "fixed_elements": fixed_elements,
+    }
+
+
 def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
     """Validate and calculate a deterministic, JSON-serializable build plan."""
 
@@ -360,14 +605,7 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
         walls_by_id[segment_id] = wall
 
     floor_points = [_point(segment["start_m"]) for segment in segments]
-    computed_area = abs(
-        sum(
-            floor_points[index][0] * floor_points[(index + 1) % len(floor_points)][1]
-            - floor_points[(index + 1) % len(floor_points)][0] * floor_points[index][1]
-            for index in range(len(floor_points))
-        )
-        / 2.0
-    )
+    computed_area = shoelace_area(floor_points)
     floor_measurement = _measurement(room, "floor_area", fallback=computed_area) if "floor_area" in room else {
         "value_m": computed_area,
         "status": "derived",
@@ -572,6 +810,7 @@ def build_generation_plan(room: dict[str, Any]) -> dict[str, Any]:
                 else None,
             }
         )
+        plan["provenance"] = _build_v11_provenance(room, plan)
     return plan
 
 
