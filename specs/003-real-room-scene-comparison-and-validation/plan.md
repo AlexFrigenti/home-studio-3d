@@ -4,10 +4,10 @@
 
 **Goal:** Add a deterministic, reusable comparison between canonical room data, the generation plan and a normalized generated-scene representation without changing measurement schemas or real-room data.
 
-**Current checkpoint:** T3.01–T3.04, T3.05-P, T3.05 and T3.06 are implemented
-and validated. T3.06 has passed real-scene acceptance against a new
-generator-2 artifact, with the historical generator-1 artifact preserved;
-later scene work remains pending.
+**Current checkpoint:** T3.01–T3.04, T3.05-P, T3.05, T3.06 and T3.07 are
+implemented and validated. T3.06 has passed real-scene acceptance against a
+new generator-2 artifact, with the historical generator-1 artifact preserved;
+T3.08–T3.10 remain pending.
 
 **Architecture:** Keep a pure-Python comparison core independent of `bpy`. Add a read-only Blender adapter that maps the existing generated scene and custom properties into a normalized representation, then produce a stable `ComparisonReport` from the core. Preserve the existing generator and scene validator contracts; integrate only the minimum delegation and metadata checks needed by the new comparison.
 
@@ -318,4 +318,22 @@ Historical/new semantic geometry equivalence passed with no unexpected
 differences and common projection hash
 `31c7a1698c0479a34bdd8e276b6e06fbd0c1dbf2ab90378dfcb3d2a2583cd82f`.
 Controlled anti-false-pass mutations, deterministic serializations and
-read-only/no-mutation checks also passed. This closure does not start T3.07.
+read-only/no-mutation checks also passed.
+
+#### T3.07 checkpoint: explicit mutation and regression coverage
+
+The comparison regression matrix is now explicit in the pure suites. The
+comparison tests cover missing and unexpected semantic entities, wall and
+opening geometry, materialized metadata, statuses, fallback flags and values,
+reconciliation flags, source IDs, incompatible plan/adapter versions,
+ordering, determinism and input non-mutation. The normalization tests cover
+duplicate managed IDs, malformed entities, wrong units, managed ownership and
+allowed unmanaged auxiliaries.
+
+Both public comparison entrypoints emit `report_version` equal to
+`room-scene-comparison-1`; report-version incompatibility is not an input
+mutation of either comparator and remains reserved for a future report
+consumer. Metadata that Blender does not materialize, including per-field
+method, uncertainty, reconciliation ID and delta, remains optional in
+`plan_to_scene`. The T3.07 changes are regression tests and documentation only;
+no production module or Blender artifact changed. T3.08–T3.10 remain pending.

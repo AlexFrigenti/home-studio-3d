@@ -559,6 +559,18 @@ class ComparisonContractTests(unittest.TestCase):
         self.assertEqual(data["generation_plan_version"], "room-v1-generator-1")
         self.assertIsNone(data["scene_adapter_version"])
 
+    def test_comparison_entrypoints_emit_current_report_version(self):
+        room, plan = _room_and_plan(FIXTURES / "room-v1.1-reconciliation-synthetic.json")
+
+        reports = (
+            comparison_module.compare_room_to_plan(room, plan),
+            comparison_module.compare_plan_to_scene(plan, _scene_from_plan(plan)),
+        )
+
+        for report in reports:
+            with self.subTest(stage=report.comparison_stages):
+                self.assertEqual(report.report_version, "room-scene-comparison-1")
+
     def test_negative_zero_is_normalized_without_sorting_vectors(self):
         finding = Finding(
             code="vector_check",
@@ -1817,6 +1829,119 @@ class PlanToSceneComparisonTests(unittest.TestCase):
 
         self.assertFalse(report.valid)
         self.assertIn("metadata_status_mismatch", _finding_codes(report))
+
+    def test_missing_materialized_wall_metadata_is_reported(self):
+        scene = _scene_from_plan(self.v11_plan)
+        wall_id = self.v11_plan["walls"][0]["id"]
+        wall = _scene_entity_by_id(scene, "wall", wall_id)
+        wall["metadata"].pop("hs3d_thickness_m")
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        finding = next(item for item in report.discrepancies if item.entity_id == wall_id)
+        self.assertEqual(finding.code, "provenance_missing")
+        self.assertEqual(
+            finding.path,
+            f"entities[wall:{wall_id}].metadata.hs3d_thickness_m",
+        )
+
+    def test_missing_materialized_opening_metadata_is_reported(self):
+        scene = _scene_from_plan(self.v11_plan)
+        opening_id = self.v11_plan["openings"][0]["id"]
+        opening = _scene_entity_by_id(scene, "opening_proxy", opening_id)
+        opening["metadata"].pop("hs3d_proxy_only")
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        finding = next(item for item in report.discrepancies if item.entity_id == opening_id)
+        self.assertEqual(finding.code, "provenance_missing")
+        self.assertEqual(
+            finding.path,
+            f"entities[opening_proxy:{opening_id}].metadata.hs3d_proxy_only",
+        )
+
+    def test_non_materialized_scene_provenance_is_not_required(self):
+        scene = _scene_from_plan(self.v11_plan)
+        wall_id = self.v11_plan["walls"][0]["id"]
+        wall_metadata = _scene_entity_by_id(scene, "wall", wall_id)["metadata"]
+
+        for key in (
+            "hs3d_method",
+            "hs3d_uncertainty",
+            "hs3d_reconciliation_id",
+            "hs3d_delta_m",
+        ):
+            with self.subTest(key=key):
+                self.assertNotIn(key, wall_metadata)
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertTrue(report.valid)
+
+    def test_materialized_unknown_wall_status_and_fallback_are_checked(self):
+        scene = _scene_from_plan(self.v11_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-00")
+
+        self.assertEqual(wall["metadata"]["hs3d_thickness_source_status"], "unknown")
+        self.assertTrue(wall["metadata"]["hs3d_thickness_fallback"])
+
+        wall["metadata"]["hs3d_thickness_source_status"] = "measured"
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("unknown_promoted", _finding_codes(report))
+
+    def test_materialized_measured_status_degradation_is_reported(self):
+        scene = _scene_from_plan(self.v11_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-00")
+        wall["metadata"]["hs3d_height_status"] = "derived"
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("measured_downgraded", _finding_codes(report))
+
+    def test_materialized_fallback_flag_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v11_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-00")
+        wall["metadata"]["hs3d_thickness_fallback"] = False
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("fallback_mismatch", _finding_codes(report))
+
+    def test_materialized_fallback_value_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v11_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-00")
+        wall["metadata"]["hs3d_thickness_m"] += 0.01
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("wall_thickness_mismatch", _finding_codes(report))
+
+    def test_materialized_reconciliation_flag_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v11_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-00")
+        wall["metadata"]["hs3d_geometry_reconciled"] = False
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("reconciliation_mismatch", _finding_codes(report))
+
+    def test_reconciled_geometry_mutation_is_reported_with_metadata_intact(self):
+        scene = _scene_from_plan(self.v11_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-00")
+        wall["geometry"]["vertices_m"][1][0] += 0.01
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("geometry_value_mismatch", _finding_codes(report))
 
     def test_scene_adapter_rejects_nan_before_comparison(self):
         scene = _scene_from_plan(self.v1_plan)

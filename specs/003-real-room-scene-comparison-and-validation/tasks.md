@@ -1,8 +1,8 @@
 # Tareas: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2
-> Estado: T3.01, T3.02, T3.03, T3.04, T3.05-P, T3.05 y T3.06 implementadas y
-> validadas; T3.07 y las fases posteriores siguen pendientes.
+> Estado: T3.01, T3.02, T3.03, T3.04, T3.05-P, T3.05, T3.06 y T3.07
+> implementadas y validadas; T3.08 y las fases posteriores siguen pendientes.
 > El slice 002 permanece cerrado e integrado en `main`; las tareas completadas
 > aquí se limitan al contrato, la política matemática, la comparación pura de
 > T3.01–T3.04, la extensión de provenance T3.05-P y la normalización
@@ -190,7 +190,7 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 ## T3.07 — Añadir mutaciones y regresiones
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** cubrir todos los fallos contractuales definidos en la spec.
 - **Archivos previstos:** `tests/measurements/test_room_scene_comparison.py`,
   fixtures normalizados si son necesarios.
@@ -200,6 +200,18 @@ capturas reales o geometría constructiva sin una autorización independiente.
   ausente, flags y provenance; duplicate managed ID, normalized entity
   malformed, wrong units, wrong report/adapter/plan version, auxiliares no
   gestionados permitidos y ordering diferente semánticamente equivalente.
+- **Evidencia:** la suite de comparación cubre directamente las mutaciones de
+  geometría, estados, fallback, reconciliación, flags, provenance, versiones,
+  entidades ausentes/inesperadas, metadata materializada ausente y escenas
+  normalizadas no mutadas. La suite de normalización cubre duplicate managed
+  ID, entidades malformadas, unidades, ownership y ordering. Ambos entrypoints
+  producen `report_version=room-scene-comparison-1`; la incompatibilidad de
+  reportes queda reservada a una futura capa de consumo/deserialización. La
+  provenance no materializada por Blender (`method`, `uncertainty`,
+  `reconciliation_id` y `delta_m`) permanece permitida.
+- **Validación:** comparison `137/137 PASS`; normalize `22/22 PASS`; suite
+  completa `230/230 PASS`. No hubo cambios de producción: la cobertura nueva
+  fue de regresión sobre el comportamiento ya implementado.
 - **Rollback:** retirar únicamente las pruebas y fixtures nuevos.
 - **Fuera:** modificar tests históricos para relajar expectativas.
 
@@ -253,8 +265,9 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 T3.05 queda `[x]` tras la verificación read-only contra Blender real.
 T3.06 queda `[x]` tras la acceptance real contra el artefacto generator-2 y
-la equivalencia geométrica con el histórico; T3.07 y posteriores permanecen
-`[ ]`. T3.01–T3.04 y T3.05-P cubren el
+la equivalencia geométrica con el histórico. T3.07 queda `[x]` tras completar
+la matriz de mutaciones y regresiones sin cambios de producción; T3.08 y
+posteriores permanecen `[ ]`. T3.01–T3.04 y T3.05-P cubren el
 contrato, la política matemática, la comparación pura room → plan y la
 provenance aditiva v1.1; T3.05 añade el contrato y adapter read-only verificado
 contra la escena real, pero no inicia `plan_to_scene` ni la integración

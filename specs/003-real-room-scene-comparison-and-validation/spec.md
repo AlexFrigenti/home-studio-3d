@@ -348,6 +348,14 @@ El resultado `valid` es `false` si existe al menos un finding con severity
 `error`. Warnings e info no invalidan la comparación, pero deben quedar
 contabilizados.
 
+`report_version` es una propiedad del `ComparisonReport` generado. Ni
+`compare_room_to_plan(room, plan)` ni `compare_plan_to_scene(plan,
+normalized_scene)` reciben un report como entrada ni validan una versión de
+report externa; ambos entrypoints deben producir siempre
+`room-scene-comparison-1`. El finding `report_version_mismatch` queda
+reservado para una futura capa de deserialización o consumo de reports y no es
+una mutación aplicable al comparador actual.
+
 ## Severidades y códigos mínimos
 
 ### Error / bloqueante
@@ -624,15 +632,22 @@ contrato.
 
 ## Failure cases de regresión
 
-La implementación futura tendrá mutaciones controladas para wall missing,
+La cobertura de regresión de T3.07 mantiene mutaciones controladas para wall missing,
 opening missing, unexpected managed object, duplicate managed entity ID,
 normalized entity malformada, longitud de pared incorrecta, altura de
 habitación incorrecta, espesor incorrecto, width/height/sill/depth/offset de
-opening incorrectos, unidades incorrectas, versión de report/adapter/plan
+opening incorrectos, unidades incorrectas, versión de adapter/plan
 incompatible, `measured → derived`, `unknown → measured`, fallback perdido,
-provenance de fallback incorrecta, reconciliación ignorada, metadata de
-reconciliación ausente, flags `proxy_only` o `constructive_geometry`
-incorrectos y provenance perdida.
+provenance de fallback incorrecta, reconciliación ignorada, metadata
+materializada ausente, flags `proxy_only` o `constructive_geometry`
+incorrectos y provenance materializada perdida. La incompatibilidad de
+`report_version` no se muta en estas funciones porque es un campo de salida;
+se protege mediante un test del contrato emitido por ambos entrypoints.
+
+La provenance que Blender no materializa —por ejemplo `method`,
+`uncertainty`, `reconciliation_id` o `delta_m` por entidad— no se convierte en
+un requisito de `plan_to_scene`; su ausencia debe seguir siendo compatible con
+la representación normalizada actual.
 
 También debe existir un caso positivo con auxiliares no gestionados permitidos
 fuera de la colección raíz.
