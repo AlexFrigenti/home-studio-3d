@@ -1,9 +1,9 @@
 # Especificación: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2 — comparación determinista entre medidas, plan de generación y escena derivada.
-> Estado: contrato, política matemática y comparación pura room → plan de
-> T3.01–T3.04 implementados; el adapter Blender y la integración de escena
-> siguen pendientes.
+> Estado: contrato, política matemática, comparación pura room → plan y
+> extensión de provenance T3.05-P implementados; el adapter Blender y la
+> integración de escena siguen pendientes.
 
 ## Objetivo
 
@@ -177,7 +177,7 @@ geometría.
 ### Límite de provenance en T3.04
 
 T3.04 no inventa provenance que el generation plan no transporte. La garantía
-actual es el subconjunto siguiente:
+actual antes de la extensión T3.05-P era el subconjunto siguiente:
 
 - completa y comprobable: IDs, valores geométricos, estados, unidades,
   source IDs expuestos por el plan, flags de fallback/proxy y metadata de
@@ -197,6 +197,59 @@ del contrato del generation plan antes de cerrar la validación `plan_to_scene`.
 La fase no se infiere del mensaje: forma parte del contrato y permite saber en
 qué transición apareció la discrepancia.
 
+### Extensión de provenance T3.05-P
+
+T3.05-P añade un bloque top-level `provenance` únicamente a los planes de
+schema `1.1`. El plan v1 histórico no recibe ese bloque. La versión publicada
+antes de esta extensión era `room-v1.1-generator-1`; la versión nueva es
+`room-v1.1-generator-2`. El bump es obligatorio porque cambia el contrato del
+plan de forma aditiva al transportar metadata por campo; no cambia ninguna
+geometría, reconciliación efectiva, fallback, orden de entidades ni consumidor
+de las claves geométricas existentes.
+
+La estructura es determinista y no duplica valores físicos que ya viven en el
+plan:
+
+```json
+{
+  "provenance": {
+    "room": {
+      "height": {"observed": {}, "effective_geometry": {}},
+      "floor_area": {"observed": {}, "effective_geometry": {}},
+      "measurement_method": "...",
+      "measured_at": "..."
+    },
+    "boundary": {"reconciliation": {}},
+    "walls": {"wall-id": {"length": {}, "thickness": {}}},
+    "openings": {"opening-id": {"offset": {}, "width": {}, "height": {}, "sill_height": {}, "depth": {}}},
+    "fixed_elements": {"element-id": {"height": {}, "anchor": {"offset": {}}}}
+  }
+}
+```
+
+Cada medición usa `observed` y `effective_geometry`. Se transportan
+`status`, `uncertainty`, `method`, `note`, `formula`, `depends_on` y
+`source_id` cuando existen en el room. La geometría efectiva añade solo
+metadata de derivación o trazabilidad: `geometry_status`, `fallback`,
+`fallback_value_m`, `reconciliation_id`, `delta_m` y `reason` cuando aplican.
+No se añaden `value`, `value_m`, coordenadas, longitudes, alturas, offsets,
+anchos, alféizares ni profundidades dentro de este bloque.
+
+La ampliación cubre explícitamente altura de room, área de suelo, longitudes
+observadas y reconciliadas de segmentos, reconciliación global, espesores de
+pared, los cinco campos de opening y provenance de elementos fijos soportados
+por el room. También transporta `measurement_method` y `measured_at` como
+metadata de sesión bajo `provenance.room`, porque son campos obligatorios del
+contrato room y aportan trazabilidad auditable. Las notas generales, nombres y
+etiquetas del sistema de coordenadas siguen siendo datos del room o del plan,
+no provenance de campo.
+
+Para planes `room-v1.1-generator-2`, `compare_room_to_plan` verifica el bloque
+por IDs y por campo. Una provenance ausente o mutada produce un finding
+estructurado; no se reconstruye metadata desde agregados. Un plan
+`room-v1.1-generator-1` se rechaza por incompatibilidad de versión y no se
+trata silenciosamente como si transportara la extensión.
+
 ## ComparisonReport
 
 El contrato conceptual es JSON-serializable, estable y sin timestamps
@@ -208,7 +261,7 @@ variables:
   "valid": true,
   "room_id": "living-room-main",
   "schema_version": "1.1",
-  "generation_plan_version": "room-v1.1-generator-1",
+  "generation_plan_version": "room-v1.1-generator-2",
   "scene_adapter_version": "room-scene-adapter-1",
   "comparison_stages": ["room_to_plan", "plan_to_scene"],
   "discrepancies": [],
@@ -289,6 +342,7 @@ contabilizados.
 - `unknown_promoted`
 - `measured_downgraded`
 - `provenance_missing`
+- `provenance_mismatch`
 - `fallback_mismatch`
 - `reconciliation_mismatch`
 - `proxy_flag_mismatch`
@@ -432,7 +486,7 @@ Las versiones tienen responsabilidades separadas:
 - `scene_adapter_version` cambia cuando cambia la normalización Blender,
   ownership, roles, campos extraídos o su interpretación.
 - `generation_plan_version` se copia del plan (`room-v1-generator-1` o
-  `room-v1.1-generator-1`) y cambia cuando cambia el contrato del plan.
+  `room-v1.1-generator-2`) y cambia cuando cambia el contrato del plan.
 - `schema_version` identifica el room de entrada y no se usa como alias de
   `report_version`.
 
@@ -463,8 +517,8 @@ nombres históricos mediante aliases; el comparador consume la misma fuente.
 
 - room-v1 se soporta desde el inicio usando sus campos históricos; no se exige
   metadata v1.1 que no exista.
-- room-v1.1 añade comprobaciones de observed/geometry, reconciliación y
-  fallbacks cuando esos campos estén presentes.
+- room-v1.1 añade comprobaciones de observed/geometry, reconciliación,
+  fallbacks y provenance de campo mediante `room-v1.1-generator-2`.
 - El fixture v1 debe conservar exactamente la golden signature:
   `1105946a0dfe0088f5ad59da4178939644305b0d09b94022bfe5c87d9dde36f0`.
 - El comparador no cambia schemas ni altera el room recibido.

@@ -563,7 +563,124 @@ class RoomToPlanComparisonTests(unittest.TestCase):
 
         self.assertTrue(report.valid)
         self.assertEqual(report.schema_version, "1.1")
-        self.assertEqual(report.generation_plan_version, "room-v1.1-generator-1")
+        self.assertEqual(report.generation_plan_version, "room-v1.1-generator-2")
+
+    def test_v11_comparator_requires_the_new_provenance_contract(self):
+        room, plan = _room_and_plan(FIXTURES / "room-v1.1-reconciliation-synthetic.json")
+        plan.pop("provenance")
+
+        report = self.compare(room, plan)
+
+        self.assertFalse(report.valid)
+        self.assertIn("provenance_missing", _finding_codes(report))
+
+    def test_v11_legacy_plan_version_is_not_silently_accepted(self):
+        room, plan = _room_and_plan(FIXTURES / "room-v1.1-reconciliation-synthetic.json")
+        plan["generator_version"] = "room-v1.1-generator-1"
+
+        report = self.compare(room, plan)
+
+        self.assertFalse(report.valid)
+        self.assertIn("generation_plan_version_mismatch", _finding_codes(report))
+
+    def test_v11_comparator_detects_provenance_metadata_mutations(self):
+        room, plan = _room_and_plan(FIXTURES / "room-v1.1-reconciliation-synthetic.json")
+        mutations = (
+            ("source_id", "source_id_mismatch", lambda p: p["provenance"]["room"]["height"]["observed"].__setitem__("source_id", "wrong-source")),
+            ("method", "provenance_mismatch", lambda p: p["provenance"]["room"]["height"]["observed"].__setitem__("method", "wrong-method")),
+            ("uncertainty", "provenance_mismatch", lambda p: p["provenance"]["room"]["height"]["observed"].__setitem__("uncertainty", 0.02)),
+            ("reconciliation_id", "reconciliation_mismatch", lambda p: p["provenance"]["walls"]["wall-00"]["length"]["effective_geometry"].__setitem__("reconciliation_id", "wrong-reconciliation")),
+            ("formula", "provenance_mismatch", lambda p: p["provenance"]["walls"]["wall-00"]["length"]["effective_geometry"].__setitem__("formula", "wrong-formula")),
+            ("depends_on", "provenance_mismatch", lambda p: p["provenance"]["walls"]["wall-00"]["length"]["effective_geometry"].__setitem__("depends_on", ["wrong-dependency"])),
+        )
+
+        for field, expected_code, mutate in mutations:
+            with self.subTest(field=field):
+                mutated = copy.deepcopy(plan)
+                mutate(mutated)
+                report = self.compare(room, mutated)
+                self.assertFalse(report.valid)
+                self.assertIn(expected_code, _finding_codes(report))
+
+    def test_v11_comparator_detects_global_reconciliation_metadata_mutation(self):
+        room, plan = _room_and_plan(FIXTURES / "room-v1.1-reconciliation-synthetic.json")
+        plan["provenance"]["boundary"]["reconciliation"]["reason"] = "wrong-reason"
+
+        report = self.compare(room, plan)
+
+        self.assertFalse(report.valid)
+        self.assertIn("reconciliation_mismatch", _finding_codes(report))
+
+    def test_v11_comparator_detects_opening_provenance_mutation(self):
+        room, plan = _room_and_plan(FIXTURES / "room-v1.1-reconciliation-synthetic.json")
+        plan["provenance"]["openings"]["door-01"]["offset"]["observed"]["method"] = "wrong-method"
+
+        report = self.compare(room, plan)
+
+        self.assertFalse(report.valid)
+        self.assertIn("provenance_mismatch", _finding_codes(report))
+
+    def test_v11_comparator_detects_fixed_element_provenance_mutation(self):
+        room = _load_json(FIXTURES / "room-v1.1-reconciliation-synthetic.json")
+        room["fixed_elements"] = [
+            {
+                "id": "socket-01",
+                "type": "socket",
+                "anchor": {
+                    "wall_id": "wall-01",
+                    "offset": {
+                        "value": 1.0,
+                        "status": "measured",
+                        "uncertainty": 0.01,
+                        "method": "manual_tape",
+                        "source_id": "synthetic-011-socket-offset",
+                    },
+                },
+                "height": {
+                    "value": 0.3,
+                    "status": "estimated",
+                    "uncertainty": 0.02,
+                    "method": "visual_estimate",
+                    "note": "Synthetic fixed-element estimate.",
+                    "source_id": "synthetic-011-socket-height",
+                },
+            }
+        ]
+        plan = GENERATOR.build_generation_plan(copy.deepcopy(room))
+        plan["provenance"]["fixed_elements"]["socket-01"]["height"]["observed"]["method"] = "wrong-method"
+
+        report = self.compare(room, plan)
+
+        self.assertFalse(report.valid)
+        self.assertIn("provenance_mismatch", _finding_codes(report))
+
+    def test_v11_comparator_detects_floor_area_provenance_mutation(self):
+        room, plan = _room_and_plan(FIXTURES / "room-v1.1-reconciliation-synthetic.json")
+        plan["provenance"]["room"]["floor_area"]["observed"]["formula"] = "wrong-formula"
+
+        report = self.compare(room, plan)
+
+        self.assertFalse(report.valid)
+        self.assertIn("provenance_mismatch", _finding_codes(report))
+
+    def test_v11_comparator_detects_fallback_provenance_mutation(self):
+        room, plan = _room_and_plan(FIXTURES / "room-v1.1-reconciliation-synthetic.json")
+        plan["provenance"]["walls"]["wall-00"]["thickness"]["effective_geometry"]["fallback_value_m"] = 0.11
+
+        report = self.compare(room, plan)
+
+        self.assertFalse(report.valid)
+        self.assertIn("fallback_provenance_mismatch", _finding_codes(report))
+
+    def test_v11_plan_output_is_deterministic_and_room_is_not_mutated(self):
+        room = _load_json(FIXTURES / "room-v1.1-reconciliation-synthetic.json")
+        original = copy.deepcopy(room)
+
+        first = GENERATOR.build_generation_plan(copy.deepcopy(room))
+        second = GENERATOR.build_generation_plan(copy.deepcopy(room))
+
+        self.assertEqual(first, second)
+        self.assertEqual(room, original)
 
     def test_missing_wall_is_an_error(self):
         room, plan = _room_and_plan(REAL_ROOM_PATH)

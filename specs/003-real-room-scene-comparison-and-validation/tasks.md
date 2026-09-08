@@ -1,11 +1,11 @@
 # Tareas: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2
-> Estado: T3.01, T3.02, T3.03 y T3.04 implementadas y validadas; el adapter
-> Blender y las fases posteriores siguen pendientes.
+> Estado: T3.01, T3.02, T3.03, T3.04 y T3.05-P implementadas y validadas; el
+> adapter Blender y las fases posteriores siguen pendientes.
 > El slice 002 permanece cerrado e integrado en `main`; las tareas completadas
 > aquí se limitan al contrato, la política matemática y la comparación pura de
-> T3.01–T3.04.
+> T3.01–T3.04 y la extensión de provenance T3.05-P.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -94,16 +94,30 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 ## T3.05-P — Ampliar provenance del generation plan antes de cerrar plan→scene
 
-- **Estado:** `[ ]`
-- **Objetivo:** transportar explícitamente provenance por campo cuando el
-  contrato final requiera validar su conservación hasta la escena.
-- **Alcance futuro:** method, uncertainty, formula, depends_on, reason,
-  reconciliation_id y source IDs individuales; sin reconstruirlos desde
-  agregados.
-- **Dependencia:** debe resolverse y validarse antes de afirmar provenance
-  completa en `plan_to_scene`. No forma parte de T3.04 ni inicia T3.05.
-- **Fuera:** cambios en esta corrección, schemas, datos reales, Blender y
-  adapter.
+- **Estado:** `[x]`
+- **Objetivo:** transportar explícitamente provenance por campo en el plan
+  v1.1 sin duplicar los valores físicos que ya contiene la geometría del plan.
+- **Versión:** los planes schema `1.1` pasaron de
+  `room-v1.1-generator-1` a `room-v1.1-generator-2`; el bump identifica el
+  cambio aditivo de contrato. `room-v1-generator-1` y su golden permanecen
+  intactos.
+- **Evidencia:** `build_generation_plan` añade únicamente para v1.1 un bloque
+  top-level `provenance` con metadata `observed` y `effective_geometry` para
+  room height, floor area, longitudes y reconciliaciones de pared, thickness,
+  campos individuales de opening y fixed elements soportados, ademas de
+  `measurement_method` y `measured_at` bajo `provenance.room`. El bloque no
+  contiene `value`, `value_m`, coordenadas ni duplicados geométricos.
+- **Comparación:** `compare_room_to_plan` valida esa provenance solo para
+  `room-v1.1-generator-2`, por IDs y por campo, con findings estructurados para
+  metadata, source IDs, reconciliaciones y fallbacks. No reconstruye campos
+  ausentes ni acepta silenciosamente `room-v1.1-generator-1`.
+- **Validación:** tests RED→GREEN, provenance determinista, no mutación,
+  geometry projection estable, validators, acceptance `living-room-main` y
+  golden v1 exacta.
+- **Dependencia:** esta tarea queda resuelta antes de cualquier afirmación de
+  provenance completa en `plan_to_scene`; no inicia T3.05.
+- **Fuera:** schemas, datos reales, Blender, adapter, `.blend`, previews y
+  nuevas mediciones.
 
 ## T3.05 — Definir representación normalizada y adapter Blender
 
@@ -196,6 +210,6 @@ capturas reales o geometría constructiva sin una autorización independiente.
 - Cambios en MCP o `get_addon_status`.
 
 T3.05 y posteriores permanecen `[ ]` hasta que una implementación posterior
-sea autorizada y validada. T3.01–T3.04 cubren únicamente el contrato, la
-política matemática y la comparación pura room → plan; esta fase no inicia el
-adapter ni la integración Blender.
+sea autorizada y validada. T3.01–T3.04 y T3.05-P cubren el contrato, la
+política matemática, la comparación pura room → plan y la provenance aditiva
+v1.1; esta fase no inicia el adapter ni la integración Blender.

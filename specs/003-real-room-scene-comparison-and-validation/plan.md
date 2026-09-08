@@ -4,6 +4,9 @@
 
 **Goal:** Add a deterministic, reusable comparison between canonical room data, the generation plan and a normalized generated-scene representation without changing measurement schemas or real-room data.
 
+**Current checkpoint:** T3.01–T3.04 and T3.05-P are implemented. T3.05 and
+later scene work remain pending.
+
 **Architecture:** Keep a pure-Python comparison core independent of `bpy`. Add a read-only Blender adapter that maps the existing generated scene and custom properties into a normalized representation, then produce a stable `ComparisonReport` from the core. Preserve the existing generator and scene validator contracts; integrate only the minimum delegation and metadata checks needed by the new comparison.
 
 **Tech Stack:** Python standard library, JSON, existing room schemas v1/v1.1, `unittest`, Blender `bpy` only for the explicitly authorized integration gate.
@@ -32,7 +35,9 @@ The future implementation should use these focused boundaries:
 - Create `blender/scripts/measurements/compare_room_scene.py`: pure comparison models, normalization contract, finding codes, tolerance checks, deterministic sorting and report serialization.
 - Create or isolate a Blender-facing adapter beside the existing measurement scripts: read-only extraction of units, collections, object IDs, mesh coordinates and `hs3d_*` properties into the normalized scene representation.
 - Modify `blender/scripts/measurements/validate_generated_room.py` only to invoke the adapter/core and retain the existing CLI behavior where compatible.
-- Modify `blender/scripts/measurements/generate_room.py` only if a required plan or metadata field is missing; do not refactor unrelated generation paths.
+- Modify `blender/scripts/measurements/generate_room.py` only for the additive
+  v1.1 provenance block required by T3.05-P; do not refactor unrelated
+  generation paths.
 - Create `tests/measurements/test_room_scene_comparison.py` for pure core and mutation tests.
 - Create normalized test fixtures under `measurements/fixtures/` only when deriving them in test code would hide the adapter contract.
 - Add `docs/setup/003-room-scene-comparison-validation.md` for commands, evidence and explicit Blender limitations.
@@ -126,18 +131,35 @@ the Shoelace operation are imported from the pure shared
 `blender/scripts/measurements/generation_policy.py`; no second fallback policy
 is maintained in the comparator.
 
-The current plan contract exposes only a subset of field-level provenance.
-T3.04 checks that subset and explicitly records the rest as `not verifiable at
-room_to_plan with generation-plan contract current version`. A future
-provenance-extension task must complete the plan contract before any
-`plan_to_scene` validation is claimed.
+T3.04 checks the provenance subset exposed by the historical plan and retains
+the explicit limitation `not verifiable at room_to_plan with generation-plan
+contract current version` for that contract. T3.05-P is now the completed,
+additive v1.1 extension described below; it does not start the Blender adapter
+or any `plan_to_scene` validation.
 
-#### Future prerequisite before complete plan-to-scene validation
+#### T3.05-P checkpoint: field-level provenance extension
 
-Define and implement an explicit generation-plan provenance extension for
-field-level method, uncertainty, formula, dependencies, reasons,
-reconciliation IDs and individual source IDs. This is not part of T3.04 and
-must not be started together with the Blender adapter.
+The schema `1.0` plan remains exactly `room-v1-generator-1`, including its
+historical logical signature. The schema `1.1` plan previously emitted
+`room-v1.1-generator-1`; it now emits `room-v1.1-generator-2` because the
+plan contract gained a top-level `provenance` block. The bump is a contract
+version change, not a geometry change.
+
+The block contains deterministic `room`, `boundary`, `walls`, `openings` and
+`fixed_elements` maps. The room map also carries the required session metadata
+`measurement_method` and `measured_at`. Measurement fields use `observed` and
+`effective_geometry` metadata. The transport includes status, uncertainty,
+method, note, formula, dependencies and source IDs when present in the room,
+plus effective geometry status, fallback metadata and reconciliation metadata
+when applicable. Physical `value`/`value_m` fields and geometry coordinates
+remain exclusively in their existing plan locations.
+
+`compare_room_to_plan` validates this block only when the plan is
+`room-v1.1-generator-2`. It compares provenance by stable IDs and fields,
+emits structured provenance/reconciliation/fallback findings, and never
+reconstructs unavailable metadata. Existing consumers continue to read the
+unchanged geometry keys; the scene validator and Blender path were not
+modified. Full plan-to-scene provenance validation remains a later task.
 
 ### Task 3: Add normalized scene and Blender adapter
 
