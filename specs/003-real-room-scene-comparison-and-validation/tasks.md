@@ -1,8 +1,8 @@
 # Tareas: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2
-> Estado: T3.01, T3.02, T3.03, T3.04, T3.05-P, T3.05, T3.06, T3.07, T3.08
-> y T3.09 implementadas y validadas; T3.10 sigue pendiente.
+> Estado: T3.01, T3.02, T3.03, T3.04, T3.05-P, T3.05, T3.06, T3.07, T3.08,
+> T3.09 y T3.10 implementadas y validadas; slice 003 cerrado documentalmente.
 > El slice 002 permanece cerrado e integrado en `main`; las tareas completadas
 > aquí se limitan al contrato, la política matemática, la comparación pura de
 > T3.01–T3.04, la extensión de provenance T3.05-P y la normalización
@@ -249,13 +249,18 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 ## T3.10 — Auditoría final del slice 003
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** verificar scope, compatibilidad v1, privacidad, determinismo,
   binarios, tests y preparación de PR.
 - **Archivos previstos:** diff completo del slice y sus gates.
 - **Validación:** validators, suite `tests/measurements`, golden
   `1105946a0dfe0088f5ad59da4178939644305b0d09b94022bfe5c87d9dde36f0`,
   syntax y `git diff --check`.
+- **Evidencia:** auditoría final PASS de scope, compatibilidad v1/v1.1,
+  privacidad, provenance/authority, determinismo, no mutación, artefactos,
+  acceptance real, gates y PR readiness. El backup local `.blend1` fue
+  eliminado; no quedan bloqueos técnicos, documentales ni de PR. Preparar la
+  PR es la siguiente acción; merge y nuevos slices quedan fuera.
 - **Rollback:** no cerrar ni publicar el slice si existe una discrepancia.
 - **Fuera:** merge, PR, nuevo slice o geometría constructiva.
 
@@ -274,7 +279,8 @@ T3.06 queda `[x]` tras la acceptance real contra el artefacto generator-2 y
 la equivalencia geométrica con el histórico. T3.07 queda `[x]` tras completar
 la matriz de mutaciones y regresiones sin cambios de producción; T3.08 y T3.09
 quedan `[x]` tras consolidar la evidencia real y la documentación de gates en
-el setup del slice; T3.10 permanece `[ ]`. T3.01–T3.04 y T3.05-P cubren el
+el setup del slice; T3.10 queda `[x]` tras la auditoría final. T3.01–T3.04 y
+T3.05-P cubren el
 contrato, la política matemática, la comparación pura room → plan y la
 provenance aditiva v1.1; T3.05 añade el contrato y adapter read-only verificado
 contra la escena real, pero no inicia `plan_to_scene` ni la integración
