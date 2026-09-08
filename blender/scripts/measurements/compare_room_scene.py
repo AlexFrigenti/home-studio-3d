@@ -1,12 +1,15 @@
 """Pure, deterministic room/plan/scene comparison contracts.
 
-The room-to-plan comparison core is implemented here without Blender or file
-I/O. The read-only normalized-scene adapter lives in
-``normalize_room_scene.py``; plan-to-scene comparison remains future work.
+The room-to-plan and plan-to-scene comparison cores are implemented here
+without Blender or file I/O. The read-only normalized-scene adapter lives in
+normalize_room_scene.py. The plan-to-scene API compares generation-plan
+geometry with normalized scene evidence; it does not implement scene reading,
+Blender mutation, or a plan-to-scene generator.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from collections.abc import Mapping
@@ -23,6 +26,8 @@ from generation_policy import (
     FLOOR_AREA_DERIVATION_FORMULA,
     FLOOR_AREA_DERIVATION_METHOD,
     FLOOR_AREA_DERIVATION_REASON,
+    GENERATION_PLAN_V1_VERSION,
+    GENERATION_PLAN_V11_LEGACY_VERSION,
     GENERATION_PLAN_V11_VERSION,
     OPENING_DEPTH_PROXY_METHOD,
     OPENING_DEPTH_PROXY_REASON,
@@ -2142,6 +2147,1116 @@ def _compare_v11_provenance(
             tolerance=Tolerance.exact(),
             message="generation plan contains provenance for an unexpected fixed element",
         )
+
+
+_PLAN_TO_SCENE_ENTITY_TYPES = (
+    "floor",
+    "wall",
+    "opening_proxy",
+    "fixed_element_proxy",
+)
+_PLAN_TO_SCENE_COLLECTIONS = {
+    "floor": "Architecture",
+    "wall": "Architecture",
+    "opening_proxy": "Openings",
+    "fixed_element_proxy": "FixedElements",
+}
+_PLAN_TO_SCENE_OBJECT_TYPES = {
+    "floor": "MESH",
+    "wall": "MESH",
+    "opening_proxy": "MESH",
+    "fixed_element_proxy": "MESH",
+}
+_PLAN_TO_SCENE_JSON_METADATA = {
+    "hs3d_coordinate_system_json",
+    "hs3d_status_index",
+    "hs3d_source_ids",
+    "hs3d_inner_face_json",
+    "hs3d_anchor_json",
+    "hs3d_depends_on",
+}
+
+
+def _plan_scene_add_finding(
+    findings: list[Finding],
+    *,
+    code: str,
+    entity_type: str,
+    entity_id: str | None,
+    path: str,
+    expected: Any,
+    actual: Any,
+    context: SourceContext | None = None,
+    tolerance: Tolerance | None = None,
+    message: str,
+) -> None:
+    findings.append(
+        Finding(
+            code=code,
+            severity="error",
+            comparison_stage="plan_to_scene",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            path=path,
+            expected=None if expected is _MISSING else expected,
+            actual=None if actual is _MISSING else actual,
+            tolerance=tolerance,
+            source_context=context or SourceContext(),
+            message=message,
+        )
+    )
+
+
+def _plan_scene_context(
+    *,
+    expected_status: Any = None,
+    expected_source_id: Any = None,
+    expected_fallback: Any = None,
+    expected_geometry_status: Any = None,
+    actual_status: Any = None,
+    actual_source_id: Any = None,
+    actual_fallback: Any = None,
+    actual_geometry_status: Any = None,
+) -> SourceContext:
+    return SourceContext(
+        observed=None,
+        effective_geometry=Provenance(
+            status=_safe_status(expected_status),
+            source_id=_safe_source_id(expected_source_id),
+            fallback=expected_fallback if isinstance(expected_fallback, bool) else None,
+            geometry_status=_safe_status(expected_geometry_status),
+        ),
+        scene=Provenance(
+            status=_safe_status(actual_status),
+            source_id=_safe_source_id(actual_source_id),
+            fallback=actual_fallback if isinstance(actual_fallback, bool) else None,
+            geometry_status=_safe_status(actual_geometry_status),
+        ),
+    )
+
+
+def _plan_scene_metadata_value(metadata: Mapping[str, Any], key: str) -> Any:
+    value = metadata.get(key, _MISSING)
+    if value is _MISSING:
+        return value
+    if key in _PLAN_TO_SCENE_JSON_METADATA and isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return value
+    return value
+
+
+def _plan_scene_metadata_check(
+    findings: list[Finding],
+    *,
+    entity_type: str,
+    entity_id: str,
+    entity_path: str,
+    metadata: Mapping[str, Any],
+    key: str,
+    expected: Any,
+    kind: str = "exact",
+    code: str | None = None,
+    expected_status: Any = None,
+    expected_source_id: Any = None,
+    expected_fallback: Any = None,
+    expected_geometry_status: Any = None,
+    area_reference: Any = None,
+    message: str = "normalized scene metadata differs from the generation plan",
+) -> None:
+    if expected is None or expected is _MISSING:
+        return
+    actual = _plan_scene_metadata_value(metadata, key)
+    context = _plan_scene_context(
+        expected_status=expected_status,
+        expected_source_id=expected_source_id,
+        expected_fallback=expected_fallback,
+        expected_geometry_status=expected_geometry_status,
+        actual_status=metadata.get("hs3d_status"),
+        actual_source_id=metadata.get("hs3d_source_id"),
+        actual_fallback=metadata.get("hs3d_thickness_fallback"),
+        actual_geometry_status=metadata.get("hs3d_geometry_status"),
+    )
+    if actual is _MISSING:
+        _plan_scene_add_finding(
+            findings,
+            code="provenance_missing",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            path=f"{entity_path}.metadata.{key}",
+            expected=expected,
+            actual=actual,
+            context=context,
+            tolerance=Tolerance.exact(),
+            message=f"normalized scene metadata {key} is not materialized",
+        )
+        return
+    if kind == "linear":
+        equal = _linear_values_equal(expected, actual)
+        tolerance = Tolerance.linear(MATH_TOLERANCE_M)
+    elif kind == "area":
+        try:
+            tolerance_m2 = area_tolerance_from_polygon(area_reference)
+            equal = within_area_tolerance(expected, actual, area_reference)
+            tolerance = Tolerance.area(tolerance_m2)
+        except (TypeError, ValueError, IndexError):
+            equal = False
+            tolerance = Tolerance.area(0.0)
+    elif kind == "status":
+        equal = expected == actual
+        tolerance = Tolerance.exact()
+        code = code or _status_mismatch_code(expected, actual)
+    else:
+        equal = exact_equal(expected, actual)
+        tolerance = Tolerance.exact()
+    if equal:
+        return
+    _plan_scene_add_finding(
+        findings,
+        code=code or "metadata_status_mismatch",
+        entity_type=entity_type,
+        entity_id=entity_id,
+        path=f"{entity_path}.metadata.{key}",
+        expected=expected,
+        actual=actual,
+        context=context,
+        tolerance=tolerance,
+        message=message,
+    )
+
+
+def _plan_scene_entity_context(
+    plan_entity: Mapping[str, Any],
+    scene_entity: Mapping[str, Any],
+    entity_type: str,
+) -> SourceContext:
+    metadata = _as_mapping(scene_entity.get("metadata"))
+    if entity_type == "wall":
+        expected_status = plan_entity.get("height_status")
+        expected_source_id = plan_entity.get("geometry_source_id") or plan_entity.get("source_id")
+        expected_geometry_status = (
+            plan_entity.get("geometry_length_status")
+            or plan_entity.get("thickness_geometry_status")
+        )
+        expected_fallback = plan_entity.get("thickness_fallback")
+    elif entity_type == "opening_proxy":
+        expected_status = plan_entity.get("height_status")
+        expected_source_id = plan_entity.get("source_id")
+        expected_geometry_status = plan_entity.get("geometry_height_status")
+        expected_fallback = plan_entity.get("geometry_height_proxy")
+    elif entity_type == "fixed_element_proxy":
+        expected_status = plan_entity.get("status")
+        expected_source_id = plan_entity.get("source_id")
+        expected_geometry_status = plan_entity.get("geometry_status")
+        expected_fallback = plan_entity.get("proxy")
+    else:
+        expected_status = plan_entity.get("status")
+        expected_source_id = plan_entity.get("source_id")
+        expected_geometry_status = plan_entity.get("status")
+        expected_fallback = None
+    return _plan_scene_context(
+        expected_status=expected_status,
+        expected_source_id=expected_source_id,
+        expected_fallback=expected_fallback,
+        expected_geometry_status=expected_geometry_status,
+        actual_status=metadata.get("hs3d_status"),
+        actual_source_id=metadata.get("hs3d_source_id"),
+        actual_fallback=metadata.get("hs3d_thickness_fallback"),
+        actual_geometry_status=metadata.get("hs3d_geometry_status"),
+    )
+
+
+def _plan_scene_world_vertices(entity: Mapping[str, Any]) -> list[list[float]] | None:
+    geometry = _as_mapping(entity.get("geometry"))
+    raw_vertices = geometry.get("vertices_m")
+    if not isinstance(raw_vertices, (list, tuple)):
+        return None
+    transform = _as_mapping(entity.get("transform"))
+    try:
+        location = [_finite_number(value, "scene location") for value in transform.get("location", ())]
+        rotation = [_finite_number(value, "scene rotation") for value in transform.get("rotation", ())]
+        scale = [_finite_number(value, "scene scale") for value in transform.get("scale", ())]
+    except (TypeError, ValueError):
+        return None
+    if len(location) != 3 or len(rotation) != 3 or len(scale) != 3:
+        return None
+    sin_x, cos_x = math.sin(rotation[0]), math.cos(rotation[0])
+    sin_y, cos_y = math.sin(rotation[1]), math.cos(rotation[1])
+    sin_z, cos_z = math.sin(rotation[2]), math.cos(rotation[2])
+    result: list[list[float]] = []
+    for raw_vertex in raw_vertices:
+        try:
+            vertex = [_finite_number(value, "scene vertex") for value in raw_vertex]
+        except (TypeError, ValueError):
+            return None
+        if len(vertex) != 3:
+            return None
+        x, y, z = vertex[0] * scale[0], vertex[1] * scale[1], vertex[2] * scale[2]
+        y_x = cos_x * y - sin_x * z
+        z_x = sin_x * y + cos_x * z
+        x_y = cos_y * x + sin_y * z_x
+        z_y = -sin_y * x + cos_y * z_x
+        x_z = cos_z * x_y - sin_z * y_x
+        y_z = sin_z * x_y + cos_z * y_x
+        result.append(
+            [
+                0.0 if x_z + location[0] == 0.0 else x_z + location[0],
+                0.0 if y_z + location[1] == 0.0 else y_z + location[1],
+                0.0 if z_y + location[2] == 0.0 else z_y + location[2],
+            ]
+        )
+    return result
+
+
+def _plan_scene_vector_subtract(left: Any, right: Any) -> list[float]:
+    return [float(left[index]) - float(right[index]) for index in range(3)]
+
+
+def _plan_scene_vector_length(value: Any) -> float:
+    return math.sqrt(sum(float(component) ** 2 for component in value))
+
+
+def _plan_scene_dot(left: Any, right: Any) -> float:
+    return sum(float(left[index]) * float(right[index]) for index in range(3))
+
+
+def _plan_scene_center(points: list[list[float]]) -> list[float]:
+    return [sum(point[index] for point in points) / len(points) for index in range(3)]
+
+
+def _plan_scene_compare_floor(
+    plan_floor: Mapping[str, Any],
+    scene_entity: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    entity_id = "floor"
+    entity_path = "entities[floor:floor]"
+    context = _plan_scene_entity_context(plan_floor, scene_entity, "floor")
+    expected_points = plan_floor.get("points_m")
+    actual_points = _plan_scene_world_vertices(scene_entity)
+    if actual_points is None:
+        _plan_scene_add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="floor",
+            entity_id=entity_id,
+            path=f"{entity_path}.geometry.vertices_m",
+            expected=expected_points,
+            actual=None,
+            context=context,
+            tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+            message="floor mesh geometry is unavailable",
+        )
+        return
+    geometry_matches = _linear_values_equal(expected_points, actual_points)
+    if not geometry_matches:
+        _plan_scene_add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="floor",
+            entity_id=entity_id,
+            path=f"{entity_path}.geometry.vertices_m",
+            expected=expected_points,
+            actual=actual_points,
+            context=context,
+            tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+            message="floor polygon evidence differs from the generation plan",
+        )
+    try:
+        expected_polygon = [list(point[:2]) for point in expected_points]
+        expected_area = plan_floor.get("area_m2")
+        actual_area = shoelace_area(actual_points)
+        area_tolerance = area_tolerance_from_polygon(expected_polygon)
+        if geometry_matches and not within_area_tolerance(expected_area, actual_area, expected_polygon):
+            _plan_scene_add_finding(
+                findings,
+                code="geometry_value_mismatch",
+                entity_type="floor",
+                entity_id=entity_id,
+                path=f"{entity_path}.geometry.area_m2",
+                expected=expected_area,
+                actual=actual_area,
+                context=context,
+                tolerance=Tolerance.area(area_tolerance),
+                message="floor polygon area differs from the generation plan",
+            )
+    except (TypeError, ValueError, IndexError):
+        _plan_scene_add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="floor",
+            entity_id=entity_id,
+            path=f"{entity_path}.geometry.area_m2",
+            expected=plan_floor.get("area_m2"),
+            actual=None,
+            context=context,
+            tolerance=Tolerance.area(0.0),
+            message="floor polygon area cannot be derived from scene evidence",
+        )
+
+
+def _plan_scene_compare_wall(
+    plan_wall: Mapping[str, Any],
+    scene_entity: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    wall_id = str(plan_wall.get("id"))
+    entity_path = f"entities[wall:{wall_id}]"
+    context = _plan_scene_entity_context(plan_wall, scene_entity, "wall")
+    expected_points = plan_wall.get("vertices_m")
+    actual_points = _plan_scene_world_vertices(scene_entity)
+    if actual_points is None or not isinstance(expected_points, (list, tuple)):
+        _plan_scene_add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"{entity_path}.geometry.vertices_m",
+            expected=expected_points,
+            actual=actual_points,
+            context=context,
+            tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+            message="wall mesh geometry is unavailable",
+        )
+        return
+    if len(actual_points) >= 8 and len(expected_points) >= 8:
+        metrics = (
+            (
+                "length_m",
+                _plan_scene_vector_length(_plan_scene_vector_subtract(actual_points[1], actual_points[0])),
+                plan_wall.get("length_m"),
+                "geometry_value_mismatch",
+            ),
+            (
+                "height_m",
+                _plan_scene_vector_length(_plan_scene_vector_subtract(actual_points[4], actual_points[0])),
+                plan_wall.get("height_m"),
+                "room_height_mismatch",
+            ),
+            (
+                "thickness_m",
+                _plan_scene_vector_length(_plan_scene_vector_subtract(actual_points[3], actual_points[0])),
+                plan_wall.get("thickness_m"),
+                "wall_thickness_mismatch",
+            ),
+        )
+        for field, actual, expected, code in metrics:
+            if not _linear_values_equal(expected, actual):
+                _plan_scene_add_finding(
+                    findings,
+                    code=code,
+                    entity_type="wall",
+                    entity_id=wall_id,
+                    path=f"{entity_path}.geometry.{field}",
+                    expected=expected,
+                    actual=actual,
+                    context=context,
+                    tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+                    message=f"wall {field} evidence differs from the generation plan",
+                )
+                break
+        else:
+            if not _linear_values_equal(expected_points, actual_points):
+                _plan_scene_add_finding(
+                    findings,
+                    code="geometry_value_mismatch",
+                    entity_type="wall",
+                    entity_id=wall_id,
+                    path=f"{entity_path}.geometry.vertices_m",
+                    expected=expected_points,
+                    actual=actual_points,
+                    context=context,
+                    tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+                    message="wall mesh evidence differs from the generation plan",
+                )
+    elif not _linear_values_equal(expected_points, actual_points):
+        _plan_scene_add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="wall",
+            entity_id=wall_id,
+            path=f"{entity_path}.geometry.vertices_m",
+            expected=expected_points,
+            actual=actual_points,
+            context=context,
+            tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+            message="wall mesh evidence differs from the generation plan",
+        )
+
+
+def _plan_scene_compare_opening(
+    plan_opening: Mapping[str, Any],
+    plan_walls: Mapping[str, Mapping[str, Any]],
+    scene_entity: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    opening_id = str(plan_opening.get("id"))
+    entity_path = f"entities[opening_proxy:{opening_id}]"
+    context = _plan_scene_entity_context(
+        plan_opening,
+        scene_entity,
+        "opening_proxy",
+    )
+    expected_points = plan_opening.get("vertices_m")
+    actual_points = _plan_scene_world_vertices(scene_entity)
+    plan_wall = plan_walls.get(plan_opening.get("wall_id"))
+    if actual_points is None or not isinstance(plan_wall, Mapping):
+        _plan_scene_add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="opening",
+            entity_id=opening_id,
+            path=f"{entity_path}.geometry.vertices_m",
+            expected=expected_points,
+            actual=actual_points,
+            context=context,
+            tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+            message="opening mesh geometry is unavailable",
+        )
+        return
+    try:
+        direction = plan_wall["direction"]
+        outward = plan_wall["outward"]
+        wall_start = plan_wall["start_m"]
+        base = _plan_scene_dot(wall_start, direction)
+        axis_coordinates = [_plan_scene_dot(point, direction) for point in actual_points]
+        outward_coordinates = [_plan_scene_dot(point, outward) for point in actual_points]
+        actual_fields = {
+            "offset_m": min(axis_coordinates) - base,
+            "width_m": max(axis_coordinates) - min(axis_coordinates),
+            "height_m": max(point[2] for point in actual_points) - min(point[2] for point in actual_points),
+            "sill_height_m": min(point[2] for point in actual_points),
+            "depth_m": max(outward_coordinates) - min(outward_coordinates),
+            "depth_center": 0.5 * (min(outward_coordinates) + max(outward_coordinates)),
+        }
+        expected_fields = {
+            "offset_m": plan_opening.get("offset_m"),
+            "width_m": plan_opening.get("width_m"),
+            "height_m": plan_opening.get("height_m"),
+            "sill_height_m": plan_opening.get("sill_height_m"),
+            "depth_m": plan_opening.get("depth_m"),
+            "depth_center": _plan_scene_dot(plan_opening["position_m"], outward),
+        }
+        for field in ("offset_m", "width_m", "height_m", "sill_height_m", "depth_m", "depth_center"):
+            if not _linear_values_equal(expected_fields[field], actual_fields[field]):
+                path_field = "depth_m" if field == "depth_center" else field
+                _plan_scene_add_finding(
+                    findings,
+                    code="opening_value_mismatch",
+                    entity_type="opening",
+                    entity_id=opening_id,
+                    path=f"{entity_path}.geometry.{path_field}",
+                    expected=expected_fields[field],
+                    actual=actual_fields[field],
+                    context=context,
+                    tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+                    message=f"opening {path_field} evidence differs from the generation plan",
+                )
+                break
+        else:
+            if not _linear_values_equal(expected_points, actual_points):
+                _plan_scene_add_finding(
+                    findings,
+                    code="geometry_value_mismatch",
+                    entity_type="opening",
+                    entity_id=opening_id,
+                    path=f"{entity_path}.geometry.vertices_m",
+                    expected=expected_points,
+                    actual=actual_points,
+                    context=context,
+                    tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+                    message="opening mesh evidence differs from the generation plan",
+                )
+    except (KeyError, TypeError, ValueError, IndexError, ZeroDivisionError):
+        _plan_scene_add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="opening",
+            entity_id=opening_id,
+            path=f"{entity_path}.geometry.vertices_m",
+            expected=expected_points,
+            actual=actual_points,
+            context=context,
+            tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+            message="opening geometry cannot be interpreted using the plan wall frame",
+        )
+
+
+def _plan_scene_compare_fixed_element(
+    plan_element: Mapping[str, Any],
+    scene_entity: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    element_id = str(plan_element.get("id"))
+    entity_path = f"entities[fixed_element_proxy:{element_id}]"
+    context = _plan_scene_entity_context(
+        plan_element,
+        scene_entity,
+        "fixed_element_proxy",
+    )
+    expected_points = plan_element.get("vertices_m")
+    actual_points = _plan_scene_world_vertices(scene_entity)
+    if actual_points is None:
+        _plan_scene_add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="fixed_element",
+            entity_id=element_id,
+            path=f"{entity_path}.geometry.vertices_m",
+            expected=expected_points,
+            actual=None,
+            context=context,
+            tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+            message="fixed-element mesh geometry is unavailable",
+        )
+        return
+    if len(actual_points) == len(expected_points) and actual_points:
+        if not _linear_values_equal(plan_element.get("position_m"), _plan_scene_center(actual_points)):
+            _plan_scene_add_finding(
+                findings,
+                code="geometry_value_mismatch",
+                entity_type="fixed_element",
+                entity_id=element_id,
+                path=f"{entity_path}.geometry.position_m",
+                expected=plan_element.get("position_m"),
+                actual=_plan_scene_center(actual_points),
+                context=context,
+                tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+                message="fixed-element position evidence differs from the generation plan",
+            )
+            return
+    if not _linear_values_equal(expected_points, actual_points):
+        _plan_scene_add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="fixed_element",
+            entity_id=element_id,
+            path=f"{entity_path}.geometry.vertices_m",
+            expected=expected_points,
+            actual=actual_points,
+            context=context,
+            tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+            message="fixed-element mesh evidence differs from the generation plan",
+        )
+
+
+def _plan_scene_entity_index(
+    scene: Mapping[str, Any],
+    findings: list[Finding],
+) -> dict[tuple[str, str], Mapping[str, Any]]:
+    indexed: dict[tuple[str, str], Mapping[str, Any]] = {}
+    for entity in _as_entities(scene.get("entities")):
+        entity_type = entity.get("entity_type")
+        entity_id = entity.get("entity_id")
+        if not isinstance(entity_type, str) or not isinstance(entity_id, str) or not entity_id:
+            _plan_scene_add_finding(
+                findings,
+                code="malformed_normalized_entity",
+                entity_type="scene",
+                entity_id=None,
+                path="entities",
+                expected="entity_type and entity_id",
+                actual=entity,
+                message="normalized scene contains a malformed managed entity",
+            )
+            continue
+        identity = (entity_type, entity_id)
+        if identity in indexed:
+            _plan_scene_add_finding(
+                findings,
+                code="duplicate_managed_entity_id",
+                entity_type=entity_type,
+                entity_id=entity_id,
+                path=f"entities[{entity_type}:{entity_id}]",
+                expected="unique managed entity ID",
+                actual=identity,
+                message="normalized scene contains duplicate managed entity identity",
+            )
+            continue
+        indexed[identity] = entity
+    return indexed
+
+
+def _plan_scene_expected_entities(plan: Mapping[str, Any]) -> dict[tuple[str, str], Mapping[str, Any]]:
+    expected: dict[tuple[str, str], Mapping[str, Any]] = {
+        ("floor", "floor"): _as_mapping(plan.get("floor")),
+    }
+    for wall in _as_entities(plan.get("walls")):
+        if isinstance(wall.get("id"), str):
+            expected[("wall", wall["id"])] = wall
+    for opening in _as_entities(plan.get("openings")):
+        if isinstance(opening.get("id"), str):
+            expected[("opening_proxy", opening["id"])] = opening
+    for element in _as_entities(plan.get("fixed_elements")):
+        if isinstance(element.get("id"), str):
+            expected[("fixed_element_proxy", element["id"])] = element
+    return expected
+
+
+def _plan_scene_compare_entity_identity(
+    findings: list[Finding],
+    *,
+    entity_type: str,
+    entity_id: str,
+    scene_entity: Mapping[str, Any],
+) -> None:
+    entity_path = f"entities[{entity_type}:{entity_id}]"
+    if scene_entity.get("role") != entity_type:
+        _plan_scene_add_finding(
+            findings,
+            code="role_mismatch",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            path=f"{entity_path}.role",
+            expected=entity_type,
+            actual=scene_entity.get("role"),
+            message="normalized scene entity role differs from the plan entity role",
+        )
+    expected_collection = _PLAN_TO_SCENE_COLLECTIONS[entity_type]
+    if scene_entity.get("collection") != expected_collection:
+        _plan_scene_add_finding(
+            findings,
+            code="collection_mismatch",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            path=f"{entity_path}.collection",
+            expected=expected_collection,
+            actual=scene_entity.get("collection"),
+            message="normalized scene entity collection differs from the plan contract",
+        )
+    expected_object_type = _PLAN_TO_SCENE_OBJECT_TYPES[entity_type]
+    if scene_entity.get("object_type") != expected_object_type:
+        _plan_scene_add_finding(
+            findings,
+            code="metadata_status_mismatch",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            path=f"{entity_path}.object_type",
+            expected=expected_object_type,
+            actual=scene_entity.get("object_type"),
+            message="normalized scene entity type differs from the plan contract",
+        )
+
+
+def _plan_scene_compare_units(
+    plan: Mapping[str, Any],
+    scene: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    expected = {"system": "METRIC", "length_unit": "METERS", "scale_length": 1.0}
+    actual = _as_mapping(scene.get("units"))
+    room_id = str(plan.get("room_id") or "unknown-room")
+    for key in ("system", "length_unit"):
+        if actual.get(key) != expected[key]:
+            _plan_scene_add_finding(
+                findings,
+                code="scene_units_mismatch",
+                entity_type="room",
+                entity_id=room_id,
+                path=f"units.{key}",
+                expected=expected[key],
+                actual=actual.get(key),
+                tolerance=Tolerance.exact(),
+                message="normalized scene units differ from the metre-based plan contract",
+            )
+    if not _linear_values_equal(expected["scale_length"], actual.get("scale_length")):
+        _plan_scene_add_finding(
+            findings,
+            code="scene_units_mismatch",
+            entity_type="room",
+            entity_id=room_id,
+            path="units.scale_length",
+            expected=expected["scale_length"],
+            actual=actual.get("scale_length"),
+            tolerance=Tolerance.linear(MATH_TOLERANCE_M),
+            message="normalized scene unit scale differs from the metre-based plan contract",
+        )
+
+
+def _plan_scene_compare_root(
+    plan: Mapping[str, Any],
+    scene: Mapping[str, Any],
+    findings: list[Finding],
+) -> None:
+    room_id = str(plan.get("room_id") or "unknown-room")
+    root = _as_mapping(scene.get("root"))
+    root_metadata = _as_mapping(root.get("metadata"))
+    expected_schema = "1.1" if plan.get("generator_version") == GENERATION_PLAN_V11_VERSION else "1.0"
+    expected_metadata = (
+        ("hs3d_room_id", plan.get("room_id"), "room_id_mismatch"),
+        ("hs3d_generator_version", plan.get("generator_version"), "generation_plan_version_mismatch"),
+        ("hs3d_schema_version", expected_schema, "schema_version_mismatch"),
+        ("hs3d_units", plan.get("units"), "scene_units_mismatch"),
+        ("hs3d_coordinate_system_json", plan.get("coordinate_system"), "metadata_status_mismatch"),
+        ("hs3d_status_index", plan.get("status_index"), "metadata_status_mismatch"),
+        ("hs3d_source_ids", plan.get("source_ids"), "source_id_mismatch"),
+        ("hs3d_logical_signature", _plan_scene_logical_signature(plan), "logical_signature_mismatch"),
+    )
+    if scene.get("room_id") != plan.get("room_id"):
+        _plan_scene_add_finding(
+            findings,
+            code="room_id_mismatch",
+            entity_type="room",
+            entity_id=room_id,
+            path="room_id",
+            expected=plan.get("room_id"),
+            actual=scene.get("room_id"),
+            tolerance=Tolerance.exact(),
+            message="normalized scene room identity differs from the generation plan",
+        )
+    if root.get("name") != plan.get("root_name"):
+        _plan_scene_add_finding(
+            findings,
+            code="geometry_value_mismatch",
+            entity_type="room",
+            entity_id=room_id,
+            path="root.name",
+            expected=plan.get("root_name"),
+            actual=root.get("name"),
+            tolerance=Tolerance.exact(),
+            message="normalized scene managed root differs from the generation plan",
+        )
+    if root.get("role") != "managed_root":
+        _plan_scene_add_finding(
+            findings,
+            code="role_mismatch",
+            entity_type="room",
+            entity_id=room_id,
+            path="root.role",
+            expected="managed_root",
+            actual=root.get("role"),
+            tolerance=Tolerance.exact(),
+            message="normalized scene root role is not managed_root",
+        )
+    for key, expected, code in expected_metadata:
+        _plan_scene_metadata_check(
+            findings,
+            entity_type="room",
+            entity_id=room_id,
+            entity_path="root",
+            metadata=root_metadata,
+            key=key,
+            expected=expected,
+            code=code,
+            message="normalized scene root metadata differs from the generation plan",
+        )
+    if plan.get("schema_version") == "1.1":
+        for field in (
+            "observed_height_m",
+            "observed_height_status",
+            "observed_height_source_id",
+            "geometry_height_m",
+            "geometry_height_status",
+            "geometry_height_fallback",
+            "geometry_height_fallback_value_m",
+            "geometry_height_fallback_method",
+            "geometry_height_fallback_reason",
+        ):
+            expected = plan.get(field)
+            if expected is None:
+                continue
+            kind = "linear" if field.endswith("_m") else "status" if field.endswith("_status") else "exact"
+            _plan_scene_metadata_check(
+                findings,
+                entity_type="room",
+                entity_id=room_id,
+                entity_path="root",
+                metadata=root_metadata,
+                key=f"hs3d_{field}",
+                expected=expected,
+                kind=kind,
+                code=_status_mismatch_code(expected, _plan_scene_metadata_value(root_metadata, f"hs3d_{field}"))
+                if kind == "status"
+                else "metadata_status_mismatch",
+            )
+
+
+def _plan_scene_metadata_specs(
+    plan: Mapping[str, Any],
+    plan_entity: Mapping[str, Any],
+    entity_type: str,
+) -> tuple[tuple[str, Any, str, str | None], ...]:
+    if entity_type == "floor":
+        return (
+            ("hs3d_status", plan_entity.get("status"), "status", None),
+            ("hs3d_source_id", plan_entity.get("source_id"), "exact", "source_id_mismatch"),
+            ("hs3d_formula", plan_entity.get("formula"), "exact", None),
+            ("hs3d_depends_on", plan_entity.get("depends_on"), "exact", None),
+            ("hs3d_geometry_status", "derived", "exact", None),
+            ("hs3d_area_m2", plan_entity.get("area_m2"), "area", "geometry_value_mismatch"),
+        )
+    if entity_type == "wall":
+        specs = [
+            ("hs3d_source_id", plan_entity.get("source_id"), "exact", "source_id_mismatch"),
+            ("hs3d_status", plan_entity.get("thickness_source_status"), "status", None),
+            ("hs3d_geometry_status", "derived", "exact", None),
+            ("hs3d_length_m", plan_entity.get("length_m"), "linear", None),
+            ("hs3d_height_m", plan_entity.get("height_m"), "linear", None),
+            ("hs3d_height_status", plan_entity.get("height_status"), "status", None),
+            ("hs3d_thickness_m", plan_entity.get("thickness_m"), "linear", "wall_thickness_mismatch"),
+            ("hs3d_thickness_source_status", plan_entity.get("thickness_source_status"), "status", None),
+            ("hs3d_thickness_fallback", plan_entity.get("thickness_fallback"), "exact", "fallback_mismatch"),
+            (
+                "hs3d_inner_face_json",
+                {"start_m": plan_entity.get("inner_start_m"), "end_m": plan_entity.get("inner_end_m")},
+                "exact",
+                None,
+            ),
+        ]
+        if plan.get("schema_version") == "1.1":
+            specs.extend(
+                (
+                    (f"hs3d_{field}", plan_entity.get(field), kind, code)
+                    for field, kind, code in (
+                        ("observed_source_id", "exact", "source_id_mismatch"),
+                        ("geometry_source_id", "exact", "source_id_mismatch"),
+                        ("observed_length_m", "linear", None),
+                        ("observed_length_status", "status", None),
+                        ("geometry_length_m", "linear", None),
+                        ("geometry_length_status", "status", None),
+                        ("geometry_reconciled", "exact", "reconciliation_mismatch"),
+                    )
+                )
+            )
+        return tuple(specs)
+    if entity_type == "opening_proxy":
+        specs = [
+            ("hs3d_opening_kind", plan_entity.get("kind"), "exact", None),
+            ("hs3d_source_id", plan_entity.get("source_id"), "exact", "source_id_mismatch"),
+            ("hs3d_status", plan_entity.get("width_status"), "status", None),
+            ("hs3d_geometry_status", "derived", "exact", None),
+            ("hs3d_wall_id", plan_entity.get("wall_id"), "exact", None),
+            ("hs3d_offset_m", plan_entity.get("offset_m"), "linear", None),
+            ("hs3d_offset_status", plan_entity.get("offset_status"), "status", None),
+            ("hs3d_width_m", plan_entity.get("width_m"), "linear", None),
+            ("hs3d_width_status", plan_entity.get("width_status"), "status", None),
+            ("hs3d_height_m", plan_entity.get("height_m"), "linear", None),
+            ("hs3d_height_status", plan_entity.get("height_status"), "status", None),
+            ("hs3d_sill_height_m", plan_entity.get("sill_height_m"), "linear", None),
+            ("hs3d_sill_status", plan_entity.get("sill_status"), "status", None),
+            ("hs3d_depth_m", plan_entity.get("depth_m"), "linear", None),
+            ("hs3d_depth_status", plan_entity.get("depth_status"), "status", None),
+            ("hs3d_proxy", plan_entity.get("proxy"), "exact", "proxy_flag_mismatch"),
+        ]
+        if plan.get("schema_version") == "1.1":
+            for field in (
+                "observed_height_m",
+                "observed_height_status",
+                "geometry_height_m",
+                "geometry_height_status",
+                "geometry_height_proxy",
+                "observed_sill_height_m",
+                "observed_sill_height_status",
+                "geometry_sill_height_m",
+                "geometry_sill_height_status",
+                "geometry_sill_height_proxy",
+                "observed_depth_m",
+                "observed_depth_status",
+                "geometry_depth_m",
+                "geometry_depth_status",
+                "geometry_depth_proxy",
+                "proxy_only",
+                "constructive_geometry",
+                "geometry_proxy_method",
+                "geometry_proxy_reason",
+            ):
+                kind = "linear" if field.endswith("_m") else "status" if field.endswith("_status") else "exact"
+                code = (
+                    "constructive_geometry_mismatch"
+                    if field == "constructive_geometry"
+                    else "proxy_flag_mismatch"
+                    if field == "proxy_only" or field.endswith("_proxy")
+                    else None
+                )
+                specs.append((f"hs3d_{field}", plan_entity.get(field), kind, code))
+        return tuple(specs)
+    if entity_type == "fixed_element_proxy":
+        return (
+            ("hs3d_fixed_type", plan_entity.get("type"), "exact", None),
+            ("hs3d_source_id", plan_entity.get("source_id"), "exact", "source_id_mismatch"),
+            ("hs3d_status", plan_entity.get("status"), "status", None),
+            ("hs3d_geometry_status", plan_entity.get("geometry_status"), "status", None),
+            ("hs3d_height_m", plan_entity.get("height_m"), "linear", None),
+            ("hs3d_height_status", plan_entity.get("status"), "status", None),
+            ("hs3d_anchor_status", plan_entity.get("anchor_status"), "status", None),
+            ("hs3d_anchor_json", plan_entity.get("anchor"), "exact", None),
+            ("hs3d_size_m", plan_entity.get("size_m"), "linear", None),
+            ("hs3d_proxy", plan_entity.get("proxy"), "exact", "proxy_flag_mismatch"),
+        )
+    return ()
+
+
+def _plan_scene_compare_entity_metadata(
+    plan: Mapping[str, Any],
+    plan_entity: Mapping[str, Any],
+    scene_entity: Mapping[str, Any],
+    entity_type: str,
+    findings: list[Finding],
+) -> None:
+    entity_id = str(plan_entity.get("id"))
+    finding_type = {
+        "opening_proxy": "opening",
+        "fixed_element_proxy": "fixed_element",
+    }.get(entity_type, entity_type)
+    entity_path = f"entities[{entity_type}:{entity_id}]"
+    metadata = _as_mapping(scene_entity.get("metadata"))
+    area_reference = (
+        [point[:2] for point in plan_entity.get("points_m", ())]
+        if entity_type == "floor"
+        else None
+    )
+    for key, expected, kind, code in _plan_scene_metadata_specs(
+        plan,
+        plan_entity,
+        entity_type,
+    ):
+        _plan_scene_metadata_check(
+            findings,
+            entity_type=finding_type,
+            entity_id=entity_id,
+            entity_path=entity_path,
+            metadata=metadata,
+            key=key,
+            expected=expected,
+            kind=kind,
+            code=code,
+            area_reference=area_reference,
+        )
+
+
+def _plan_scene_logical_signature(plan: Mapping[str, Any]) -> str:
+    payload = json.dumps(
+        plan,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def compare_plan_to_scene(
+    plan: Mapping[str, Any],
+    normalized_scene: Mapping[str, Any],
+) -> ComparisonReport:
+    """Compare generation-plan expectations with normalized scene evidence."""
+
+    plan_data = _as_mapping(plan)
+    scene_data = _as_mapping(normalized_scene)
+    plan_version = str(plan_data.get("generator_version") or "unknown-generator")
+    adapter_version = str(scene_data.get("scene_adapter_version") or "unknown-adapter")
+    room_id = str(plan_data.get("room_id") or scene_data.get("room_id") or "unknown-room")
+    schema_version = str(
+        plan_data.get("schema_version")
+        or ("1.1" if plan_version == GENERATION_PLAN_V11_VERSION else "1.0")
+    )
+    findings: list[Finding] = []
+    expected_entities = _plan_scene_expected_entities(plan_data)
+
+    def build_report() -> ComparisonReport:
+        return ComparisonReport(
+            room_id=room_id,
+            schema_version=schema_version,
+            generation_plan_version=plan_version,
+            scene_adapter_version=adapter_version,
+            comparison_stages=("plan_to_scene",),
+            discrepancies=findings,
+            checked_entities=len(expected_entities),
+        )
+
+    expected_version = {
+        "1.0": GENERATION_PLAN_V1_VERSION,
+        "1.1": GENERATION_PLAN_V11_VERSION,
+    }.get(schema_version)
+    if plan_version == GENERATION_PLAN_V11_LEGACY_VERSION or expected_version != plan_version:
+        _plan_scene_add_finding(
+            findings,
+            code="generation_plan_version_mismatch",
+            entity_type="room",
+            entity_id=room_id,
+            path="generator_version",
+            expected=expected_version or "supported generation plan version",
+            actual=plan_version,
+            tolerance=Tolerance.exact(),
+            message="generation plan version is unsupported for plan-to-scene comparison",
+        )
+        return build_report()
+    if adapter_version != SCENE_ADAPTER_VERSION:
+        _plan_scene_add_finding(
+            findings,
+            code="scene_adapter_version_mismatch",
+            entity_type="scene",
+            entity_id=room_id,
+            path="scene_adapter_version",
+            expected=SCENE_ADAPTER_VERSION,
+            actual=adapter_version,
+            tolerance=Tolerance.exact(),
+            message="normalized scene adapter version is unsupported",
+        )
+        return build_report()
+
+    _plan_scene_compare_units(plan_data, scene_data, findings)
+    _plan_scene_compare_root(plan_data, scene_data, findings)
+    actual_entities = _plan_scene_entity_index(scene_data, findings)
+    for identity in sorted(set(actual_entities) - set(expected_entities)):
+        entity_type, entity_id = identity
+        if entity_type not in _PLAN_TO_SCENE_ENTITY_TYPES:
+            continue
+        _plan_scene_add_finding(
+            findings,
+            code="unexpected_object",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            path=f"entities[{entity_type}:{entity_id}]",
+            expected=None,
+            actual=actual_entities[identity],
+            tolerance=Tolerance.exact(),
+            message="normalized scene contains an unexpected managed entity",
+        )
+    plan_walls = {
+        wall["id"]: wall
+        for wall in _as_entities(plan_data.get("walls"))
+        if isinstance(wall.get("id"), str)
+    }
+    for entity_type, entity_id in sorted(expected_entities):
+        actual_entity = actual_entities.get((entity_type, entity_id))
+        if actual_entity is None:
+            _plan_scene_add_finding(
+                findings,
+                code="expected_object_missing",
+                entity_type=entity_type,
+                entity_id=entity_id,
+                path=f"entities[{entity_type}:{entity_id}]",
+                expected="managed entity",
+                actual=None,
+                tolerance=Tolerance.exact(),
+                message="generation plan entity is absent from normalized scene",
+            )
+            continue
+        plan_entity = expected_entities[(entity_type, entity_id)]
+        _plan_scene_compare_entity_identity(
+            findings,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            scene_entity=actual_entity,
+        )
+        _plan_scene_compare_entity_metadata(
+            plan_data,
+            plan_entity,
+            actual_entity,
+            entity_type,
+            findings,
+        )
+        if entity_type == "floor":
+            _plan_scene_compare_floor(plan_entity, actual_entity, findings)
+        elif entity_type == "wall":
+            _plan_scene_compare_wall(plan_entity, actual_entity, findings)
+        elif entity_type == "opening_proxy":
+            _plan_scene_compare_opening(plan_entity, plan_walls, actual_entity, findings)
+        elif entity_type == "fixed_element_proxy":
+            _plan_scene_compare_fixed_element(plan_entity, actual_entity, findings)
+    return build_report()
 
 
 def compare_room_to_plan(

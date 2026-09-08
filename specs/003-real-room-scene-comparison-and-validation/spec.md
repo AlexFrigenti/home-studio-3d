@@ -2,9 +2,9 @@
 
 > Clasificación: T2 — comparación determinista entre medidas, plan de generación y escena derivada.
 > Estado: contrato, política matemática, comparación pura room → plan,
-> extensión de provenance T3.05-P y el adapter normalizado read-only de T3.05
-> implementados y verificados; T3.06 y la comparación plan → escena siguen
-> pendientes.
+> extensión de provenance T3.05-P, adapter normalizado read-only de T3.05 y
+> comparación plan → escena T3.06 implementados y verificados; T3.06 está
+> cerrado tras acceptance real contra el artefacto generator-2.
 
 ## Objetivo
 
@@ -175,6 +175,23 @@ elemento fijo; se verifican `height_m` y los estados de altura por pared. El
 plan `room-v1.1` sí exige sus campos explícitos de altura observada y
 geometría.
 
+La fase `plan_to_scene` está implementada en
+`compare_plan_to_scene(plan, normalized_scene)` como core puro. Recibe el
+generation plan como expected y el `NormalizedScene` como actual; no consulta
+el room, no importa `bpy`, no regenera el plan y no muta ninguna entrada.
+Compara floor, walls, openings y fixed elements por IDs, usa la evidencia
+geométrica world-space derivada de vértices locales y transform directo, y
+verifica metadata de escena de forma independiente. Preview camera/light
+permanecen fuera del conjunto semántico del plan. T3.06 quedó cerrado tras
+acceptance contra la escena normalizada extraída del artefacto generator-2;
+el histórico generator-1 se conserva como evidencia y no se trata como una
+versión compatible del plan actual.
+
+La precondición de esta primera implementación es la del generator actual:
+las entidades mesh gestionadas no tienen un parent transform semántico y sus
+vértices locales se interpretan con location, rotation XYZ y scale directos.
+No se pretende soportar jerarquías de parent arbitrarias en esta fase.
+
 ### Límite de provenance en T3.04
 
 T3.04 no inventa provenance que el generation plan no transporte. La garantía
@@ -193,7 +210,9 @@ Para esos campos la condición es: **not verifiable at room_to_plan with
 generation-plan contract current version**. El comparador no los reconstruye
 desde otros campos ni genera findings afirmando que fueron preservados. La
 provenance completa hasta escena requiere una ampliación posterior y explícita
-del contrato del generation plan antes de cerrar la validación `plan_to_scene`.
+del contrato del generation plan. T3.06 cierra la comparación de geometría y
+metadata materializada sin afirmar provenance de campos que no estén presentes
+en la escena.
 
 La fase no se infiere del mensaje: forma parte del contrato y permite saber en
 qué transición apareció la discrepancia.
@@ -535,10 +554,11 @@ normaliza a `0.0` y NaN/Inf se rechazan. Los auxiliares no gestionados fuera de
 la raíz se clasifican en `ownership.unmanaged_auxiliary`; entidades
 gestionadas duplicadas, malformadas o fuera de su dominio producen errores
 estructurados. La extracción Blender es read-only y fue verificada contra el
-`.blend` real versionado sin mutarlo ni guardarlo; las dos serializaciones
-fueron idénticas. La provenance de escena se limita a la metadata realmente
-materializada en Blender y sigue siendo parcial; no se implementa
-`plan_to_scene`.
+`.blend` histórico y contra el nuevo artefacto generator-2 sin mutarlos ni
+guardarlos; las serializaciones fueron idénticas en cada escena. La provenance
+de escena se limita a la metadata realmente materializada en Blender y sigue
+siendo parcial; T3.06 compara esa representación con el plan sin volver a
+consultar el room ni regenerar geometría.
 
 ## Compatibilidad y determinismo
 
@@ -584,11 +604,23 @@ contrato.
 - Dieciséis espesores `unknown` con fallback `0.10 m derived`.
 - Cero proxies verticales activos.
 - `proxy_only=true` y `constructive_geometry=false` para los openings.
-- Artefactos existentes sin regenerarlos:
+- Artefacto histórico preservado sin sobrescribirlo:
   - `blender/scenes/review/2026-09-07-living-room-main-v1.1-regenerated.blend`
     SHA-256 `79D9ECCFE874A0DFA507638871462F260C6BD678C8A5E78860461B3A71911DC5`.
   - `renders/previews/2026-09-07-living-room-main-v1.1-regenerated/qa-top-orthographic.png`
     SHA-256 `E11C9C6B17D0B243705217EC0A73D8523A5F02C46342333131B0421ED4818072`.
+- Artefacto nuevo generado por el pipeline actual para cerrar T3.06:
+  - `blender/scenes/review/2026-09-08-living-room-main-v1.1-generator-2.blend`
+    SHA-256 `352FDC163F0126989A2969F07A0B543FDCCC777E6ED8A29F78043F9CD9178280`.
+  - `renders/previews/2026-09-08-living-room-main-v1.1-generator-2/qa-top-orthographic.png`
+    tamaño `167944` bytes; SHA-256
+    `D145DDD3473F02ABCC45FAC613158CEC02C1D4C7CA86656D11CFA3D3ED27915E`.
+- `compare_plan_to_scene` sobre el nuevo artefacto: `valid=true`,
+  `errors=0`, `warnings=0`, `info=0`, `checked_entities=29`.
+- La equivalencia geométrica histórico generator-1 frente a nuevo generator-2
+  pasó sin diferencias inesperadas; solo cambiaron metadata contractual de
+  versión y firma lógica. Las mutaciones controladas, el determinismo y la no
+  mutación también pasaron. T3.07 sigue pendiente.
 
 ## Failure cases de regresión
 

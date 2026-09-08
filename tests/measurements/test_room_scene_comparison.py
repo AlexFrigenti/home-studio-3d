@@ -16,6 +16,7 @@ if str(MEASUREMENT_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(MEASUREMENT_SCRIPTS))
 
 import compare_room_scene as comparison_module  # noqa: E402
+from normalize_room_scene import normalize_scene  # noqa: E402
 from compare_room_scene import (  # noqa: E402
     ComparisonReport,
     Finding,
@@ -60,6 +61,245 @@ def _room_and_plan(path: Path) -> tuple[dict, dict]:
 
 def _finding_codes(report: ComparisonReport) -> set[str]:
     return {finding.code for finding in report.discrepancies}
+
+
+def _scene_entity(name, role, collection, vertices, metadata, object_type="MESH"):
+    return {
+        "name": name,
+        "object_type": object_type,
+        "collection": collection,
+        "transform": {
+            "location": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0],
+        },
+        "geometry": None if vertices is None else {"vertices_m": copy.deepcopy(vertices)},
+        "metadata": {"hs3d_role": role, **copy.deepcopy(metadata)},
+    }
+
+
+def _scene_from_plan(plan, *, reverse=False):
+    """Build a test-only scene payload from a plan before any scene mutation."""
+
+    schema_version = plan.get("schema_version", "1.0")
+    root_metadata = {
+        "hs3d_room_id": plan["room_id"],
+        "hs3d_generator_version": plan["generator_version"],
+        "hs3d_schema_version": schema_version,
+        "hs3d_units": plan["units"],
+        "hs3d_coordinate_system_json": copy.deepcopy(plan["coordinate_system"]),
+        "hs3d_status_index": copy.deepcopy(plan["status_index"]),
+        "hs3d_source_ids": copy.deepcopy(plan["source_ids"]),
+        "hs3d_logical_signature": GENERATOR.logical_signature(plan),
+    }
+    if schema_version == "1.1":
+        for field in (
+            "observed_height_m",
+            "observed_height_status",
+            "observed_height_source_id",
+            "geometry_height_m",
+            "geometry_height_status",
+            "geometry_height_fallback",
+            "geometry_height_fallback_value_m",
+            "geometry_height_fallback_method",
+            "geometry_height_fallback_reason",
+        ):
+            root_metadata[f"hs3d_{field}"] = copy.deepcopy(plan[field])
+
+    def collection(name):
+        return {
+            "name": name,
+            "metadata": {
+                "hs3d_collection_role": name,
+                "hs3d_room_id": plan["room_id"],
+            },
+            "objects": [],
+        }
+
+    collections = {name: collection(name) for name in ("Architecture", "Openings", "FixedElements", "Validation")}
+    architecture = collections["Architecture"]["objects"]
+    architecture.append(
+        _scene_entity(
+            "HS3D_FLOOR",
+            "floor",
+            "Architecture",
+            plan["floor"]["points_m"],
+            {
+                "hs3d_status": plan["floor"]["status"],
+                "hs3d_source_id": plan["floor"]["source_id"],
+                "hs3d_formula": plan["floor"]["formula"],
+                "hs3d_depends_on": plan["floor"]["depends_on"],
+                "hs3d_area_m2": plan["floor"]["area_m2"],
+                "hs3d_geometry_status": "derived",
+            },
+        )
+    )
+    for wall in plan["walls"]:
+        metadata = {
+            "hs3d_source_id": wall["source_id"],
+            "hs3d_status": wall["thickness_source_status"],
+            "hs3d_geometry_status": "derived",
+            "hs3d_length_m": wall["length_m"],
+            "hs3d_height_m": wall["height_m"],
+            "hs3d_height_status": wall["height_status"],
+            "hs3d_thickness_m": wall["thickness_m"],
+            "hs3d_thickness_source_status": wall["thickness_source_status"],
+            "hs3d_thickness_fallback": wall["thickness_fallback"],
+            "hs3d_inner_face_json": {
+                "start_m": wall["inner_start_m"],
+                "end_m": wall["inner_end_m"],
+            },
+        }
+        if schema_version == "1.1":
+            for field in (
+                "observed_source_id",
+                "geometry_source_id",
+                "observed_length_m",
+                "observed_length_status",
+                "geometry_length_m",
+                "geometry_length_status",
+                "geometry_reconciled",
+            ):
+                metadata[f"hs3d_{field}"] = copy.deepcopy(wall[field])
+        architecture.append(
+            _scene_entity(
+                f"HS3D_WALL_{wall['id']}",
+                "wall",
+                "Architecture",
+                wall["vertices_m"],
+                metadata,
+            )
+        )
+
+    for opening in plan["openings"]:
+        prefix = "DOOR" if opening["kind"] == "door" else "WINDOW"
+        metadata = {
+            "hs3d_opening_kind": opening["kind"],
+            "hs3d_source_id": opening["source_id"],
+            "hs3d_status": opening["width_status"],
+            "hs3d_geometry_status": "derived",
+            "hs3d_wall_id": opening["wall_id"],
+            "hs3d_offset_m": opening["offset_m"],
+            "hs3d_offset_status": opening["offset_status"],
+            "hs3d_width_m": opening["width_m"],
+            "hs3d_width_status": opening["width_status"],
+            "hs3d_height_m": opening["height_m"],
+            "hs3d_height_status": opening["height_status"],
+            "hs3d_sill_height_m": opening["sill_height_m"],
+            "hs3d_sill_status": opening["sill_status"],
+            "hs3d_depth_m": opening["depth_m"],
+            "hs3d_depth_status": opening["depth_status"],
+            "hs3d_proxy": opening["proxy"],
+        }
+        if schema_version == "1.1":
+            for field in (
+                "observed_height_m",
+                "observed_height_status",
+                "geometry_height_m",
+                "geometry_height_status",
+                "geometry_height_proxy",
+                "observed_sill_height_m",
+                "observed_sill_height_status",
+                "geometry_sill_height_m",
+                "geometry_sill_height_status",
+                "geometry_sill_height_proxy",
+                "observed_depth_m",
+                "observed_depth_status",
+                "geometry_depth_m",
+                "geometry_depth_status",
+                "geometry_depth_proxy",
+                "proxy_only",
+                "constructive_geometry",
+                "geometry_proxy_method",
+                "geometry_proxy_reason",
+            ):
+                metadata[f"hs3d_{field}"] = copy.deepcopy(opening[field])
+        collections["Openings"]["objects"].append(
+            _scene_entity(
+                f"HS3D_{prefix}_{opening['id']}",
+                "opening_proxy",
+                "Openings",
+                opening["vertices_m"],
+                metadata,
+            )
+        )
+
+    for element in plan["fixed_elements"]:
+        collections["FixedElements"]["objects"].append(
+            _scene_entity(
+                f"HS3D_FIXED_{element['id']}",
+                "fixed_element_proxy",
+                "FixedElements",
+                element["vertices_m"],
+                {
+                    "hs3d_fixed_type": element["type"],
+                    "hs3d_source_id": element["source_id"],
+                    "hs3d_status": element["status"],
+                    "hs3d_geometry_status": element["geometry_status"],
+                    "hs3d_height_m": element["height_m"],
+                    "hs3d_height_status": element["status"],
+                    "hs3d_anchor_status": element["anchor_status"],
+                    "hs3d_anchor_json": element["anchor"],
+                    "hs3d_size_m": element["size_m"],
+                    "hs3d_proxy": element["proxy"],
+                },
+            )
+        )
+
+    collections["Validation"]["objects"].extend(
+        [
+            _scene_entity(
+                "HS3D_CAMERA",
+                "preview_camera",
+                "Validation",
+                None,
+                {"hs3d_generator_version": plan["generator_version"]},
+                object_type="CAMERA",
+            ),
+            _scene_entity(
+                "HS3D_KEY_LIGHT",
+                "preview_light",
+                "Validation",
+                None,
+                {"hs3d_generator_version": plan["generator_version"]},
+                object_type="LIGHT",
+            ),
+        ]
+    )
+
+    collection_list = list(collections.values())
+    if reverse:
+        collection_list.reverse()
+        for item in collection_list:
+            item["objects"].reverse()
+    payload = {
+        "scene": {
+            "units": {
+                "system": "METRIC",
+                "length_unit": "METERS",
+                "scale_length": 1.0,
+            }
+        },
+        "root": {
+            "name": plan["root_name"],
+            "metadata": root_metadata,
+            "collections": collection_list,
+        },
+        "external_objects": [],
+    }
+    return normalize_scene(payload)
+
+
+def _scene_entity_by_id(scene, entity_type, entity_id):
+    return next(
+        entity
+        for entity in scene["entities"]
+        if entity["entity_type"] == entity_type and entity["entity_id"] == entity_id
+    )
+
+
+def _first_wall(plan):
+    return plan["walls"][0]
 
 
 class ComparisonContractTests(unittest.TestCase):
@@ -1105,6 +1345,511 @@ class RoomToPlanComparisonTests(unittest.TestCase):
             policy.OPENING_VISUAL_HEIGHT_PROXY_M,
         )
         self.assertEqual(GENERATOR.DEFAULT_OPENING_DEPTH_M, policy.OPENING_DEPTH_PROXY_M)
+
+
+class PlanToSceneComparisonTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.v1_room, cls.v1_plan = _room_and_plan(FIXTURES / "room-v1-synthetic.json")
+        cls.v11_room, cls.v11_plan = _room_and_plan(
+            FIXTURES / "room-v1.1-reconciliation-synthetic.json"
+        )
+        cls.real_room, cls.real_plan = _room_and_plan(REAL_ROOM_PATH)
+
+    def compare(self, plan, scene):
+        try:
+            comparator = comparison_module.compare_plan_to_scene
+        except AttributeError as exc:
+            self.fail(f"compare_plan_to_scene API is not implemented yet: {exc}")
+        return comparator(plan, scene)
+
+    def test_v1_equivalent_scene_is_valid(self):
+        report = self.compare(self.v1_plan, _scene_from_plan(self.v1_plan))
+
+        self.assertTrue(report.valid)
+        self.assertEqual(report.comparison_stages, ("plan_to_scene",))
+
+    def test_v11_equivalent_scene_is_valid(self):
+        report = self.compare(self.v11_plan, _scene_from_plan(self.v11_plan))
+
+        self.assertTrue(report.valid)
+        self.assertEqual(report.generation_plan_version, "room-v1.1-generator-2")
+
+    def test_living_room_equivalent_synthetic_scene_is_valid(self):
+        report = self.compare(self.real_plan, _scene_from_plan(self.real_plan))
+
+        self.assertTrue(report.valid)
+        self.assertEqual(report.room_id, "living-room-main")
+
+    def test_entities_reordered_are_semantically_equivalent(self):
+        normal = self.compare(self.v1_plan, _scene_from_plan(self.v1_plan))
+        reversed_scene = self.compare(self.v1_plan, _scene_from_plan(self.v1_plan, reverse=True))
+
+        self.assertTrue(normal.valid)
+        self.assertTrue(reversed_scene.valid)
+        self.assertEqual(normal.to_json(), reversed_scene.to_json())
+
+    def test_geometry_difference_within_linear_tolerance_passes(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", self.v1_plan["walls"][0]["id"])
+        wall["geometry"]["vertices_m"][0][0] += MATH_TOLERANCE_M * 0.5
+
+        self.assertTrue(self.compare(self.v1_plan, scene).valid)
+
+    def test_direct_translation_is_applied_to_local_vertices(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        translation = [10.0, -4.0, 2.0]
+        for vertex in wall["geometry"]["vertices_m"]:
+            for index in range(3):
+                vertex[index] -= translation[index]
+        wall["transform"]["location"] = translation
+
+        self.assertTrue(self.compare(self.v1_plan, scene).valid)
+
+    def test_euler_xyz_rotation_is_applied_before_translation(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        angle = 0.37
+        cosine, sine = math.cos(angle), math.sin(angle)
+        for vertex in wall["geometry"]["vertices_m"]:
+            x, y = vertex[0], vertex[1]
+            vertex[0] = cosine * x + sine * y
+            vertex[1] = -sine * x + cosine * y
+        wall["transform"]["rotation"][2] = angle
+
+        self.assertTrue(self.compare(self.v1_plan, scene).valid)
+
+    def test_floor_area_difference_within_area_tolerance_passes(self):
+        scene = _scene_from_plan(self.v1_plan)
+        floor = _scene_entity_by_id(scene, "floor", "floor")
+        tolerance = area_tolerance_from_polygon(
+            [point[:2] for point in self.v1_plan["floor"]["points_m"]]
+        )
+        floor["metadata"]["hs3d_area_m2"] += tolerance * 0.5
+
+        self.assertTrue(self.compare(self.v1_plan, scene).valid)
+
+    def test_floor_area_difference_outside_area_tolerance_fails(self):
+        scene = _scene_from_plan(self.v1_plan)
+        floor = _scene_entity_by_id(scene, "floor", "floor")
+        tolerance = area_tolerance_from_polygon(
+            [point[:2] for point in self.v1_plan["floor"]["points_m"]]
+        )
+        floor["metadata"]["hs3d_area_m2"] += tolerance * 2.0
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("geometry_value_mismatch", _finding_codes(report))
+
+    def test_plan_and_scene_are_not_mutated(self):
+        plan = copy.deepcopy(self.v11_plan)
+        scene = _scene_from_plan(plan)
+        plan_before = copy.deepcopy(plan)
+        scene_before = copy.deepcopy(scene)
+
+        self.compare(plan, scene)
+
+        self.assertEqual(plan, plan_before)
+        self.assertEqual(scene, scene_before)
+
+    def test_report_is_deterministic(self):
+        first = self.compare(self.v11_plan, _scene_from_plan(self.v11_plan))
+        second = self.compare(self.v11_plan, _scene_from_plan(self.v11_plan))
+
+        self.assertEqual(first.to_json(), second.to_json())
+
+    def test_incompatible_scene_adapter_version_stops_dependent_checks(self):
+        scene = _scene_from_plan(self.v1_plan)
+        scene["scene_adapter_version"] = "room-scene-adapter-999"
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertEqual(_finding_codes(report), {"scene_adapter_version_mismatch"})
+
+    def test_incompatible_plan_version_stops_dependent_checks(self):
+        plan = copy.deepcopy(self.v1_plan)
+        plan["generator_version"] = "room-v9-generator-1"
+
+        report = self.compare(plan, _scene_from_plan(self.v1_plan))
+
+        self.assertFalse(report.valid)
+        self.assertEqual(_finding_codes(report), {"generation_plan_version_mismatch"})
+
+    def test_room_id_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        scene["room_id"] = "other-room"
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("room_id_mismatch", _finding_codes(report))
+
+    def test_units_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        scene["units"]["length_unit"] = "FEET"
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("scene_units_mismatch", _finding_codes(report))
+
+    def test_schema_version_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        scene["root"]["metadata"]["hs3d_schema_version"] = "1.1"
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("schema_version_mismatch", _finding_codes(report))
+
+    def test_logical_signature_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        scene["root"]["metadata"]["hs3d_logical_signature"] = "wrong"
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("logical_signature_mismatch", _finding_codes(report))
+
+    def test_missing_wall_is_reported_without_field_cascade(self):
+        scene = _scene_from_plan(self.v1_plan)
+        scene["entities"] = [
+            entity
+            for entity in scene["entities"]
+            if not (entity["entity_type"] == "wall" and entity["entity_id"] == "wall-01")
+        ]
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertEqual(_finding_codes(report), {"expected_object_missing"})
+
+    def test_unexpected_wall_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        extra = copy.deepcopy(_scene_entity_by_id(scene, "wall", "wall-01"))
+        extra["entity_id"] = "wall-extra"
+        extra["name"] = "HS3D_WALL_wall-extra"
+        scene["entities"].append(extra)
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("unexpected_object", _finding_codes(report))
+
+    def test_missing_opening_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        scene["entities"] = [
+            entity
+            for entity in scene["entities"]
+            if not entity["entity_type"] == "opening_proxy"
+        ][:-1]
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("expected_object_missing", _finding_codes(report))
+
+    def test_unexpected_opening_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        extra = copy.deepcopy(_scene_entity_by_id(scene, "opening_proxy", "door-01"))
+        extra["entity_id"] = "opening-extra"
+        extra["name"] = "HS3D_DOOR_opening-extra"
+        scene["entities"].append(extra)
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("unexpected_object", _finding_codes(report))
+
+    def test_unexpected_fixed_element_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        extra = copy.deepcopy(_scene_entity_by_id(scene, "fixed_element_proxy", "socket-01"))
+        extra["entity_id"] = "fixed-extra"
+        extra["name"] = "HS3D_FIXED_fixed-extra"
+        scene["entities"].append(extra)
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("unexpected_object", _finding_codes(report))
+
+    def test_role_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["role"] = "opening_proxy"
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("role_mismatch", _finding_codes(report))
+
+    def test_collection_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["collection"] = "Openings"
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("collection_mismatch", _finding_codes(report))
+
+    def test_wall_translation_altered_is_reported_from_geometry(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["transform"]["location"][0] += 0.01
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("geometry_value_mismatch", _finding_codes(report))
+
+    def test_wall_rotation_altered_is_reported_from_geometry(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["transform"]["rotation"][2] = math.pi / 2.0
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("geometry_value_mismatch", _finding_codes(report))
+
+    def test_wall_scale_altered_is_reported_from_geometry(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["transform"]["scale"][0] = 1.01
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("geometry_value_mismatch", _finding_codes(report))
+
+    def test_wall_mesh_length_altered_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["geometry"]["vertices_m"][1][0] += 0.01
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("geometry_value_mismatch", _finding_codes(report))
+
+    def test_wall_mesh_height_altered_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["geometry"]["vertices_m"][4][2] += 0.01
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("room_height_mismatch", _finding_codes(report))
+
+    def test_wall_mesh_thickness_altered_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["geometry"]["vertices_m"][2][1] -= 0.01
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("geometry_value_mismatch", _finding_codes(report))
+
+    def test_correct_metadata_cannot_hide_corrupt_wall_mesh(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["geometry"]["vertices_m"][1][0] += 0.02
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+
+    def test_correct_wall_mesh_cannot_hide_corrupt_metadata(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["metadata"]["hs3d_thickness_m"] += 0.02
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("wall_thickness_mismatch", _finding_codes(report))
+
+    def test_metadata_finding_uses_plan_and_scene_contexts_without_room(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["metadata"]["hs3d_thickness_m"] += 0.02
+
+        report = self.compare(self.v1_plan, scene)
+        finding = next(
+            item
+            for item in report.discrepancies
+            if item.code == "wall_thickness_mismatch"
+        )
+
+        self.assertIsNone(finding.source_context.observed)
+        self.assertIsNotNone(finding.source_context.effective_geometry)
+        self.assertIsNotNone(finding.source_context.scene)
+
+    def test_floor_polygon_altered_is_reported_from_vertices(self):
+        scene = _scene_from_plan(self.v1_plan)
+        floor = _scene_entity_by_id(scene, "floor", "floor")
+        floor["geometry"]["vertices_m"][1][0] += 0.02
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("geometry_value_mismatch", _finding_codes(report))
+
+    def test_opening_offset_altered_is_reported_from_geometry(self):
+        scene = _scene_from_plan(self.v1_plan)
+        opening = _scene_entity_by_id(scene, "opening_proxy", "door-01")
+        for vertex in opening["geometry"]["vertices_m"]:
+            vertex[0] += 0.02
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("opening_value_mismatch", _finding_codes(report))
+
+    def test_opening_width_altered_is_reported_from_geometry(self):
+        scene = _scene_from_plan(self.v1_plan)
+        opening = _scene_entity_by_id(scene, "opening_proxy", "door-01")
+        opening["geometry"]["vertices_m"][1][0] += 0.02
+        opening["geometry"]["vertices_m"][5][0] += 0.02
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("opening_value_mismatch", _finding_codes(report))
+
+    def test_opening_height_altered_is_reported_from_geometry(self):
+        scene = _scene_from_plan(self.v1_plan)
+        opening = _scene_entity_by_id(scene, "opening_proxy", "door-01")
+        for index in (4, 5, 6, 7):
+            opening["geometry"]["vertices_m"][index][2] += 0.02
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("opening_value_mismatch", _finding_codes(report))
+
+    def test_opening_sill_altered_is_reported_from_geometry(self):
+        scene = _scene_from_plan(self.v1_plan)
+        opening = _scene_entity_by_id(scene, "opening_proxy", "door-01")
+        for index in (0, 1, 2, 3):
+            opening["geometry"]["vertices_m"][index][2] += 0.02
+        for index in (4, 5, 6, 7):
+            opening["geometry"]["vertices_m"][index][2] += 0.02
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("opening_value_mismatch", _finding_codes(report))
+
+    def test_opening_depth_altered_is_reported_from_geometry(self):
+        scene = _scene_from_plan(self.v1_plan)
+        opening = _scene_entity_by_id(scene, "opening_proxy", "door-01")
+        for vertex in opening["geometry"]["vertices_m"]:
+            vertex[1] += 0.02
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("opening_value_mismatch", _finding_codes(report))
+
+    def test_opening_wall_id_metadata_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        opening = _scene_entity_by_id(scene, "opening_proxy", "door-01")
+        opening["metadata"]["hs3d_wall_id"] = "wall-02"
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("metadata_status_mismatch", _finding_codes(report))
+
+    def test_opening_proxy_only_flag_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v11_plan)
+        opening = _scene_entity_by_id(scene, "opening_proxy", "door-01")
+        opening["metadata"]["hs3d_proxy_only"] = False
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("proxy_flag_mismatch", _finding_codes(report))
+
+    def test_opening_constructive_geometry_flag_mismatch_is_reported(self):
+        scene = _scene_from_plan(self.v11_plan)
+        opening = _scene_entity_by_id(scene, "opening_proxy", "door-01")
+        opening["metadata"]["hs3d_constructive_geometry"] = True
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("constructive_geometry_mismatch", _finding_codes(report))
+
+    def test_fixed_element_geometry_altered_is_reported(self):
+        scene = _scene_from_plan(self.v1_plan)
+        element = _scene_entity_by_id(scene, "fixed_element_proxy", "socket-01")
+        element["geometry"]["vertices_m"][0][0] += 0.02
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("geometry_value_mismatch", _finding_codes(report))
+
+    def test_source_id_metadata_mismatch_is_reported_when_materialized(self):
+        scene = _scene_from_plan(self.v11_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-00")
+        wall["metadata"]["hs3d_observed_source_id"] = "wrong-source"
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("source_id_mismatch", _finding_codes(report))
+
+    def test_status_metadata_mismatch_is_reported_when_materialized(self):
+        scene = _scene_from_plan(self.v11_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-00")
+        wall["metadata"]["hs3d_geometry_length_status"] = "measured"
+
+        report = self.compare(self.v11_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("metadata_status_mismatch", _finding_codes(report))
+
+    def test_scene_adapter_rejects_nan_before_comparison(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["geometry"]["vertices_m"][0][0] = math.nan
+
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertFalse(report.valid)
+        self.assertIn("geometry_value_mismatch", _finding_codes(report))
+
+    def test_scene_metadata_is_not_a_substitute_for_plan_geometry(self):
+        scene = _scene_from_plan(self.v1_plan)
+        wall = _scene_entity_by_id(scene, "wall", "wall-01")
+        wall["metadata"]["hs3d_length_m"] = self.v1_plan["walls"][0]["length_m"]
+        wall["geometry"]["vertices_m"][1][0] += 0.03
+
+        self.assertFalse(self.compare(self.v1_plan, scene).valid)
+
+    def test_plan_to_scene_does_not_require_room_input(self):
+        scene = _scene_from_plan(self.v1_plan)
+        report = self.compare(self.v1_plan, scene)
+
+        self.assertTrue(report.valid)
+
+    def test_legacy_v11_generator_is_unsupported(self):
+        plan = copy.deepcopy(self.v11_plan)
+        plan["generator_version"] = "room-v1.1-generator-1"
+
+        report = self.compare(plan, _scene_from_plan(self.v11_plan))
+
+        self.assertFalse(report.valid)
+        self.assertEqual(_finding_codes(report), {"generation_plan_version_mismatch"})
 
 
 if __name__ == "__main__":

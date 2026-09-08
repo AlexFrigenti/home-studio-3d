@@ -1,8 +1,8 @@
 # Tareas: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2
-> Estado: T3.01, T3.02, T3.03, T3.04, T3.05-P y T3.05 implementadas y
-> validadas; T3.06 y las fases posteriores siguen pendientes.
+> Estado: T3.01, T3.02, T3.03, T3.04, T3.05-P, T3.05 y T3.06 implementadas y
+> validadas; T3.07 y las fases posteriores siguen pendientes.
 > El slice 002 permanece cerrado e integrado en `main`; las tareas completadas
 > aquí se limitan al contrato, la política matemática, la comparación pura de
 > T3.01–T3.04, la extensión de provenance T3.05-P y la normalización
@@ -152,12 +152,38 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 ## T3.06 — Implementar comparación plan ↔ escena
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** verificar geometría, dimensiones, posiciones, metadata,
   signatures, statuses y flags contra el generation plan.
-- **Archivos previstos:** core, adapter y `validate_generated_room.py`.
+- **Implementación actual:** `compare_plan_to_scene(plan, normalized_scene)` es
+  un core puro y determinista que compara el plan recibido con evidencia de la
+  escena normalizada; no lee el room, importa `bpy` ni regenera geometría.
+- **Archivos modificados:** `compare_room_scene.py` y
+  `test_room_scene_comparison.py`.
 - **Validación:** tolerancia computacional, IDs canónicos, expected/actual y
-  severity correctos para walls, openings, floor y fixed elements.
+  severity correctos para walls, openings, floor y fixed elements. La
+  acceptance real se ejecutó contra una escena nueva generada por el pipeline
+  actual, preservando sin cambios el artefacto histórico generator-1.
+  `GENERATION_VALID`, `SCENE_VALID` y `compare_plan_to_scene` pasaron con
+  `room-v1.1-generator-2`, `room-scene-adapter-1`, `errors=0`,
+  `warnings=0`, `info=0` y `checked_entities=29`.
+- **Evidencia real:** el nuevo artefacto es
+  `blender/scenes/review/2026-09-08-living-room-main-v1.1-generator-2.blend`,
+  con SHA-256
+  `352FDC163F0126989A2969F07A0B543FDCCC777E6ED8A29F78043F9CD9178280`.
+  Su preview técnico fue generado por el pipeline en
+  `renders/previews/2026-09-08-living-room-main-v1.1-generator-2/`.
+  La escena normalizada contiene 31 entidades gestionadas: 22 walls, 6
+  opening proxies, 1 floor, 1 preview camera y 1 preview light.
+- **Equivalencia:** la proyección geométrica semántica histórico generator-1
+  frente a nuevo generator-2 pasó sin diferencias inesperadas; el hash común
+  es `31c7a1698c0479a34bdd8e276b6e06fbd0c1dbf2ab90378dfcb3d2a2583cd82f`.
+  Solo cambiaron metadata contractual de versión y firma lógica.
+- **Robustez:** las mutaciones reales de traslación, mesh, thickness metadata,
+  `proxy_only` y `source_id` produjeron findings bloqueantes estables; los
+  casos independientes geometry-vs-metadata, determinismo y no mutación también
+  pasaron. El histórico conserva el SHA-256
+  `79D9ECCFE874A0DFA507638871462F260C6BD678C8A5E78860461B3A71911DC5`.
 - **Rollback:** conservar la validación de escena histórica si la integración
   nueva debe retirarse.
 - **Fuera:** booleanos, openings constructivos y nuevas reglas artísticas.
@@ -226,8 +252,11 @@ capturas reales o geometría constructiva sin una autorización independiente.
 - Cambios en MCP o `get_addon_status`.
 
 T3.05 queda `[x]` tras la verificación read-only contra Blender real.
-T3.06 y posteriores permanecen `[ ]`. T3.01–T3.04 y T3.05-P cubren el
+T3.06 queda `[x]` tras la acceptance real contra el artefacto generator-2 y
+la equivalencia geométrica con el histórico; T3.07 y posteriores permanecen
+`[ ]`. T3.01–T3.04 y T3.05-P cubren el
 contrato, la política matemática, la comparación pura room → plan y la
 provenance aditiva v1.1; T3.05 añade el contrato y adapter read-only verificado
 contra la escena real, pero no inicia `plan_to_scene` ni la integración
-funcional posterior.
+funcional posterior. T3.06 añade y valida el core plan → normalized scene
+contra una escena generator-2 separada, sin sobrescribir el histórico.
