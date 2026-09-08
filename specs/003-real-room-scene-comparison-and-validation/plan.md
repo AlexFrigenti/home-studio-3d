@@ -4,8 +4,9 @@
 
 **Goal:** Add a deterministic, reusable comparison between canonical room data, the generation plan and a normalized generated-scene representation without changing measurement schemas or real-room data.
 
-**Current checkpoint:** T3.01–T3.04 and T3.05-P are implemented. T3.05 and
-later scene work remain pending.
+**Current checkpoint:** T3.01–T3.04, T3.05-P and T3.05 are implemented and
+validated. T3.05 has been verified read-only against the versioned real Blender
+scene; T3.06 and later scene work remain pending.
 
 **Architecture:** Keep a pure-Python comparison core independent of `bpy`. Add a read-only Blender adapter that maps the existing generated scene and custom properties into a normalized representation, then produce a stable `ComparisonReport` from the core. Preserve the existing generator and scene validator contracts; integrate only the minimum delegation and metadata checks needed by the new comparison.
 
@@ -30,10 +31,12 @@ later scene work remain pending.
 
 ## Files and responsibilities
 
-The future implementation should use these focused boundaries:
+The implementation uses these focused boundaries:
 
-- Create `blender/scripts/measurements/compare_room_scene.py`: pure comparison models, normalization contract, finding codes, tolerance checks, deterministic sorting and report serialization.
-- Create or isolate a Blender-facing adapter beside the existing measurement scripts: read-only extraction of units, collections, object IDs, mesh coordinates and `hs3d_*` properties into the normalized scene representation.
+- Create `blender/scripts/measurements/compare_room_scene.py`: pure comparison models, finding codes, tolerance checks, deterministic sorting and report serialization.
+- Create `blender/scripts/measurements/normalize_room_scene.py`: keep the
+  pure normalized-scene contract and the duck-typed read-only Blender adapter
+  together without importing `bpy` at module load time.
 - Modify `blender/scripts/measurements/validate_generated_room.py` only to invoke the adapter/core and retain the existing CLI behavior where compatible.
 - Modify `blender/scripts/measurements/generate_room.py` only for the additive
   v1.1 provenance block required by T3.05-P; do not refactor unrelated
@@ -51,7 +54,10 @@ The future implementation should use these focused boundaries:
 The implementation should expose stable interfaces equivalent to:
 
 ```python
-def normalize_scene(scene_source: object) -> dict[str, object]:
+def normalize_scene(scene_payload: object) -> dict[str, object]:
+    raise NotImplementedError
+
+def normalize_blender_scene(scene_source: object) -> dict[str, object]:
     raise NotImplementedError
 
 def compare_room_to_plan(room: dict[str, object], plan: dict[str, object]) -> ComparisonReport:
@@ -161,14 +167,43 @@ reconstructs unavailable metadata. Existing consumers continue to read the
 unchanged geometry keys; the scene validator and Blender path were not
 modified. Full plan-to-scene provenance validation remains a later task.
 
+#### T3.05 checkpoint: normalized scene and read-only adapter
+
+`blender/scripts/measurements/normalize_room_scene.py` provides the pure
+`normalize_scene(mapping)` core and the `normalize_blender_scene(scene_source)`
+read-only extraction boundary. The normalized contract exposes
+`scene_adapter_version` (`room-scene-adapter-1`), room identity, explicit
+metric/metres units, the managed root, the four managed child collections,
+canonical managed entities and their finite transforms, mesh vertices and
+materialized `hs3d_*` metadata. Local paths and runtime Blender handles are
+excluded.
+
+Managed entities are identified by role and canonical IDs under
+`HS3D_ROOM_<room_id>`. Entities and collections are ordered canonically;
+unmanaged auxiliary objects outside the root are classified separately, while
+duplicate, malformed, wrongly-owned or non-finite managed input raises a
+structured normalization error. The adapter never writes to Blender and no
+`plan_to_scene` comparison is implemented. Pure/synthetic verification and the
+authorized read-only verification against the existing real `.blend` are
+complete. The real run confirmed 31 managed entities, stable serialization,
+no structural errors, no mutation and an unchanged `.blend` SHA-256
+(`79D9ECCFE874A0DFA507638871462F260C6BD678C8A5E78860461B3A71911DC5`).
+Scene provenance remains partial and is limited to metadata materialized in
+Blender; T3.06 remains pending.
+
 ### Task 3: Add normalized scene and Blender adapter
 
 Map the existing root collection, four child collections, walls, floor,
 openings, fixed elements and preview camera/light to the normalized
 representation. Read only the metadata already emitted by the generator.
 Ignore non-managed auxiliary objects outside the root; duplicate or malformed
-managed entities become findings. Missing critical fields become findings;
-the adapter does not repair, infer or write the scene.
+managed entities are rejected with structured normalization errors. Missing
+critical fields are rejected; the adapter does not repair, infer or write the
+scene.
+
+The T3.05 implementation and its pure/synthetic tests are complete. Real
+Blender extraction was verified read-only against the versioned `.blend`; no
+scene or preview was regenerated or saved.
 
 ### Task 4: Integrate the existing validation entry point
 

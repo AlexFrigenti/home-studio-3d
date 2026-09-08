@@ -1,7 +1,8 @@
 """Pure, deterministic room/plan/scene comparison contracts.
 
 The room-to-plan comparison core is implemented here without Blender or file
-I/O. Plan-to-scene comparison and the Blender adapter remain future work.
+I/O. The read-only normalized-scene adapter lives in
+``normalize_room_scene.py``; plan-to-scene comparison remains future work.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from normalize_room_scene import SCENE_ADAPTER_VERSION
 from generation_policy import (
     AUTHORIZED_FALLBACK_VALUES_M,
     DOOR_SILL_DERIVATION_FORMULA,
@@ -41,7 +43,6 @@ from generation_policy import (
 
 MATH_TOLERANCE_M = 1e-6
 REPORT_VERSION = "room-scene-comparison-1"
-SCENE_ADAPTER_VERSION = "room-scene-adapter-1"
 COMPARISON_STAGES = ("room_to_plan", "plan_to_scene")
 SEVERITIES = ("error", "warning", "info")
 SEVERITY_ORDER = {name: index for index, name in enumerate(SEVERITIES)}

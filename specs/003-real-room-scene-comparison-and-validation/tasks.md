@@ -1,11 +1,12 @@
 # Tareas: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2
-> Estado: T3.01, T3.02, T3.03, T3.04 y T3.05-P implementadas y validadas; el
-> adapter Blender y las fases posteriores siguen pendientes.
+> Estado: T3.01, T3.02, T3.03, T3.04, T3.05-P y T3.05 implementadas y
+> validadas; T3.06 y las fases posteriores siguen pendientes.
 > El slice 002 permanece cerrado e integrado en `main`; las tareas completadas
-> aquí se limitan al contrato, la política matemática y la comparación pura de
-> T3.01–T3.04 y la extensión de provenance T3.05-P.
+> aquí se limitan al contrato, la política matemática, la comparación pura de
+> T3.01–T3.04, la extensión de provenance T3.05-P y la normalización
+> read-only de escena de T3.05.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -121,16 +122,31 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 ## T3.05 — Definir representación normalizada y adapter Blender
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** extraer en modo solo lectura unidades, colecciones, IDs,
   geometría y custom properties sin depender del orden de objetos, usando el
   dominio gestionado existente de `HS3D_ROOM_<room_id>`.
-- **Archivos previstos:** adapter Blender junto a los scripts de medición,
-  `validate_generated_room.py` y tests de contrato.
+- **Archivos modificados:** `blender/scripts/measurements/normalize_room_scene.py`
+  y `tests/measurements/test_normalize_room_scene.py`.
 - **Validación:** objetos ausentes/inesperados, unidades incorrectas,
   metadata crítica ausente, duplicate managed entity ID, entidades
-  normalizadas malformadas, versiones incompatibles, auxiliares no gestionados
-  permitidos y orden alternativo producen resultados definidos.
+  normalizadas malformadas, auxiliares no gestionados permitidos y orden
+  alternativo producen resultados definidos en el core puro/sintético. El
+  contrato emite `scene_adapter_version` de forma estable; la compatibilidad
+  entre versiones para comparar pertenece a la fase posterior. La verificación
+  read-only contra el `.blend` versionado confirmó el contrato, las 31
+  entidades esperadas, determinismo y ausencia de mutación.
+- **Evidencia:** contrato `room-scene-adapter-1`, normalización por IDs,
+  unidades métricas, orden estable, finite floats, exclusión de rutas locales,
+  ownership managed/unmanaged y adapter duck-typed read-only cubiertos por
+  tests puros y verificación Blender real. La normalización real produjo 1
+  floor, 22 walls, 6 opening proxies, 1 preview camera y 1 preview light;
+  dos serializaciones fueron idénticas, sin errores estructurales ni mutación.
+  El SHA-256 del `.blend` permaneció
+  `79D9ECCFE874A0DFA507638871462F260C6BD678C8A5E78860461B3A71911DC5`.
+  La provenance de escena sigue siendo parcial y solo se extrae la metadata
+  materializada; no se importa `bpy` al cargar el módulo, no se escribe una
+  escena y no se ejecuta `plan_to_scene`.
 - **Rollback:** retirar el adapter sin alterar escenas.
 - **Fuera:** guardar, regenerar, reparar o modificar `.blend`.
 
@@ -209,7 +225,9 @@ capturas reales o geometría constructiva sin una autorización independiente.
 - Fotografías, EXIF, LiDAR y fotogrametría.
 - Cambios en MCP o `get_addon_status`.
 
-T3.05 y posteriores permanecen `[ ]` hasta que una implementación posterior
-sea autorizada y validada. T3.01–T3.04 y T3.05-P cubren el contrato, la
-política matemática, la comparación pura room → plan y la provenance aditiva
-v1.1; esta fase no inicia el adapter ni la integración Blender.
+T3.05 queda `[x]` tras la verificación read-only contra Blender real.
+T3.06 y posteriores permanecen `[ ]`. T3.01–T3.04 y T3.05-P cubren el
+contrato, la política matemática, la comparación pura room → plan y la
+provenance aditiva v1.1; T3.05 añade el contrato y adapter read-only verificado
+contra la escena real, pero no inicia `plan_to_scene` ni la integración
+funcional posterior.

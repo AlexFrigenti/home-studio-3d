@@ -1,9 +1,10 @@
 # Especificación: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2 — comparación determinista entre medidas, plan de generación y escena derivada.
-> Estado: contrato, política matemática, comparación pura room → plan y
-> extensión de provenance T3.05-P implementados; el adapter Blender y la
-> integración de escena siguen pendientes.
+> Estado: contrato, política matemática, comparación pura room → plan,
+> extensión de provenance T3.05-P y el adapter normalizado read-only de T3.05
+> implementados y verificados; T3.06 y la comparación plan → escena siguen
+> pendientes.
 
 ## Objetivo
 
@@ -495,13 +496,13 @@ permitir reproducir qué contrato produjo el resultado.
 
 ## Arquitectura y testabilidad
 
-La implementación futura separará:
+La implementación separa:
 
 1. **Comparison core:** recibe room validado, generation plan y una
    representación normalizada de escena; no importa `bpy`.
-2. **Blender adapter:** lee una escena abierta en Blender, extrae solo objetos,
-   nombres, geometría, unidades y custom properties autorizadas, y produce la
-   representación normalizada.
+2. **Normalized-scene core/adapter:** `normalize_room_scene.py` normaliza
+   mappings JSON-compatibles y ofrece una frontera duck-typed de solo lectura
+   para extraer una escena Blender sin importar `bpy` al cargar el módulo.
 3. **Report:** ordena findings, calcula `valid` y genera la firma estable del
    informe si se necesita.
 
@@ -512,6 +513,32 @@ solo cuando la tarea de implementación tenga autorización explícita.
 La política pura compartida de fallbacks y el cálculo Shoelace viven en
 `blender/scripts/measurements/generation_policy.py`. El generator conserva sus
 nombres históricos mediante aliases; el comparador consume la misma fuente.
+
+### Contrato de escena normalizada de T3.05
+
+El adapter versionado `room-scene-adapter-1` produce un mapping con las claves
+`scene_adapter_version`, `room_id`, `units`, `root`, `collections`, `entities` y
+`ownership`. `root` identifica `HS3D_ROOM_<room_id>` y `collections` contiene,
+en orden canónico, `Architecture`, `Openings`, `FixedElements` y `Validation`.
+
+Las entidades gestionadas se identifican por `role`/`entity_type` y
+`entity_id`, no por handles Blender. El contrato conserva, cuando existe,
+transformación, vértices locales de malla y custom properties `hs3d_*` ya
+materializadas por el generator, incluyendo estados, flags de proxy y
+metadata de provenance disponible en la escena. No copia rutas locales,
+timestamps, UUIDs ni valores inventados, y no duplica la geometría en un
+segundo bloque de provenance.
+
+La normalización es pura y determinista: colecciones y entidades se ordenan
+canónicamente, los mappings se serializan con claves ordenadas, `-0.0` se
+normaliza a `0.0` y NaN/Inf se rechazan. Los auxiliares no gestionados fuera de
+la raíz se clasifican en `ownership.unmanaged_auxiliary`; entidades
+gestionadas duplicadas, malformadas o fuera de su dominio producen errores
+estructurados. La extracción Blender es read-only y fue verificada contra el
+`.blend` real versionado sin mutarlo ni guardarlo; las dos serializaciones
+fueron idénticas. La provenance de escena se limita a la metadata realmente
+materializada en Blender y sigue siendo parcial; no se implementa
+`plan_to_scene`.
 
 ## Compatibilidad y determinismo
 
