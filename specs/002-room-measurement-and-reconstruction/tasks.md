@@ -2,7 +2,7 @@
 
 > Clasificación: T2
 > Rama: `spec/002-room-measurement-and-reconstruction`
-> Estado: schema JSON v1/v1.1, fixtures, validador, generación de planes y checkpoint real autorizado de `living-room-main` implementados; T2.12 y T2.12-V están cerradas documentalmente y T2.13 permanece pendiente.
+> Estado: schema JSON v1/v1.1, fixtures, validador, generación de planes y checkpoint real autorizado de `living-room-main` implementados; T2.12, T2.12-V y T2.13 están cerradas documentalmente; Slice 002 está integrado en `main`.
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
@@ -155,7 +155,7 @@ y detenerse ante una discrepancia no resuelta.
 ## T2.13 — Cerrar el slice y preparar PR
 
 - **Estado:** `[x]`
-- **Precondición:** T2.12 y T2.12-V están cerradas documentalmente; esta tarea de revisión final y preparación de PR sigue pendiente.
+- **Precondición:** T2.12 y T2.12-V están cerradas documentalmente; la revisión final y preparación de PR de esta tarea se completaron, y Slice 002 quedó integrado posteriormente en `main`.
 - **Objetivo:** revisar scope, documentación, riesgos, invariantes y gates; dejar la PR lista sin empezar el siguiente slice.
 - **Archivos:** solo los artefactos aprobados de este checkpoint, sin ampliar el alcance.
 - **Validación:** `git diff --check`, `git status --short`, diff completo, ausencia de secretos, ausencia de datos reales nuevos bajo `measurements/`, revisión de los binarios/preview derivados y revisión contra `.quality/QUALITY.md`/`CONTRIBUTING.md`.
@@ -164,5 +164,5 @@ y detenerse ante una discrepancia no resuelta.
 - **Evidencia final:** auditoría read-only completada con scope PASS, privacidad PASS, compatibilidad v1 PASS, binarios/previews PASS y working tree limpio. La rama conserva 21 commits sobre `origin/main`, está `0/0` respecto a su upstream y no contiene `docs/setup/desktop-environment-inventory.md`.
 - **Gates finales:** validators de fixture v1, fixture v1.1 y `living-room-main` `VALID`; generation plan `PASS`; suite `tests/measurements` `61/61 PASS`; JSON/Python syntax `PASS`; `git diff --check` `PASS`; golden v1 `1105946a0dfe0088f5ad59da4178939644305b0d09b94022bfe5c87d9dde36f0`.
 - **Artefactos finales:** `.blend` `blender/scenes/review/2026-09-07-living-room-main-v1.1-regenerated.blend` con SHA-256 `79D9ECCFE874A0DFA507638871462F260C6BD678C8A5E78860461B3A71911DC5`; preview `renders/previews/2026-09-07-living-room-main-v1.1-regenerated/qa-top-orthographic.png` con SHA-256 `E11C9C6B17D0B243705217EC0A73D8523A5F02C46342333131B0421ED4818072`.
-- **Readiness y cierre:** el slice 002 queda cerrado documentalmente; no se inicia ningún slice posterior y el merge sigue fuera de alcance. La siguiente acción es preparar y abrir la PR en una tarea posterior; esta tarea no abre la PR.
+- **Readiness y cierre:** en este checkpoint el slice 002 queda cerrado documentalmente y listo para PR; no se inicia ningún slice posterior y el merge queda fuera de alcance. Posteriormente la PR se abrió y Slice 002 quedó integrado en `main`.
 - **Deudas futuras/no bloqueantes:** los 16 espesores `unknown` con fallback `0.10 m derived`; `opening_direction=unknown`; `proxy_only=true`; `constructive_geometry=false`; ausencia de booleanos constructivos; posible geometría constructiva futura; espesores adicionales solo si son accesibles y fiables; deuda conocida de `get_addon_status` del pin MCP; y wording baseline de `PROJECT_CONTEXT.md` fuera de este slice.

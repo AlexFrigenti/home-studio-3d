@@ -2,7 +2,7 @@
 
 > Clasificación: T2 — complejo o sensible
 > Rama: `spec/001-blender-codex-mcp-foundation`
-> Estado: foundation ejecutada y validada; documentación alineada en esta rama; cierre T2/PR pendiente
+> Estado: foundation ejecutada y validada; Slice 001 integrado en `main`; sus decisiones y evidencias se conservan como baseline
 
 ## Objetivo del slice
 

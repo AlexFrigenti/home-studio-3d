@@ -4,10 +4,11 @@
 
 **Goal:** Add a deterministic, reusable comparison between canonical room data, the generation plan and a normalized generated-scene representation without changing measurement schemas or real-room data.
 
-**Current checkpoint:** T3.01–T3.04, T3.05-P, T3.05, T3.06, T3.07, T3.08
-and T3.09 are implemented and validated. T3.06 passed real-scene acceptance
-against a new generator-2 artifact, with the historical generator-1 artifact
-preserved; T3.10 remains pending.
+**Current checkpoint:** T3.01–T3.04, T3.05-P, T3.05, T3.06, T3.07, T3.08,
+T3.09 and T3.10 are implemented and validated. T3.06 passed real-scene
+acceptance against a new generator-2 artifact, with the historical generator-1
+artifact preserved; the final T3.10 audit is complete and Slice 003 is
+integrated in `main`.
 
 **Architecture:** Keep a pure-Python comparison core independent of `bpy`. Add a read-only Blender adapter that maps the existing generated scene and custom properties into a normalized representation, then produce a stable `ComparisonReport` from the core. Preserve the existing generator and scene validator contracts; integrate only the minimum delegation and metadata checks needed by the new comparison.
 
@@ -337,7 +338,8 @@ consumer. Metadata that Blender does not materialize, including per-field
 method, uncertainty, reconciliation ID and delta, remains optional in
 `plan_to_scene`. The T3.07 changes are regression tests and documentation only;
 no production module or Blender artifact changed. T3.08 and T3.09 are now
-closed through the setup evidence document; T3.10 remains pending.
+closed through the setup evidence document, and T3.10 is closed after the
+final audit.
 
 #### T3.08 checkpoint: living-room-main evidence
 
@@ -355,5 +357,5 @@ The same setup document records the executed pure gates, the reused real
 acceptance evidence, versions, hashes, deterministic/no-mutation evidence,
 privacy review, provenance boundaries, repository-relative entrypoints and
 known infrastructure limitations. It explicitly distinguishes current
-`room-v1.1-generator-2` from historical `room-v1.1-generator-1` and keeps
-T3.10 as the remaining audit task.
+`room-v1.1-generator-2` from historical `room-v1.1-generator-1`; the final
+T3.10 audit is complete.

@@ -5,7 +5,8 @@
 > extensión de provenance T3.05-P, adapter normalizado read-only de T3.05,
 > comparación plan → escena T3.06 y documentación de acceptance/gates de
 > T3.08/T3.09 implementados y verificados; T3.06 está cerrado tras acceptance
-> real contra el artefacto generator-2 y T3.10 sigue pendiente.
+> real contra el artefacto generator-2 y T3.10 está cerrada tras la auditoría
+> final; Slice 003 está integrado en `main`.
 
 ## Objetivo
 
@@ -631,7 +632,8 @@ contrato.
   versión y firma lógica. Las mutaciones controladas, el determinismo y la no
   mutación también pasaron. T3.07 está cerrado. La evidencia documental de
   T3.08 y T3.09 queda consolidada en
-  `docs/setup/003-room-scene-comparison-validation.md`; T3.10 sigue pendiente.
+  `docs/setup/003-room-scene-comparison-validation.md`; T3.10 está cerrada tras
+  la auditoría final del slice.
 
 ## Failure cases de regresión
 
