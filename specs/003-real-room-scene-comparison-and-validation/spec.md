@@ -2,9 +2,10 @@
 
 > Clasificación: T2 — comparación determinista entre medidas, plan de generación y escena derivada.
 > Estado: contrato, política matemática, comparación pura room → plan,
-> extensión de provenance T3.05-P, adapter normalizado read-only de T3.05 y
-> comparación plan → escena T3.06 implementados y verificados; T3.06 está
-> cerrado tras acceptance real contra el artefacto generator-2.
+> extensión de provenance T3.05-P, adapter normalizado read-only de T3.05,
+> comparación plan → escena T3.06 y documentación de acceptance/gates de
+> T3.08/T3.09 implementados y verificados; T3.06 está cerrado tras acceptance
+> real contra el artefacto generator-2 y T3.10 sigue pendiente.
 
 ## Objetivo
 
@@ -628,7 +629,9 @@ contrato.
 - La equivalencia geométrica histórico generator-1 frente a nuevo generator-2
   pasó sin diferencias inesperadas; solo cambiaron metadata contractual de
   versión y firma lógica. Las mutaciones controladas, el determinismo y la no
-  mutación también pasaron. T3.07 sigue pendiente.
+  mutación también pasaron. T3.07 está cerrado. La evidencia documental de
+  T3.08 y T3.09 queda consolidada en
+  `docs/setup/003-room-scene-comparison-validation.md`; T3.10 sigue pendiente.
 
 ## Failure cases de regresión
 

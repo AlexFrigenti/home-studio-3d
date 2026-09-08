@@ -1,8 +1,8 @@
 # Tareas: Real-room Scene Comparison and Validation v1
 
 > Clasificación: T2
-> Estado: T3.01, T3.02, T3.03, T3.04, T3.05-P, T3.05, T3.06 y T3.07
-> implementadas y validadas; T3.08 y las fases posteriores siguen pendientes.
+> Estado: T3.01, T3.02, T3.03, T3.04, T3.05-P, T3.05, T3.06, T3.07, T3.08
+> y T3.09 implementadas y validadas; T3.10 sigue pendiente.
 > El slice 002 permanece cerrado e integrado en `main`; las tareas completadas
 > aquí se limitan al contrato, la política matemática, la comparación pura de
 > T3.01–T3.04, la extensión de provenance T3.05-P y la normalización
@@ -217,7 +217,7 @@ capturas reales o geometría constructiva sin una autorización independiente.
 
 ## T3.08 — Validar `living-room-main`
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** ejecutar el comparador contra el JSON real y el artefacto
   `.blend` ya versionado, sin regenerarlo.
 - **Archivos previstos:** `docs/setup/003-room-scene-comparison-validation.md`
@@ -225,19 +225,25 @@ capturas reales o geometría constructiva sin una autorización independiente.
 - **Validación:** 22 segmentos, 6 openings, reconciliaciones, V2 derived,
   seis espesores measured, dieciséis fallbacks, cero proxies verticales,
   `proxy_only=true` y `constructive_geometry=false`.
+- **Evidencia:** `docs/setup/003-room-scene-comparison-validation.md` consolida
+  la acceptance real aprobada de T3.05/T3.06, el artefacto generator-2 y la
+  equivalencia geométrica con el histórico, sin regenerar ni modificar escenas.
 - **Rollback:** retirar evidencia documental, no el artefacto canónico.
 - **Autorización:** requiere autorización explícita para abrir Blender si la
   integración no puede ejecutarse fuera de Blender.
 
 ## T3.09 — Documentar gates, privacidad y reproducibilidad
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** registrar comandos, resultados, límites de infraestructura,
   provenance, hashes y ausencia de datos personales.
 - **Archivos previstos:** `docs/setup/003-room-scene-comparison-validation.md`,
   `spec.md`, `plan.md` si se descubre una decisión contractual nueva.
 - **Validación:** revisión contra `.quality/QUALITY.md`, `CONTRIBUTING.md` y
   `AGENTS.md`; no afirmar PASS sin evidencia.
+- **Evidencia:** el documento de setup registra comandos y resultados de gates,
+  versiones, hashes, privacidad, límites de provenance, determinismo, no
+  mutación y reproducibilidad con rutas relativas al repositorio.
 - **Rollback:** revertir documentación del slice 003.
 - **Fuera:** limpieza amplia de snapshots históricos de slices anteriores.
 
@@ -266,8 +272,9 @@ capturas reales o geometría constructiva sin una autorización independiente.
 T3.05 queda `[x]` tras la verificación read-only contra Blender real.
 T3.06 queda `[x]` tras la acceptance real contra el artefacto generator-2 y
 la equivalencia geométrica con el histórico. T3.07 queda `[x]` tras completar
-la matriz de mutaciones y regresiones sin cambios de producción; T3.08 y
-posteriores permanecen `[ ]`. T3.01–T3.04 y T3.05-P cubren el
+la matriz de mutaciones y regresiones sin cambios de producción; T3.08 y T3.09
+quedan `[x]` tras consolidar la evidencia real y la documentación de gates en
+el setup del slice; T3.10 permanece `[ ]`. T3.01–T3.04 y T3.05-P cubren el
 contrato, la política matemática, la comparación pura room → plan y la
 provenance aditiva v1.1; T3.05 añade el contrato y adapter read-only verificado
 contra la escena real, pero no inicia `plan_to_scene` ni la integración
