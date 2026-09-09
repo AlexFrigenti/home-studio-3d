@@ -3,6 +3,7 @@ import math
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -135,6 +136,44 @@ def _spatial_binding(plan, report_overrides=None, **binding_overrides):
     }
     binding.update(binding_overrides)
     return binding
+
+
+def _spatial_finding(
+    code="furniture_overlap",
+    *,
+    item_id="sofa",
+    related_entity_type="furniture",
+    related_entity_id="chair",
+    severity="error",
+    message="spatial finding",
+    details=None,
+):
+    finding = {
+        "code": code,
+        "severity": severity,
+        "item_id": item_id,
+        "related_entity_type": related_entity_type,
+        "related_entity_id": related_entity_id,
+        "message": message,
+    }
+    if details is not None:
+        finding["details"] = details
+    return finding
+
+
+def _spatial_limitation(
+    code="opening_proxy_only",
+    *,
+    entity_type="opening",
+    entity_ids=None,
+    message="limitation",
+):
+    return {
+        "code": code,
+        "entity_type": entity_type,
+        "entity_ids": list(entity_ids or ["opening-01"]),
+        "message": message,
+    }
 
 
 def _compare(
@@ -522,6 +561,373 @@ class VariantComparisonContractTests(unittest.TestCase):
         self.assertNotIn("errors_introduced", data)
         self.assertNotIn("warnings_introduced", data)
         self.assertNotIn("limitations_introduced", data)
+
+    def test_t503_emits_spatial_delta_and_per_layout_summary(self):
+        data = _compare().to_dict()
+
+        delta = data["pairwise_deltas"][0]
+        spatial = delta["spatial_delta"]
+        self.assertTrue(data["valid"])
+        self.assertTrue(spatial["baseline_valid"])
+        self.assertTrue(spatial["variant_valid"])
+        self.assertEqual(spatial["valid_transition"], "unchanged_valid")
+        self.assertEqual(spatial["introduced_errors"], [])
+        self.assertEqual(spatial["resolved_errors"], [])
+        self.assertEqual(spatial["persistent_errors"], [])
+        self.assertEqual(spatial["introduced_warnings"], [])
+        self.assertEqual(spatial["introduced_limitations"], [])
+        self.assertEqual(spatial["checked_items_delta"]["baseline"], ["sofa"])
+        self.assertEqual(spatial["checked_items_delta"]["variant"], ["sofa"])
+
+        summary = data["summary"]["variant_summaries"][0]
+        self.assertTrue(summary["spatial_valid"])
+        self.assertEqual(summary["checked_items"], ["sofa"])
+        self.assertEqual(summary["error_count"], 0)
+        self.assertEqual(summary["warning_count"], 0)
+        self.assertEqual(summary["limitation_count"], 0)
+        self.assertEqual(summary["introduced_error_count"], 0)
+        self.assertEqual(summary["resolved_error_count"], 0)
+        self.assertEqual(summary["introduced_limitation_count"], 0)
+
+    def test_t503_error_introduction_is_structured_and_does_not_invalidate_comparison(self):
+        variant = _plan("variant-a")
+        report = _compare(
+            variants=[variant],
+            variant_reports=[
+                _spatial_binding(
+                    variant,
+                    report_overrides={
+                        "valid": False,
+                        "errors": [_spatial_finding("furniture_overlap")],
+                        "summary": {"errors": 1, "warnings": 0, "limitations": 0},
+                    },
+                )
+            ],
+        )
+
+        data = report.to_dict()
+        spatial = data["pairwise_deltas"][0]["spatial_delta"]
+        self.assertTrue(report.valid)
+        self.assertFalse(spatial["variant_valid"])
+        self.assertEqual(spatial["valid_transition"], "became_invalid")
+        self.assertEqual([item["code"] for item in spatial["introduced_errors"]], ["furniture_overlap"])
+        self.assertEqual(spatial["resolved_errors"], [])
+
+    def test_t503_error_resolution_and_persistence_use_structural_identity(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+        persistent = _spatial_finding(message="baseline wording")
+        resolved = _spatial_finding("furniture_wall_intersection", message="wall wording")
+        introduced = _spatial_finding("furniture_out_of_floor", message="floor wording")
+        baseline_binding = _spatial_binding(
+            baseline,
+            report_overrides={
+                "valid": False,
+                "errors": [persistent, resolved, copy.deepcopy(persistent)],
+                "summary": {"errors": 2, "warnings": 0, "limitations": 0},
+            },
+        )
+        variant_binding = _spatial_binding(
+            variant,
+            report_overrides={
+                "valid": False,
+                "errors": [
+                    dict(persistent, message="variant wording"),
+                    introduced,
+                ],
+                "summary": {"errors": 2, "warnings": 0, "limitations": 0},
+            },
+        )
+
+        spatial = _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=baseline_binding,
+            variant_reports=[variant_binding],
+        ).to_dict()["pairwise_deltas"][0]["spatial_delta"]
+
+        self.assertEqual([item["code"] for item in spatial["persistent_errors"]], ["furniture_overlap"])
+        self.assertEqual([item["code"] for item in spatial["resolved_errors"]], ["furniture_wall_intersection"])
+        self.assertEqual([item["code"] for item in spatial["introduced_errors"]], ["furniture_out_of_floor"])
+
+    def test_t503_same_code_on_different_items_is_not_persistent(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+        baseline_report = _spatial_binding(
+            baseline,
+            report_overrides={
+                "valid": False,
+                "errors": [_spatial_finding(item_id="sofa")],
+                "summary": {"errors": 1, "warnings": 0, "limitations": 0},
+            },
+        )
+        variant_report = _spatial_binding(
+            variant,
+            report_overrides={
+                "valid": False,
+                "errors": [_spatial_finding(item_id="chair")],
+                "summary": {"errors": 1, "warnings": 0, "limitations": 0},
+            },
+        )
+
+        spatial = _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=baseline_report,
+            variant_reports=[variant_report],
+        ).to_dict()["pairwise_deltas"][0]["spatial_delta"]
+
+        self.assertEqual(spatial["persistent_errors"], [])
+        self.assertEqual(spatial["resolved_errors"][0]["item_id"], "sofa")
+        self.assertEqual(spatial["introduced_errors"][0]["item_id"], "chair")
+
+    def test_t503_warnings_and_limitations_remain_separate(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+        baseline_report = _spatial_binding(
+            baseline,
+            report_overrides={
+                "warnings": [_spatial_finding("warning_code", severity="warning")],
+                "limitations": [_spatial_limitation("wall_thickness_fallback")],
+                "summary": {"errors": 0, "warnings": 1, "limitations": 1},
+            },
+        )
+        variant_report = _spatial_binding(
+            variant,
+            report_overrides={
+                "warnings": [_spatial_finding("new_warning", severity="warning")],
+                "limitations": [_spatial_limitation("opening_proxy_only")],
+                "summary": {"errors": 0, "warnings": 1, "limitations": 1},
+            },
+        )
+
+        spatial = _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=baseline_report,
+            variant_reports=[variant_report],
+        ).to_dict()["pairwise_deltas"][0]["spatial_delta"]
+
+        self.assertEqual([item["code"] for item in spatial["resolved_warnings"]], ["warning_code"])
+        self.assertEqual([item["code"] for item in spatial["introduced_warnings"]], ["new_warning"])
+        self.assertEqual([item["code"] for item in spatial["resolved_limitations"]], ["wall_thickness_fallback"])
+        self.assertEqual([item["code"] for item in spatial["introduced_limitations"]], ["opening_proxy_only"])
+        self.assertNotIn("errors", spatial)
+
+    def test_t503_persistent_warnings_and_limitations_are_reported_once(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+        warning = _spatial_finding("stable_warning", severity="warning", message="baseline wording")
+        limitation = _spatial_limitation("opening_direction_unknown", message="baseline wording")
+        baseline_report = _spatial_binding(
+            baseline,
+            report_overrides={
+                "warnings": [warning],
+                "limitations": [limitation],
+                "summary": {"errors": 0, "warnings": 1, "limitations": 1},
+            },
+        )
+        variant_report = _spatial_binding(
+            variant,
+            report_overrides={
+                "warnings": [dict(warning, message="variant wording")],
+                "limitations": [dict(limitation, message="variant wording")],
+                "summary": {"errors": 0, "warnings": 1, "limitations": 1},
+            },
+        )
+
+        spatial = _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=baseline_report,
+            variant_reports=[variant_report],
+        ).to_dict()["pairwise_deltas"][0]["spatial_delta"]
+
+        self.assertEqual([item["code"] for item in spatial["persistent_warnings"]], ["stable_warning"])
+        self.assertEqual(
+            [item["code"] for item in spatial["persistent_limitations"]],
+            ["opening_direction_unknown"],
+        )
+        self.assertEqual(spatial["introduced_warnings"], [])
+        self.assertEqual(spatial["resolved_limitations"], [])
+
+    def test_t503_valid_transitions_are_objective(self):
+        cases = (
+            (True, True, "unchanged_valid"),
+            (True, False, "became_invalid"),
+            (False, True, "became_valid"),
+            (False, False, "unchanged_invalid"),
+        )
+
+        for baseline_valid, variant_valid, expected in cases:
+            with self.subTest(baseline_valid=baseline_valid, variant_valid=variant_valid):
+                baseline = _plan("baseline")
+                variant = _plan("variant-a")
+                baseline_binding = _spatial_binding(
+                    baseline,
+                    report_overrides={"valid": baseline_valid},
+                )
+                variant_binding = _spatial_binding(
+                    variant,
+                    report_overrides={"valid": variant_valid},
+                )
+                spatial = _compare(
+                    baseline=baseline,
+                    variants=[variant],
+                    baseline_report=baseline_binding,
+                    variant_reports=[variant_binding],
+                ).to_dict()["pairwise_deltas"][0]["spatial_delta"]
+                self.assertEqual(spatial["valid_transition"], expected)
+
+    def test_t503_checked_items_delta_is_deterministic(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+        baseline_report = _spatial_binding(
+            baseline,
+            report_overrides={"checked_items": ["sofa", "chair"]},
+        )
+        variant_report = _spatial_binding(
+            variant,
+            report_overrides={"checked_items": ["table", "sofa"]},
+        )
+
+        spatial = _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=baseline_report,
+            variant_reports=[variant_report],
+        ).to_dict()["pairwise_deltas"][0]["spatial_delta"]
+
+        self.assertEqual(spatial["checked_items_delta"], {
+            "baseline": ["chair", "sofa"],
+            "variant": ["sofa", "table"],
+            "added": ["table"],
+            "removed": ["chair"],
+            "count_delta": 0,
+        })
+
+    def test_t503_reordered_findings_and_limitations_do_not_change_report(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+        errors = [
+            _spatial_finding("furniture_wall_intersection", item_id="sofa"),
+            _spatial_finding("furniture_overlap", item_id="chair"),
+        ]
+        limitations = [
+            _spatial_limitation("opening_proxy_only", entity_ids=["opening-02"]),
+            _spatial_limitation("wall_thickness_fallback", entity_ids=["wall-01"]),
+        ]
+        first = _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=_spatial_binding(baseline),
+            variant_reports=[
+                _spatial_binding(
+                    variant,
+                    report_overrides={
+                        "valid": False,
+                        "errors": errors,
+                        "limitations": limitations,
+                    },
+                )
+            ],
+        )
+        second = _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=_spatial_binding(baseline),
+            variant_reports=[
+                _spatial_binding(
+                    variant,
+                    report_overrides={
+                        "valid": False,
+                        "errors": list(reversed(errors)),
+                        "limitations": list(reversed(limitations)),
+                    },
+                )
+            ],
+        )
+
+        self.assertEqual(first.to_dict(), second.to_dict())
+        self.assertEqual(first.logical_signature, second.logical_signature)
+
+    def test_t503_malformed_spatial_content_is_structured_without_deltas(self):
+        variant = _plan("variant-a")
+        malformed_reports = (
+            {"errors": [None]},
+            {"limitations": [None]},
+            {"checked_items": [None]},
+        )
+
+        for overrides in malformed_reports:
+            with self.subTest(overrides=overrides):
+                report = _compare(
+                    variants=[variant],
+                    variant_reports=[_spatial_binding(variant, report_overrides=overrides)],
+                )
+                self.assertFalse(report.valid)
+                self.assertIn(
+                    "malformed_spatial_report",
+                    {finding["code"] for finding in report.to_dict()["errors"]},
+                )
+                self.assertEqual(report.to_dict()["pairwise_deltas"], [])
+
+    def test_t503_does_not_recalculate_spatial_validation(self):
+        variant_module = sys.modules["compare_furniture_variants"]
+        with mock.patch.object(
+            variant_module,
+            "validate_furniture_spatial",
+            side_effect=AssertionError("spatial validation must not be recalculated"),
+            create=True,
+        ):
+            report = _compare()
+
+        self.assertTrue(report.valid)
+
+    def test_t503_does_not_mutate_spatial_reports(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+        baseline_report = _spatial_binding(
+            baseline,
+            report_overrides={
+                "errors": [_spatial_finding("furniture_overlap")],
+                "limitations": [_spatial_limitation("opening_proxy_only")],
+            },
+        )
+        variant_report = _spatial_binding(variant)
+        before = copy.deepcopy((baseline_report, variant_report))
+
+        _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=baseline_report,
+            variant_reports=[variant_report],
+        )
+
+        self.assertEqual((baseline_report, variant_report), before)
+
+    def test_t503_spatial_changes_update_signature_without_changing_item_deltas(self):
+        variant = _plan("variant-a")
+        base = _compare(variants=[variant])
+        changed = _compare(
+            variants=[variant],
+            variant_reports=[
+                _spatial_binding(
+                    variant,
+                    report_overrides={
+                        "valid": False,
+                        "errors": [_spatial_finding("furniture_out_of_floor")],
+                        "summary": {"errors": 1, "warnings": 0, "limitations": 0},
+                    },
+                )
+            ],
+        )
+
+        self.assertNotEqual(base.logical_signature, changed.logical_signature)
+        self.assertEqual(
+            base.to_dict()["pairwise_deltas"][0]["common_items"],
+            changed.to_dict()["pairwise_deltas"][0]["common_items"],
+        )
 
     def test_no_variants_is_structured_invalid_report(self):
         report = _compare(variants=[], variant_reports=[])

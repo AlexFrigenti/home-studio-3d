@@ -4,7 +4,7 @@
 
 **Goal:** Añadir un comparator puro que compare dos o más FurniturePlans y sus SpatialValidationReports para la misma habitación, produciendo un VariantComparisonReport determinista y sin ranking subjetivo.
 
-**Architecture:** T5.01 implementa `compare_furniture_variants.py` con planes y wrappers espaciales explícitos, `baseline_layout_id`, validación de binding/versiones y serialización determinista. T5.02 añade sets y deltas de items baseline→variante; el resumen/delta espacial queda para T5.03. No leerá layouts, room JSON ni Blender.
+**Architecture:** T5.01 implementa `compare_furniture_variants.py` con planes y wrappers espaciales explícitos, `baseline_layout_id`, validación de binding/versiones y serialización determinista. T5.02 añade sets y deltas de items baseline→variante; T5.03 consume los reports espaciales ya calculados y añade summaries por layout y `spatial_delta`. No leerá layouts, room JSON ni Blender ni recalculará spatial validation.
 
 **Tech Stack:** Python estándar, mappings/dataclasses inmutables según los patrones furniture existentes, `unittest`, JSON canónico y SHA-256 lógico opcional. Sin `bpy`, dependencias externas ni cambios de room pipeline.
 
@@ -91,7 +91,7 @@ Run: `python -m unittest tests/furniture/test_furniture_variant_comparison.py`
 
 Expected: PASS con entradas reordenadas y snapshots de inputs sin cambios.
 
-**Cierre T5.02:** implementado y validado. Produce únicamente deltas de plan y metadata/provenance; no consume semánticamente `valid`, `errors`, `warnings` ni `limitations` del report espacial.
+**Cierre T5.02:** implementado y validado. Produce únicamente deltas de plan y metadata/provenance; T5.03 es el único checkpoint que consume semánticamente `valid`, `errors`, `warnings` y `limitations` del report espacial.
 
 ### Task 5.03: Integrar deltas de SpatialValidationReport
 
@@ -101,27 +101,29 @@ Expected: PASS con entradas reordenadas y snapshots de inputs sin cambios.
 
 **Interfaces:**
 - Consumes: `SpatialValidationReport` existente asociado explícitamente a cada layout.
-- Produces: resumen por layout y `spatial_deltas` con errores, warnings y limitations introducidos/resueltos.
+- Produces: resumen por layout y `spatial_delta` baseline→variante con errores, warnings y limitations introducidos/resueltos.
 
-- [ ] **Step 1: Escribir tests con reports válidos y mutados**
+- [x] **Step 1: Escribir tests con reports válidos y mutados**
 
 Construir reports sintéticos a partir de `furniture-spatial-validation-1` y mutar únicamente sus findings/limitations para demostrar introducciones y resoluciones sin llamar al validator.
 
-- [ ] **Step 2: Ejecutar los tests de integración espacial**
+- [x] **Step 2: Ejecutar los tests de integración espacial**
 
 Run: `python -m unittest tests/furniture/test_furniture_variant_comparison.py`
 
 Expected: FAIL si el comparator recalcula, mezcla por mensaje o promociona limitations a errors.
 
-- [ ] **Step 3: Implementar consumo read-only de reports**
+- [x] **Step 3: Implementar consumo read-only de reports**
 
 Normalizar findings mediante código, severity, item y entidades relacionadas; conservar `valid`, counts, checked items y limitations por layout; no invocar `validate_furniture_spatial`.
 
-- [ ] **Step 4: Confirmar anti-cascade espacial**
+- [x] **Step 4: Confirmar anti-cascade espacial**
 
 Run: `python -m unittest tests/furniture/test_furniture_variant_comparison.py`
 
 Expected: PASS con reportes ordenados, findings introducidos/resueltos y limitations separadas.
+
+**Cierre T5.03:** implementado y validado con `spatial_delta` determinista por variante, transición objetiva de `valid`, comparación de `checked_items`, deduplicación estructural de findings y summaries espaciales por layout. El comparator no invoca `validate_furniture_spatial`; `SpatialValidationReport.valid=false` permanece como hecho y no invalida por sí solo el report de comparación.
 
 ### Task 5.04: Completar matriz de regresión y mutaciones
 

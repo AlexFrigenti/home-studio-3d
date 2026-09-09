@@ -1,4 +1,4 @@
-"""Pure T5.01 contract validation for furniture layout variants."""
+"""Pure T5.01–T5.03 comparison for furniture layout variants."""
 
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ class VariantFinding:
 
 @dataclass(frozen=True)
 class VariantComparisonReport:
-    """Serializable result for the T5.01/T5.02 variant contract."""
+    """Serializable result for the T5.01–T5.03 variant contract."""
 
     report_version: str
     valid: bool
@@ -504,7 +504,269 @@ def _validate_spatial_binding(
         "coordinate_system": binding.get("coordinate_system"),
         "report_version": report.get("report_version"),
         "report_valid": report.get("valid"),
+        "report": report,
     }, []
+
+
+def _spatial_finding_snapshot(value: Any) -> dict[str, Any] | None:
+    finding = _to_mapping(value)
+    if finding is None:
+        return None
+    if not _is_nonempty_string(finding.get("code")):
+        return None
+    if not _is_nonempty_string(finding.get("severity")):
+        return None
+
+    snapshot: dict[str, Any] = {
+        "code": finding["code"],
+        "severity": finding["severity"],
+    }
+    for field in ("item_id", "related_entity_type", "related_entity_id"):
+        if field in finding:
+            value = finding[field]
+            if value is not None and not _is_nonempty_string(value):
+                return None
+            snapshot[field] = value
+    if "details" in finding:
+        details = finding["details"]
+        if not isinstance(details, Mapping):
+            return None
+        try:
+            snapshot["details"] = _canonical_value(details)
+        except (TypeError, ValueError):
+            return None
+    return snapshot
+
+
+def _normalize_spatial_findings(
+    values: Sequence[Any],
+    *,
+    layout_id: str,
+    field: str,
+) -> tuple[list[dict[str, Any]], list[VariantFinding]]:
+    normalized: dict[str, dict[str, Any]] = {}
+    errors: list[VariantFinding] = []
+    for index, value in enumerate(values):
+        snapshot = _spatial_finding_snapshot(value)
+        if snapshot is None:
+            errors.append(
+                _make_finding(
+                    "malformed_spatial_report",
+                    layout_id=layout_id,
+                    field=f"report.{field}[{index}]",
+                    message="spatial finding must contain stable structured fields",
+                )
+            )
+            continue
+        normalized[_canonical_json(snapshot)] = snapshot
+    return [normalized[key] for key in sorted(normalized)], errors
+
+
+def _normalize_spatial_limitations(
+    values: Sequence[Any],
+    *,
+    layout_id: str,
+) -> tuple[list[dict[str, Any]], list[VariantFinding]]:
+    normalized: dict[str, dict[str, Any]] = {}
+    errors: list[VariantFinding] = []
+    for index, value in enumerate(values):
+        limitation = _to_mapping(value)
+        if limitation is None:
+            errors.append(
+                _make_finding(
+                    "malformed_spatial_report",
+                    layout_id=layout_id,
+                    field=f"report.limitations[{index}]",
+                    message="limitation must be a mapping",
+                )
+            )
+            continue
+        code = limitation.get("code")
+        entity_type = limitation.get("entity_type")
+        entity_ids = limitation.get("entity_ids")
+        if (
+            not _is_nonempty_string(code)
+            or not _is_nonempty_string(entity_type)
+            or _as_sequence(entity_ids) is None
+            or any(not _is_nonempty_string(entity_id) for entity_id in entity_ids)
+        ):
+            errors.append(
+                _make_finding(
+                    "malformed_spatial_report",
+                    layout_id=layout_id,
+                    field=f"report.limitations[{index}]",
+                    message="limitation must contain code, entity_type and string entity_ids",
+                )
+            )
+            continue
+        snapshot = {
+            "code": code,
+            "entity_type": entity_type,
+            "entity_ids": sorted(set(entity_ids)),
+        }
+        if "details" in limitation:
+            details = limitation["details"]
+            if not isinstance(details, Mapping):
+                errors.append(
+                    _make_finding(
+                        "malformed_spatial_report",
+                        layout_id=layout_id,
+                        field=f"report.limitations[{index}].details",
+                        message="limitation details must be a mapping",
+                    )
+                )
+                continue
+            try:
+                snapshot["details"] = _canonical_value(details)
+            except (TypeError, ValueError):
+                errors.append(
+                    _make_finding(
+                        "malformed_spatial_report",
+                        layout_id=layout_id,
+                        field=f"report.limitations[{index}].details",
+                        message="limitation details must contain finite canonical values",
+                    )
+                )
+                continue
+        normalized[_canonical_json(snapshot)] = snapshot
+    return [normalized[key] for key in sorted(normalized)], errors
+
+
+def _normalize_checked_items(
+    values: Sequence[Any],
+    *,
+    layout_id: str,
+) -> tuple[list[str], list[VariantFinding]]:
+    if any(not _is_nonempty_string(item_id) for item_id in values):
+        return [], [
+            _make_finding(
+                "malformed_spatial_report",
+                layout_id=layout_id,
+                field="report.checked_items",
+                message="checked_items must contain non-empty string IDs",
+            )
+        ]
+    return sorted(set(values)), []
+
+
+def _extract_spatial_state(
+    spatial_info: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, list[VariantFinding]]:
+    layout_id = spatial_info["layout_id"]
+    report = spatial_info["report"]
+    errors: list[VariantFinding] = []
+    normalized_errors, finding_errors = _normalize_spatial_findings(
+        report["errors"], layout_id=layout_id, field="errors"
+    )
+    normalized_warnings, warning_errors = _normalize_spatial_findings(
+        report["warnings"], layout_id=layout_id, field="warnings"
+    )
+    normalized_limitations, limitation_errors = _normalize_spatial_limitations(
+        report["limitations"], layout_id=layout_id
+    )
+    checked_items, checked_item_errors = _normalize_checked_items(
+        report["checked_items"], layout_id=layout_id
+    )
+    errors.extend(finding_errors)
+    errors.extend(warning_errors)
+    errors.extend(limitation_errors)
+    errors.extend(checked_item_errors)
+    if errors:
+        return None, errors
+    return {
+        "valid": report["valid"],
+        "errors": normalized_errors,
+        "warnings": normalized_warnings,
+        "limitations": normalized_limitations,
+        "checked_items": checked_items,
+    }, []
+
+
+def _spatial_summary(
+    plan_info: Mapping[str, Any],
+    spatial_info: Mapping[str, Any],
+    spatial_state: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "layout_id": plan_info["layout_id"],
+        "furniture_plan_version": plan_info["furniture_plan_version"],
+        "furniture_plan_logical_signature": _safe_value(plan_info["logical_signature"]),
+        "spatial_report_version": spatial_info["report_version"],
+        "spatial_valid": spatial_state["valid"],
+        "checked_items": list(spatial_state["checked_items"]),
+        "item_count": len(spatial_state["checked_items"]),
+        "error_count": len(spatial_state["errors"]),
+        "warning_count": len(spatial_state["warnings"]),
+        "limitation_count": len(spatial_state["limitations"]),
+        "error_codes": sorted({item["code"] for item in spatial_state["errors"]}),
+        "warning_codes": sorted({item["code"] for item in spatial_state["warnings"]}),
+        "limitation_codes": sorted({item["code"] for item in spatial_state["limitations"]}),
+    }
+
+
+def _spatial_entries_delta(
+    baseline_values: Sequence[Mapping[str, Any]],
+    variant_values: Sequence[Mapping[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    baseline_by_key = {_canonical_json(value): dict(value) for value in baseline_values}
+    variant_by_key = {_canonical_json(value): dict(value) for value in variant_values}
+    baseline_keys = set(baseline_by_key)
+    variant_keys = set(variant_by_key)
+    return (
+        [variant_by_key[key] for key in sorted(variant_keys - baseline_keys)],
+        [baseline_by_key[key] for key in sorted(baseline_keys - variant_keys)],
+        [baseline_by_key[key] for key in sorted(baseline_keys & variant_keys)],
+    )
+
+
+def _valid_transition(baseline_valid: bool, variant_valid: bool) -> str:
+    if baseline_valid and variant_valid:
+        return "unchanged_valid"
+    if baseline_valid and not variant_valid:
+        return "became_invalid"
+    if not baseline_valid and variant_valid:
+        return "became_valid"
+    return "unchanged_invalid"
+
+
+def _build_spatial_delta(
+    baseline_state: Mapping[str, Any],
+    variant_state: Mapping[str, Any],
+) -> dict[str, Any]:
+    introduced_errors, resolved_errors, persistent_errors = _spatial_entries_delta(
+        baseline_state["errors"], variant_state["errors"]
+    )
+    introduced_warnings, resolved_warnings, persistent_warnings = _spatial_entries_delta(
+        baseline_state["warnings"], variant_state["warnings"]
+    )
+    introduced_limitations, resolved_limitations, persistent_limitations = _spatial_entries_delta(
+        baseline_state["limitations"], variant_state["limitations"]
+    )
+    baseline_checked = list(baseline_state["checked_items"])
+    variant_checked = list(variant_state["checked_items"])
+    baseline_checked_set = set(baseline_checked)
+    variant_checked_set = set(variant_checked)
+    return {
+        "baseline_valid": baseline_state["valid"],
+        "variant_valid": variant_state["valid"],
+        "valid_transition": _valid_transition(baseline_state["valid"], variant_state["valid"]),
+        "introduced_errors": introduced_errors,
+        "resolved_errors": resolved_errors,
+        "persistent_errors": persistent_errors,
+        "introduced_warnings": introduced_warnings,
+        "resolved_warnings": resolved_warnings,
+        "persistent_warnings": persistent_warnings,
+        "introduced_limitations": introduced_limitations,
+        "resolved_limitations": resolved_limitations,
+        "persistent_limitations": persistent_limitations,
+        "checked_items_delta": {
+            "baseline": baseline_checked,
+            "variant": variant_checked,
+            "added": sorted(variant_checked_set - baseline_checked_set),
+            "removed": sorted(baseline_checked_set - variant_checked_set),
+            "count_delta": len(variant_checked) - len(baseline_checked),
+        },
+    }
 
 
 def _compare_binding(
@@ -1091,6 +1353,7 @@ def _build_pairwise_delta(
     variant_layout_id: str,
     baseline_items: Mapping[str, Mapping[str, Any]],
     variant_items: Mapping[str, Mapping[str, Any]],
+    spatial_delta: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     baseline_ids = set(baseline_items)
     variant_ids = set(variant_items)
@@ -1145,7 +1408,7 @@ def _build_pairwise_delta(
         "resized_count": len(resized_items),
         "metadata_changed_count": len(metadata_changed_items),
     }
-    return {
+    result = {
         "from_layout_id": baseline_layout_id,
         "to_layout_id": variant_layout_id,
         "common_items": common_items,
@@ -1163,6 +1426,23 @@ def _build_pairwise_delta(
         "metadata_changes": metadata_changes,
         "summary": summary,
     }
+    if spatial_delta is not None:
+        result["spatial_delta"] = _plain_value(spatial_delta)
+        summary.update(
+            {
+                "introduced_error_count": len(spatial_delta["introduced_errors"]),
+                "resolved_error_count": len(spatial_delta["resolved_errors"]),
+                "persistent_error_count": len(spatial_delta["persistent_errors"]),
+                "introduced_warning_count": len(spatial_delta["introduced_warnings"]),
+                "resolved_warning_count": len(spatial_delta["resolved_warnings"]),
+                "persistent_warning_count": len(spatial_delta["persistent_warnings"]),
+                "introduced_limitation_count": len(spatial_delta["introduced_limitations"]),
+                "resolved_limitation_count": len(spatial_delta["resolved_limitations"]),
+                "persistent_limitation_count": len(spatial_delta["persistent_limitations"]),
+                "valid_transition": spatial_delta["valid_transition"],
+            }
+        )
+    return result
 
 
 def _build_report(
@@ -1173,6 +1453,7 @@ def _build_report(
     baseline_info: Mapping[str, Any] | None,
     errors: Sequence[VariantFinding],
     pairwise_deltas: Sequence[Mapping[str, Any]] = (),
+    spatial_summaries: Sequence[Mapping[str, Any]] = (),
 ) -> VariantComparisonReport:
     ordered_errors = tuple(sorted(errors, key=_finding_sort_key))
     ordered_ids = tuple(sorted(set(compared_layout_ids)))
@@ -1182,13 +1463,32 @@ def _build_report(
             key=lambda delta: (str(delta.get("to_layout_id", "")), str(delta.get("from_layout_id", ""))),
         )
     )
-    variant_summaries = [
-        {
+    ordered_spatial_summaries = tuple(
+        sorted(
+            (_plain_value(summary) for summary in spatial_summaries),
+            key=lambda summary: str(summary.get("layout_id", "")),
+        )
+    )
+    spatial_by_layout = {
+        summary["layout_id"]: summary
+        for summary in ordered_spatial_summaries
+    }
+    variant_summaries = []
+    for delta in ordered_deltas:
+        summary = {
             "layout_id": delta["to_layout_id"],
             **_plain_value(delta["summary"]),
         }
-        for delta in ordered_deltas
-    ]
+        spatial_summary = spatial_by_layout.get(delta["to_layout_id"])
+        if spatial_summary is not None:
+            summary.update(
+                {
+                    key: value
+                    for key, value in spatial_summary.items()
+                    if key != "layout_id"
+                }
+            )
+        variant_summaries.append(summary)
     summary = {
         "variant_count": len(compared_layout_ids),
         "layout_bindings": [
@@ -1200,6 +1500,7 @@ def _build_report(
             for row in sorted(binding_rows, key=lambda item: item["layout_id"])
         ],
         "variant_summaries": variant_summaries,
+        "spatial_summaries": list(ordered_spatial_summaries),
         "error_count": len(ordered_errors),
         "warning_count": 0,
         "info_count": 0,
@@ -1333,17 +1634,28 @@ def compare_layout_variants(
         spatial_infos.append(spatial_info)
         errors.extend(spatial_errors)
 
+    spatial_states: list[dict[str, Any] | None] = []
+    spatial_summary_rows: list[dict[str, Any]] = []
     all_infos = list(zip(plan_infos, spatial_infos))
     for plan_info, spatial_info in all_infos:
         if plan_info is None or spatial_info is None:
+            spatial_states.append(None)
             continue
         errors.extend(_compare_binding(plan_info, spatial_info, layout_id=plan_info["layout_id"]))
+        spatial_state, spatial_content_errors = _extract_spatial_state(spatial_info)
+        spatial_states.append(spatial_state)
+        errors.extend(spatial_content_errors)
+        if spatial_state is not None:
+            spatial_summary_rows.append(
+                _spatial_summary(plan_info, spatial_info, spatial_state)
+            )
         if plan_info["layout_id"] not in {row["layout_id"] for row in binding_rows}:
             binding_rows.append(
                 {
                     "layout_id": plan_info["layout_id"],
                     "furniture_plan_logical_signature": plan_info["logical_signature"],
                     "spatial_report_version": spatial_info["report_version"],
+                    "spatial_summary": spatial_summary_rows[-1] if spatial_state is not None else None,
                 }
             )
 
@@ -1385,12 +1697,21 @@ def compare_layout_variants(
             for variant_layout_id, variant_items in sorted(variant_item_rows, key=lambda row: row[0]):
                 if variant_items is None:
                     continue
+                variant_index = next(
+                    index
+                    for index, info in enumerate(plan_infos[1:], start=1)
+                    if info is not None and info["layout_id"] == variant_layout_id
+                )
                 pairwise_deltas.append(
                     _build_pairwise_delta(
                         baseline_info["layout_id"],
                         variant_layout_id,
                         baseline_items,
                         variant_items,
+                        _build_spatial_delta(
+                            spatial_states[0],
+                            spatial_states[variant_index],
+                        ),
                     )
                 )
 
@@ -1401,6 +1722,7 @@ def compare_layout_variants(
         baseline_info=baseline_info,
         errors=errors,
         pairwise_deltas=pairwise_deltas,
+        spatial_summaries=spatial_summary_rows,
     )
 
 
