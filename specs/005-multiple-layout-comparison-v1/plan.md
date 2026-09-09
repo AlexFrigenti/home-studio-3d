@@ -135,23 +135,25 @@ Expected: PASS con reportes ordenados, findings introducidos/resueltos y limitat
 - Consumes: API pública `compare_layout_variants` y sus mappings serializables.
 - Produces: cobertura de error estructurado, determinismo, serialización y no mutation.
 
-- [ ] **Step 1: Añadir la matriz negativa**
+- [x] **Step 1: Añadir la matriz negativa**
 
 Cubrir room mismatch, plan version mismatch, spatial version mismatch, duplicate item, malformed item, added/removed, move, rotate, resize, type/status/source, spatial error, limitation y baseline inválido.
 
-- [ ] **Step 2: Añadir pruebas de determinismo**
+- [x] **Step 2: Añadir pruebas de determinismo**
 
 Comparar reports con variantes, items, mappings y findings reordenados; exigir igualdad exacta de `to_dict()` y de `logical_signature`.
 
-- [ ] **Step 3: Añadir pruebas de no mutation**
+- [x] **Step 3: Añadir pruebas de no mutation**
 
 Tomar deep copies de planes, reports y wrappers, ejecutar el comparator y comprobar que las copias coinciden con los inputs posteriores.
 
-- [ ] **Step 4: Ejecutar la matriz completa**
+- [x] **Step 4: Ejecutar la matriz completa**
 
 Run: `python -m unittest tests/furniture/test_furniture_variant_comparison.py`
 
 Expected: PASS sin Blender y sin archivos temporales.
+
+**Cierre T5.04:** implementado y validado con 75 tests del comparador. La matriz cubre mutaciones de binding, items, geometría, metadata/provenance y facts espaciales; además cubre límites de tolerancia, payloads malformados, deduplicación, determinismo, sensibilidad de firma y no mutación. El único RED real fue la comparación exacta de un límite lineal de `1e-6` m, corregida mínimamente con representación decimal estable; no se introdujo refactor.
 
 ### Task 5.05: Cerrar acceptance sintética de living-room-main
 

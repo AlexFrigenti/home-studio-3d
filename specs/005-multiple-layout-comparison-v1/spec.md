@@ -1,6 +1,6 @@
 # Especificación: Multiple Layout Comparison / Variant Review v1
 
-> Estado: T5.01–T5.03 implementados y validados; T5.04–T5.06 no implementados.
+> Estado: T5.01–T5.04 implementados y validados; T5.05–T5.06 no implementados.
 >
 > Rama: `spec/005-multiple-layout-comparison-v1`
 
@@ -311,9 +311,9 @@ No forman parte de Slice 005:
 - fixed elements nuevos;
 - artefacto `.blend` o preview comparativo.
 
-## Estado de implementación T5.01–T5.03
+## Estado de implementación T5.01–T5.04
 
-T5.01–T5.03 están implementados en `blender/scripts/furniture/compare_furniture_variants.py` y cubiertos por `tests/furniture/test_furniture_variant_comparison.py`. El módulo valida versiones, baseline explícito, cardinalidad, binding room/plan/spatial, ordering canónico, serialización JSON, firma lógica, inputs malformados y no mutación. T5.02 añade sets semánticos y deltas baseline→variante de items, geometry efectiva y metadata/provenance. T5.03 añade summaries por layout y `spatial_delta` de errores, warnings, limitations, checked items y transiciones de validez, sin invocar el validador espacial. No implementa acceptance canónica ni Blender.
+T5.01–T5.04 están implementados en `blender/scripts/furniture/compare_furniture_variants.py` y cubiertos por `tests/furniture/test_furniture_variant_comparison.py`. El módulo valida versiones, baseline explícito, cardinalidad, binding room/plan/spatial, ordering canónico, serialización JSON, firma lógica, inputs malformados y no mutación. T5.02 añade sets semánticos y deltas baseline→variante de items, geometry efectiva y metadata/provenance. T5.03 añade summaries por layout y `spatial_delta` de errores, warnings, limitations, checked items y transiciones de validez, sin invocar el validador espacial. T5.04 amplía la regresión con 75 tests de contrato, mutaciones, límites de tolerancia, payloads malformados, deduplicación, determinismo, firma y no mutación. No implementa acceptance canónica ni Blender.
 
 ## Acceptance propuesta
 

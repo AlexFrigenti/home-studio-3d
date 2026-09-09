@@ -1,6 +1,6 @@
 # Tareas: Multiple Layout Comparison / Variant Review v1
 
-> Estado del checkpoint actual: T5.01–T5.03 implementadas y validadas; T5.04–T5.06 no implementadas.
+> Estado del checkpoint actual: T5.01–T5.04 implementadas y validadas; T5.05–T5.06 no implementadas.
 >
 > Rama: `spec/005-multiple-layout-comparison-v1`
 
@@ -45,15 +45,15 @@ En el checkpoint actual, el report contiene binding/versiones, findings contract
 
 **Cierre:** el report compara resultados espaciales ya calculados sin cambiar su semántica. La identidad de findings ignora `message`, conserva código/severidad/item/entidades/details contractuales, deduplica entradas equivalentes y produce `spatial_delta` determinista por variante. `valid` del comparador solo refleja errores contractuales propios; `spatial_valid` permanece como hecho de cada report.
 
-## T5.04 — Regression and mutation matrix
+## T5.04 [x] — Regression and mutation matrix
 
-- [ ] Cubrir add/remove, move, rotate, resize, footprint/OBB/z bounds, type, status y source.
-- [ ] Cubrir room/version/signature/units/coordinate-system mismatch.
-- [ ] Cubrir duplicate IDs, malformed plans, malformed spatial reports y baseline inválido.
-- [ ] Cubrir ordering, canonical serialization, logical signature y no mutation.
-- [ ] Cubrir error espacial y limitation introducidos/resueltos usando deep copies.
+- [x] Cubrir add/remove, move, rotate, resize, footprint/OBB/z bounds, type, status y source.
+- [x] Cubrir room/version/signature/units/coordinate-system mismatch.
+- [x] Cubrir duplicate IDs, malformed plans, malformed spatial reports y baseline inválido.
+- [x] Cubrir ordering, canonical serialization, logical signature y no mutation.
+- [x] Cubrir error espacial y limitation introducidos/resueltos usando deep copies.
 
-**Cierre:** cada mutación produce el finding o delta estructurado esperado sin cascadas redundantes.
+**Cierre:** cada mutación produce el finding o delta estructurado esperado sin cascadas redundantes. La matriz final alcanza 75 tests del comparador e incluye límites lineales, yaw ±180°, details espaciales, warnings malformados, duplicados semánticos, mutaciones de anchor y binding directo de wrappers.
 
 ## T5.05 — living-room-main variant acceptance
 

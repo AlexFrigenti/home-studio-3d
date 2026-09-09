@@ -1153,7 +1153,9 @@ def _extract_item_map(
 
 
 def _numeric_equal(left: Any, right: Any, tolerance: float = MATH_TOLERANCE_M) -> bool:
-    return _is_finite_number(left) and _is_finite_number(right) and abs(float(left) - float(right)) <= tolerance
+    if not _is_finite_number(left) or not _is_finite_number(right):
+        return False
+    return abs(Decimal(str(left)) - Decimal(str(right))) <= Decimal(str(tolerance))
 
 
 def _numeric_delta(variant: Any, baseline: Any) -> float:

@@ -2,6 +2,7 @@ import copy
 import math
 import sys
 import unittest
+from decimal import Decimal
 from pathlib import Path
 from unittest import mock
 
@@ -927,6 +928,260 @@ class VariantComparisonContractTests(unittest.TestCase):
         self.assertEqual(
             base.to_dict()["pairwise_deltas"][0]["common_items"],
             changed.to_dict()["pairwise_deltas"][0]["common_items"],
+        )
+
+    def test_t504_contractual_finding_details_distinguish_identity(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+        baseline_report = _spatial_binding(
+            baseline,
+            report_overrides={
+                "valid": False,
+                "errors": [_spatial_finding(details={"axis": "x"})],
+            },
+        )
+        variant_report = _spatial_binding(
+            variant,
+            report_overrides={
+                "valid": False,
+                "errors": [_spatial_finding(details={"axis": "y"})],
+            },
+        )
+
+        spatial = _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=baseline_report,
+            variant_reports=[variant_report],
+        ).to_dict()["pairwise_deltas"][0]["spatial_delta"]
+
+        self.assertEqual(spatial["persistent_errors"], [])
+        self.assertEqual(spatial["resolved_errors"][0]["details"], {"axis": "x"})
+        self.assertEqual(spatial["introduced_errors"][0]["details"], {"axis": "y"})
+
+    def test_t504_message_only_mutation_preserves_identity_and_signature(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+
+        def compare_with_message(message):
+            return _compare(
+                baseline=baseline,
+                variants=[variant],
+                baseline_report=_spatial_binding(baseline),
+                variant_reports=[
+                    _spatial_binding(
+                        variant,
+                        report_overrides={
+                            "valid": False,
+                            "errors": [_spatial_finding(message=message)],
+                        },
+                    )
+                ],
+            )
+
+        first = compare_with_message("wording A")
+        second = compare_with_message("wording B")
+
+        first_spatial = first.to_dict()["pairwise_deltas"][0]["spatial_delta"]
+        second_spatial = second.to_dict()["pairwise_deltas"][0]["spatial_delta"]
+        self.assertEqual(first_spatial["persistent_errors"], second_spatial["persistent_errors"])
+        self.assertEqual(first.logical_signature, second.logical_signature)
+
+    def test_t504_nonfinite_finding_details_are_structured_invalid(self):
+        variant = _plan("variant-a")
+        report = _compare(
+            variants=[variant],
+            variant_reports=[
+                _spatial_binding(
+                    variant,
+                    report_overrides={
+                        "errors": [_spatial_finding(details={"nan": math.nan, "positive_inf": math.inf})],
+                    },
+                )
+            ],
+        )
+
+        data = report.to_dict()
+        self.assertFalse(report.valid)
+        self.assertIn("malformed_spatial_report", {finding["code"] for finding in data["errors"]})
+        self.assertEqual(data["pairwise_deltas"], [])
+        self.assertNotIn("NaN", report.canonical_json())
+        self.assertNotIn("Infinity", report.canonical_json())
+
+    def test_t504_malformed_warning_is_structured_invalid(self):
+        variant = _plan("variant-a")
+        report = _compare(
+            variants=[variant],
+            variant_reports=[
+                _spatial_binding(variant, report_overrides={"warnings": [None]})
+            ],
+        )
+
+        self.assertFalse(report.valid)
+        self.assertIn(
+            "malformed_spatial_report",
+            {finding["code"] for finding in report.to_dict()["errors"]},
+        )
+        self.assertEqual(report.to_dict()["pairwise_deltas"], [])
+
+    def test_t504_duplicate_limitations_are_deduplicated_without_signature_change(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+        limitation = _spatial_limitation("opening_proxy_only")
+        duplicate_report = _spatial_binding(
+            variant,
+            report_overrides={
+                "limitations": [limitation, copy.deepcopy(limitation)],
+            },
+        )
+        unique_report = _spatial_binding(
+            variant,
+            report_overrides={"limitations": [limitation]},
+        )
+
+        duplicate = _compare(
+            baseline=baseline,
+            variants=[variant],
+            variant_reports=[duplicate_report],
+        )
+        unique = _compare(
+            baseline=baseline,
+            variants=[variant],
+            variant_reports=[unique_report],
+        )
+
+        spatial = duplicate.to_dict()["pairwise_deltas"][0]["spatial_delta"]
+        self.assertEqual(len(spatial["introduced_limitations"]), 1)
+        self.assertEqual(duplicate.logical_signature, unique.logical_signature)
+        self.assertEqual(
+            duplicate.to_dict()["summary"]["variant_summaries"][0]["limitation_count"],
+            1,
+        )
+
+    def test_t504_duplicate_checked_items_do_not_inflate_delta(self):
+        baseline = _plan("baseline")
+        variant = _plan("variant-a")
+        duplicate_report = _spatial_binding(
+            variant,
+            report_overrides={"checked_items": ["sofa", "chair", "chair"]},
+        )
+        unique_report = _spatial_binding(
+            variant,
+            report_overrides={"checked_items": ["chair", "sofa"]},
+        )
+        baseline_report = _spatial_binding(
+            baseline,
+            report_overrides={"checked_items": ["sofa", "sofa"]},
+        )
+
+        duplicate = _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=baseline_report,
+            variant_reports=[duplicate_report],
+        )
+        unique = _compare(
+            baseline=baseline,
+            variants=[variant],
+            baseline_report=_spatial_binding(baseline, report_overrides={"checked_items": ["sofa"]}),
+            variant_reports=[unique_report],
+        )
+
+        spatial = duplicate.to_dict()["pairwise_deltas"][0]["spatial_delta"]
+        self.assertEqual(spatial["checked_items_delta"]["added"], ["chair"])
+        self.assertEqual(spatial["checked_items_delta"]["count_delta"], 1)
+        self.assertEqual(duplicate.logical_signature, unique.logical_signature)
+
+    def test_t504_placement_method_is_a_metadata_only_mutation(self):
+        variant = _plan("variant-a", items=[_item(placement_method="assisted")])
+
+        delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(delta["geometry_changed_items"], [])
+        self.assertEqual(delta["metadata_changed_items"], ["sofa"])
+        self.assertEqual(delta["metadata_changes"][0]["changes"][0]["field"], "placement_method")
+
+    def test_t504_anchor_is_a_metadata_only_mutation(self):
+        variant_item = _item()
+        variant_item["anchor"] = "center"
+        variant = _plan("variant-a", items=[variant_item])
+
+        delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(delta["geometry_changed_items"], [])
+        self.assertEqual(delta["metadata_changed_items"], ["sofa"])
+        self.assertEqual(delta["metadata_changes"][0]["changes"][0]["field"], "anchor")
+
+    def test_t504_yaw_boundary_uses_negative_180_shortest_delta(self):
+        variant = _plan("variant-a", items=[_item(yaw=180.0)])
+        reverse = _plan("variant-a", items=[_item(yaw=0.0)])
+
+        forward_delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+        reverse_delta = _compare(
+            baseline=_plan("baseline", items=[_item(yaw=180.0)]),
+            variants=[reverse],
+        ).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(forward_delta["geometry_changes"][0]["yaw"]["delta_yaw_deg"], -180.0)
+        self.assertEqual(reverse_delta["geometry_changes"][0]["yaw"]["delta_yaw_deg"], -180.0)
+        self.assertGreaterEqual(forward_delta["geometry_changes"][0]["yaw"]["delta_yaw_deg"], -180.0)
+        self.assertLess(forward_delta["geometry_changes"][0]["yaw"]["delta_yaw_deg"], 180.0)
+
+    def test_t504_dimensions_tolerance_is_componentwise_at_boundary(self):
+        for component in range(3):
+            with self.subTest(component=component):
+                for difference, expected_changed in (
+                    (0.5e-6, False),
+                    (1.0e-6, False),
+                    (1.5e-6, True),
+                ):
+                    base_dimensions = [Decimal("2.0"), Decimal("1.0"), Decimal("0.8")]
+                    base_dimensions[component] += Decimal(str(difference))
+                    dimensions = [float(value) for value in base_dimensions]
+                    variant = _plan("variant-a", items=[_item(dimensions=dimensions)])
+                    delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+                    self.assertEqual(bool(delta["resized_items"]), expected_changed)
+
+    def test_t504_z_bounds_tolerance_is_componentwise_at_boundary(self):
+        for difference, expected_changed in (
+            (0.5e-6, False),
+            (1.0e-6, False),
+            (1.5e-6, True),
+        ):
+            with self.subTest(difference=difference):
+                effective = _effective_geometry((2.0, 1.0, 0.8), (0.0, 0.0), 0.0)
+                effective["z_min_m"] = difference
+                variant = _plan("variant-a", items=[_item(effective_geometry=effective)])
+                delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+                self.assertEqual(bool(delta["resized_items"]), expected_changed)
+
+    def test_t504_spatial_wrapper_binding_fields_are_checked_directly(self):
+        fields = (
+            ("room_plan_version", "room_plan_version_mismatch", "other-room-plan"),
+            ("room_logical_signature", "room_plan_signature_mismatch", "other-signature"),
+            ("units", "units_mismatch", "cm"),
+            ("coordinate_system", "coordinate_system_mismatch", "other-system"),
+        )
+        variant = _plan("variant-a")
+        for field, code, value in fields:
+            with self.subTest(field=field):
+                binding = _spatial_binding(variant, **{field: value})
+                report = _compare(variants=[variant], variant_reports=[binding])
+                self.assertFalse(report.valid)
+                self.assertIn(code, {finding["code"] for finding in report.to_dict()["errors"]})
+
+        report = _compare(
+            variants=[variant],
+            variant_reports=[
+                _spatial_binding(
+                    variant,
+                    report_overrides={"report_version": "future-spatial-2"},
+                )
+            ],
+        )
+        self.assertIn(
+            "unsupported_spatial_report_version",
+            {finding["code"] for finding in report.to_dict()["errors"]},
         )
 
     def test_no_variants_is_structured_invalid_report(self):
