@@ -1,7 +1,8 @@
 # Tareas: Furniture Placement v1
 
 > Clasificación: T2
-> Estado del checkpoint actual: T4.01 implementada y validada; T4.02–T4.06 no iniciadas.
+> Estado del checkpoint actual: T4.01 y T4.02 implementadas y validadas;
+> T4.03–T4.06 no iniciadas.
 > Rama: `spec/004-furniture-placement-v1`
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
@@ -42,10 +43,10 @@ restantes siguen pendientes.
 
 ## T4.02 — Construir el furniture plan puro
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** producir un plan Blender-independent ligado a un room plan
   concreto.
-- **Archivos previstos:**
+- **Archivos implementados:**
   `blender/scripts/furniture/build_furniture_plan.py`,
   `tests/furniture/test_furniture_plan.py`.
 - **Interfaces:**
@@ -54,15 +55,20 @@ restantes siguen pendientes.
 - **Invariantes:** versión `furniture-placement-generator-1`; identidad,
   versión y firma del room plan transportadas; items ordenados por ID; yaw
   normalizado a `[0,360)`; geometry efectiva de proxy derivada con
-  `bottom_center`; provenance limitada a datos del layout; inputs intactos.
+  `bottom_center`; provenance limitada a datos del layout; inputs intactos;
+  spatial validation reservada para T4.03; solo se soporta
+  `room-v1.1-generator-2`.
 - **Tests:** mismatch de room, units, coordinate system, version y firma;
   input en orden alternativo; yaw equivalente; footprint con rotación;
   firma distinta al alterar cada campo contractual; serialización repetida
-  idéntica; no mutación de layout y room plan.
+  idéntica; provenance, no mutación de layout y room plan; `30/30 PASS`.
 - **Gates:** tests puros de furniture, Python/JSON syntax y diff check.
 - **Blender:** No.
-- **Cierre:** la misma serialización canónica del layout y el mismo room plan
-  producen el mismo plan y `logical_signature` sin importar `bpy`.
+- **Cierre:** `[x]` La misma serialización canónica del layout y el mismo room
+  plan producen el mismo plan y `logical_signature` sin importar `bpy`.
+- **Evidencia:** yaw canónico, ordering por ID, footprint/OBB 2D, provenance,
+  firma SHA-256 y defensas de identidad/versiones; no spatial validation ni
+  Blender.
 
 ## T4.03 — Validar spatial validity
 
@@ -201,6 +207,6 @@ acceptance y no debe mezclarse con tareas posteriores de assets o UI.
 
 ## Estado del slice en este checkpoint
 
-T4.01 está `[x]`. T4.02–T4.06 permanecen `[ ]`. Este checkpoint no crea
-furniture plan, spatial validation, overlay Blender, normalizer, comparator,
-escena, preview ni artefacto Blender.
+T4.01 y T4.02 están `[x]`. T4.03–T4.06 permanecen `[ ]`. Este checkpoint no
+crea spatial validation, overlay Blender, normalizer, comparator, escena,
+preview ni artefacto Blender.

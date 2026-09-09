@@ -10,9 +10,9 @@
 
 **Spec:** `specs/004-furniture-placement-v1/spec.md`
 
-**Current checkpoint:** T4.01 está implementada y validada con schema,
-validator puro, fixture sintético y 26 tests contractuales. T4.02–T4.06 siguen
-sin iniciar.
+**Current checkpoint:** T4.01 y T4.02 están implementadas y validadas. T4.02
+produce un furniture plan puro con yaw canónico, geometría efectiva y firma
+determinista; T4.03–T4.06 siguen sin iniciar.
 
 ## Global Constraints
 
@@ -44,7 +44,7 @@ design checkpoint:
   layout, only when T4.06 is authorized to create acceptance data.
 - Create `blender/scripts/furniture/validate_furniture_layout.py`: pure input
   validation and canonicalization.
-- Create `blender/scripts/furniture/build_furniture_plan.py`: pure plan,
+- Created `blender/scripts/furniture/build_furniture_plan.py`: pure plan,
   effective proxy geometry and logical signature.
 - Create `blender/scripts/furniture/validate_furniture_spatial.py`: floor,
   wall, opening and furniture-overlap checks plus explicitly separated
@@ -108,7 +108,7 @@ the canonical room data.
 **Objective:** Produce a deterministic furniture plan bound to a specific room
 plan without importing Blender or writing files.
 
-**Planned files:** `blender/scripts/furniture/build_furniture_plan.py`,
+**Implemented files:** `blender/scripts/furniture/build_furniture_plan.py`,
 `tests/furniture/test_furniture_plan.py`.
 
 **Interfaces:**
@@ -126,18 +126,21 @@ geometry, provenance and `logical_signature`.
 the layout; no input mutation; identical canonical inputs produce byte-stable
 plan serialization and signature; geometry uses the bottom-center anchor and
 canonical room coordinates. T4.02, not T4.01, owns modulo-360 yaw
-normalization.
+normalization. T4.02 supports `room-v1.1-generator-2`; legacy room plan
+versions are rejected. Spatial validation is not part of this checkpoint.
 
-**Tests and gates:** room/layout mismatch; version/signature mismatch;
-ordering-independent input; yaw values such as `-360`, `0`, `360` and `720`;
-position and rotated footprint calculations; signature changes for each
-contractual field; same inputs produce identical output; room plan and layout
-remain unchanged.
+**Tests and gates:** 30 pure tests covering room/layout mismatch,
+version/signature mismatch, ordering-independent input, yaw values such as
+`-360`, `0`, `360` and `720`, `-0.0`, position and rotated footprint
+calculations, signature changes for each contractual field, same inputs
+produce identical output, provenance preservation and unchanged room plan and
+layout.
 
 **Blender:** No.
 
-**Closure:** a pure, serializable plan exists with no dependency on `bpy`, and
-its signature is stable for all supported input orderings.
+**Closure:** complete. A pure, serializable plan exists with no dependency on
+`bpy`; its signature is stable for all supported input orderings and no
+spatial validation or Blender overlay is created.
 
 ### T4.03 — Validate spatial placement
 

@@ -2,8 +2,9 @@
 
 > Clasificación: T2 — nuevo dominio de datos, plan determinista, validación espacial y overlay Blender derivado.
 > Rama: `spec/004-furniture-placement-v1`
-> Estado: T4.01 — contrato, schema, validator, fixture sintético y tests
-> implementados y validados; T4.02–T4.06 no iniciadas.
+> Estado: T4.01 y T4.02 — contrato, schema, validator, fixture sintético,
+> furniture plan puro y tests implementados y validados; T4.03–T4.06 no
+> iniciadas.
 
 ## Objetivo
 
@@ -263,7 +264,6 @@ units = m
 coordinate_system = canonical_room
 items ordenados por id
 effective_geometry por item
-spatial_validation
 provenance
 logical_signature
 ```
@@ -272,7 +272,8 @@ Cada `effective_geometry` materializa dimensions `[width, depth, height]`,
 anchor, posición, yaw normalizado, footprint/OBB y los vértices locales
 derivados del proxy. La provenance conserva al menos `source_id`,
 `dimensions_status` y `placement_method=manual`; no inventa provenance de
-Blender ni del room.
+Blender ni del room. T4.02 no emite `spatial_validation`: esa validación
+contractual comienza en T4.03 sobre el plan ya construido.
 
 La función conceptual es:
 
@@ -293,6 +294,11 @@ firma incluye identidad, tipo, dimensiones, estado, source ID, posición,
 anchor, yaw, identidad/versiones del room plan y geometría efectiva. No
 incluye timestamps, rutas personales, orden incidental de objetos Blender ni
 warnings variables.
+
+T4.02 soporta explícitamente el room plan actual
+`room-v1.1-generator-2`. Los planes `room-v1-generator-1` y
+`room-v1.1-generator-1` no se promocionan silenciosamente y se rechazan hasta
+que exista una decisión de compatibilidad específica.
 
 La tolerancia computacional reutiliza el principio de `1e-6 m` para comparar
 valores lineales; no se interpreta como incertidumbre física ni relaja los
@@ -534,6 +540,20 @@ intacta, dos generaciones lógicamente idénticas, normalized furniture scene
 válida, furniture plan→scene válido, mutaciones anti-false-pass, preview
 técnico, `.blend` derivado y fuente arquitectónica no sobrescrita. Las
 dimensiones no se presentarán como medidas reales.
+
+## Evidencia de T4.02
+
+T4.02 queda implementada sin Blender ni cambios al room pipeline:
+
+- plan puro: `blender/scripts/furniture/build_furniture_plan.py`;
+- tests: `tests/furniture/test_furniture_plan.py`;
+- resultado: `30/30 PASS`;
+- soporte de room plan: `room-v1.1-generator-2`;
+- yaw normalizado a `[0,360)` y items ordenados por ID;
+- footprint local/world, OBB 2D, z mínimo/máximo y provenance del layout;
+- firma SHA-256 determinista y no mutación de inputs;
+- no se ejecuta spatial validation, no se usa Blender y no se crea furniture
+  overlay.
 
 ## Versiones
 
