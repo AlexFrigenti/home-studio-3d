@@ -22,25 +22,36 @@
 - Blender 5.2.1, Blender MCP y Codex CLI están instalados y operativos en el portátil.
 - La comunicación live `Codex → Blender MCP → Blender` quedó validada mediante lectura de escena.
 - El fixture `blender/scenes/tests/001-foundation-room.blend` quedó validado y probado entre portátil y sobremesa, sin convertir ninguna máquina en autoridad sobre las medidas.
-- La foundation, el contrato de medición/reconstrucción y la comparación/validación de escena real están implementados e integrados en `main`.
+- Slice 001 — Blender/Codex/MCP Foundation está integrado en `main`.
+- Slice 002 — Room Measurement and Reconstruction está integrado en `main`.
+- Slice 003 — Real Room Scene Comparison and Validation está integrado en `main`.
+- Slice 004 — Furniture Placement v1 está integrado en `main`.
 
 ## Estado actual
 
 - `living-room-main` es la habitación real validada de referencia.
-- El flujo vigente es `measurements/` → generation plan determinista → generación arquitectónica en Blender → `NormalizedScene` → comparación `room → plan` y `plan → scene`.
-- El contrato actual usa `room-v1.1-generator-2`, con `room-scene-adapter-1` y `room-scene-comparison-1`; la compatibilidad v1 se conserva.
+- El flujo room vigente es `measurements/` → generation plan determinista → generación arquitectónica en Blender → `NormalizedScene` → comparación `room → plan` y `plan → scene`.
+- El contrato room actual usa `room-v1.1-generator-2`, con `room-scene-adapter-1` y `room-scene-comparison-1`; la compatibilidad v1 se conserva.
 - `measurements/` sigue siendo la autoridad arquitectónica; la escena es un derivado validado.
+- El dominio furniture usa `furniture-layout-1`, `furniture-placement-generator-1` y `furniture-spatial-validation-1`.
+- El flujo furniture vigente es layout JSON → `FurniturePlan` → spatial validation → overlay Blender reversible → `furniture-scene-adapter-1` → `furniture-scene-comparison-1`.
+- `HSLAYOUT_*` permanece separado de `HS3D_ROOM_*`; el furniture overlay no modifica la arquitectura.
+- Slice 004 tiene acceptance sintética canónica, `.blend` derivado, preview técnico, privacy guard y firmas lógicas deterministas.
 
 ## Limitaciones actuales
 
 - Los openings siguen siendo proxies técnicos (`proxy_only=true`, `constructive_geometry=false`); no hay booleanos ni geometría constructiva.
-- No hay una capa de mobiliario/decoración libre ni validación multi-room como producto.
+- El mobiliario sigue limitado a proxies/cuboids sintéticos; no hay assets reales, catálogo ni materiales artísticos finales.
+- Los layouts siguen siendo JSON manuales; no hay comparación A/B/C de variantes, ergonomía, circulación ni recomendaciones.
+- No existe validación multi-room como producto.
+- El contrato de fixed elements existe, pero `living-room-main` no tiene una acceptance representativa de obstáculos fijos.
 - La provenance materializada en Blender es parcial por diseño.
-- Dieciséis espesores permanecen `unknown` con fallback explícito y `opening_direction` continúa `unknown`.
+- Dieciséis espesores permanecen `unknown` con fallback explícito y los seis openings mantienen `opening_direction=unknown`.
+- El guardado de escenas no dispone de rollback transaccional.
 
 ## Próximo horizonte
 
-El trabajo posterior deberá definirse mediante un nuevo slice aprobado. Este contexto no inicia ni da por aprobado Slice 004.
+El trabajo posterior deberá definirse mediante un nuevo slice aprobado. Este contexto no inicia ni aprueba Slice 005.
 
 ## Contrato común de calidad
 
