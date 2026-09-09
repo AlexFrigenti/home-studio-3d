@@ -1,6 +1,6 @@
 # Tareas: Multiple Layout Comparison / Variant Review v1
 
-> Estado del checkpoint actual: T5.01–T5.04 implementadas y validadas; T5.05–T5.06 no implementadas.
+> Estado del checkpoint actual: T5.01–T5.05 implementadas y validadas; T5.06 no implementada.
 >
 > Rama: `spec/005-multiple-layout-comparison-v1`
 
@@ -55,15 +55,15 @@ En el checkpoint actual, el report contiene binding/versiones, findings contract
 
 **Cierre:** cada mutación produce el finding o delta estructurado esperado sin cascadas redundantes. La matriz final alcanza 75 tests del comparador e incluye límites lineales, yaw ±180°, details espaciales, warnings malformados, duplicados semánticos, mutaciones de anchor y binding directo de wrappers.
 
-## T5.05 — living-room-main variant acceptance
+## T5.05 [x] — living-room-main variant acceptance
 
-- [ ] Crear fixtures sintéticos dedicados en `tests/furniture/fixtures/variant_comparison/`.
-- [ ] Definir baseline A, variante válida B con movimiento/rotación y variante válida C con resize y cambio de conjunto.
-- [ ] Construir planes y reports previos con los productores T4 existentes.
-- [ ] Verificar room binding, summaries, deltas, spatial validity, limitations, ordering, signature y no mutation.
-- [ ] Mantener las mutaciones espaciales inválidas como casos negativos en memoria, no como acceptance layout canónico.
+- [x] Crear fixtures sintéticos dedicados en `layouts/living-room-main/variants/`.
+- [x] Definir baseline A, variante válida B con movimiento/rotación y variante C con resize, cambio de conjunto y error espacial real.
+- [x] Construir planes y reports previos con los productores T4 existentes.
+- [x] Verificar room binding, summaries, deltas, spatial validity, limitations, ordering, signature y no mutation.
+- [x] Mantener las mutaciones espaciales adicionales como probes negativos en memoria, no como acceptance layout canónico.
 
-**Cierre:** acceptance pura reproducible para `living-room-main`, sin Blender, `.blend` ni preview.
+**Cierre:** acceptance pura reproducible para `living-room-main`, cubierta por cinco tests, sin Blender, `.blend` ni preview. A y B son válidas; C introduce `furniture_out_of_floor` y se reporta como `became_invalid` sin invalidar contractualmente el comparador.
 
 ## T5.06 — Documentation, privacy and final audit
 

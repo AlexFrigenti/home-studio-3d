@@ -1,6 +1,6 @@
 # Especificación: Multiple Layout Comparison / Variant Review v1
 
-> Estado: T5.01–T5.04 implementados y validados; T5.05–T5.06 no implementados.
+> Estado: T5.01–T5.05 implementados y validados; T5.06 no implementado.
 >
 > Rama: `spec/005-multiple-layout-comparison-v1`
 
@@ -311,21 +311,23 @@ No forman parte de Slice 005:
 - fixed elements nuevos;
 - artefacto `.blend` o preview comparativo.
 
-## Estado de implementación T5.01–T5.04
+## Estado de implementación T5.01–T5.05
 
-T5.01–T5.04 están implementados en `blender/scripts/furniture/compare_furniture_variants.py` y cubiertos por `tests/furniture/test_furniture_variant_comparison.py`. El módulo valida versiones, baseline explícito, cardinalidad, binding room/plan/spatial, ordering canónico, serialización JSON, firma lógica, inputs malformados y no mutación. T5.02 añade sets semánticos y deltas baseline→variante de items, geometry efectiva y metadata/provenance. T5.03 añade summaries por layout y `spatial_delta` de errores, warnings, limitations, checked items y transiciones de validez, sin invocar el validador espacial. T5.04 amplía la regresión con 75 tests de contrato, mutaciones, límites de tolerancia, payloads malformados, deduplicación, determinismo, firma y no mutación. No implementa acceptance canónica ni Blender.
+T5.01–T5.05 están implementados en `blender/scripts/furniture/compare_furniture_variants.py` y cubiertos por los tests puros de furniture. El módulo valida versiones, baseline explícito, cardinalidad, binding room/plan/spatial, ordering canónico, serialización JSON, firma lógica, inputs malformados y no mutación. T5.02 añade sets semánticos y deltas baseline→variante de items, geometry efectiva y metadata/provenance. T5.03 añade summaries por layout y `spatial_delta` de errores, warnings, limitations, checked items y transiciones de validez, sin invocar el validador espacial. T5.04 amplía la regresión con 75 tests de contrato, mutaciones, límites de tolerancia, payloads malformados, deduplicación, determinismo, firma y no mutación. T5.05 añade una acceptance end-to-end pura para `living-room-main` con layouts JSON sintéticos, FurniturePlans y SpatialValidationReports producidos por los productores reales. No usa Blender ni implementa T5.06.
 
-## Acceptance propuesta
+## Acceptance T5.05 — living-room-main
 
-La acceptance será pura Python y usará `living-room-main` con tres planes sintéticos válidos:
+La acceptance se ejecuta desde `tests/furniture/test_furniture_variant_acceptance.py` y usa los fixtures versionables:
 
-- A: baseline con tres items;
-- B: mismos IDs con movimiento y rotación dentro del floor polygon;
-- C: diferencia de dimensiones y conjunto —un item eliminado y otro añadido— manteniendo un caso espacialmente válido.
+- `layouts/living-room-main/variants/baseline-a.json`;
+- `layouts/living-room-main/variants/variant-b.json`;
+- `layouts/living-room-main/variants/variant-c.json`.
 
-Mutaciones negativas separadas cubrirán binding, versiones, item añadido/eliminado, movimiento, yaw, dimensiones, type/status/source, errores espaciales, limitations, ordering y no mutation. Una mutation de report espacial permitirá demostrar errores introducidos/resueltos sin crear un layout inválido permanente.
+La pipeline real genera `room-v1.1-generator-2` con firma `182824cc89031546eade026dca25f419430e29527ab1785d0397879300c5186a`. Los FurniturePlans tienen las firmas `b107d146c81a300858d33d48265d7e42480c88f6ed8443e6a54f80a008e19a0c` (A), `32b40195178f96178e2ba64ecc637e09c4c941ccc6fabe50c216049a0a52d70e` (B) y `a723fb4c9e89495aa441dd184b8cb2a3579badfcfee47de8714465e9493b8c96` (C).
 
-No se crearán layouts canónicos de producción ni artefactos Blender para cerrar Slice 005.
+A y B producen `valid=true` en spatial validation. B mueve y rota `armchair`, mantiene `coffee_table` y `sofa` sin cambios y no introduce errores. C redimensiona `sofa`, elimina `armchair`, añade `floor_proxy` y produce mediante `validate_furniture_spatial` el error `furniture_out_of_floor`; su transición es `became_invalid`. El `VariantComparisonReport` sigue siendo contractualmente válido y tiene la firma lógica `42754f8500d836c9e8e901129ee7c49d65d3c2505b7d78e8369480484011e6c8`.
+
+La acceptance verifica dos ejecuciones equivalentes, reordenamiento B/C, no mutación y probes en memoria para source metadata y spatial delta. Las limitations persistentes son `opening_direction_unknown`, `opening_proxy_only` y `wall_thickness_fallback`. No se crean `.blend`, previews ni artefactos visuales.
 
 ## Dependencias y Slice 006
 

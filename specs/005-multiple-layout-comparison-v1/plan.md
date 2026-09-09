@@ -158,30 +158,32 @@ Expected: PASS sin Blender y sin archivos temporales.
 ### Task 5.05: Cerrar acceptance sintética de living-room-main
 
 **Files:**
-- Create: `tests/furniture/fixtures/variant_comparison/baseline.json`
-- Create: `tests/furniture/fixtures/variant_comparison/variant-b.json`
-- Create: `tests/furniture/fixtures/variant_comparison/variant-c.json`
-- Modify: `tests/furniture/test_furniture_variant_comparison.py`
+- Create: `layouts/living-room-main/variants/baseline-a.json`
+- Create: `layouts/living-room-main/variants/variant-b.json`
+- Create: `layouts/living-room-main/variants/variant-c.json`
+- Create: `tests/furniture/test_furniture_variant_acceptance.py`
 
 **Interfaces:**
 - Consumes: tres layouts `furniture-layout-1` del mismo `living-room-main` y el room plan actual.
 - Produces: acceptance pura del report `furniture-variant-comparison-1`; no `.blend`, preview ni layout canónico productivo.
 
-- [ ] **Step 1: Crear fixtures sintéticos válidos**
+- [x] **Step 1: Crear fixtures sintéticos válidos**
 
-Baseline A tendrá tres items; B conservará IDs y cambiará posición/yaw; C demostrará resize y un par added/removed manteniendo placement espacialmente válido. Todos usarán provenance `synthetic`, IDs estables y `canonical_room`.
+Baseline A tendrá tres items; B conservará IDs y cambiará posición/yaw; C demostrará resize, un item añadido, otro eliminado y un error espacial real de `validate_furniture_spatial`. Todos usarán provenance `synthetic`, IDs estables y `canonical_room`.
 
-- [ ] **Step 2: Construir planes y reports en el test**
+- [x] **Step 2: Construir planes y reports en el test**
 
 Usar `build_furniture_plan` y `validate_furniture_spatial` existentes únicamente como productores previos del acceptance; el comparator recibirá sus resultados y no los recalculará internamente.
 
-- [ ] **Step 3: Verificar facts del report**
+- [x] **Step 3: Verificar facts del report**
 
 Exigir room binding común, summaries por layout, deltas esperados, spatial validity, limitations estables, ordering determinista, signature y no mutation.
 
-- [ ] **Step 4: Verificar el caso espacial negativo separado**
+- [x] **Step 4: Verificar el caso espacial negativo separado**
 
-Mutar un deepcopy de `SpatialValidationReport` para demostrar `errors_introduced`/`errors_resolved`, sin guardar una variante inválida como layout canónico.
+Mutar un deepcopy del wrapper espacial de C para demostrar que un cambio adicional altera el delta y la firma, sin guardar una variante inválida adicional como layout canónico.
+
+**Cierre T5.05:** implementado y validado con cinco tests de acceptance. La pipeline real produce el room plan `room-v1.1-generator-2`; A y B son espacialmente válidas; C produce `furniture_out_of_floor` y la transición objetiva `became_invalid`. La comparación sigue siendo contractualmente válida, determinista y sin mutación, sin Blender ni artefactos visuales.
 
 ### Task 5.06: Auditoría final y documentación de acceptance
 
