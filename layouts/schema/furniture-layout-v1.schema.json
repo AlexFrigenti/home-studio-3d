@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:home-studio-3d:layouts:furniture-layout-v1",
+  "title": "Home Studio 3D Furniture Layout v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "layout_schema_version",
+    "layout_id",
+    "room_id",
+    "units",
+    "coordinate_system",
+    "placement_method",
+    "items"
+  ],
+  "properties": {
+    "layout_schema_version": {
+      "const": "furniture-layout-1"
+    },
+    "layout_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "room_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "units": {
+      "const": "m"
+    },
+    "coordinate_system": {
+      "const": "canonical_room"
+    },
+    "placement_method": {
+      "const": "manual"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "dimensions_m",
+        "dimensions_status",
+        "source_id",
+        "position_xy_m",
+        "anchor",
+        "yaw_deg"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "type": {
+          "enum": [
+            "sofa",
+            "coffee_table",
+            "armchair",
+            "shelf",
+            "tv_unit"
+          ]
+        },
+        "dimensions_m": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "dimensions_status": {
+          "enum": [
+            "measured",
+            "estimated",
+            "manufacturer",
+            "synthetic"
+          ]
+        },
+        "source_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "position_xy_m": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          }
+        },
+        "anchor": {
+          "const": "bottom_center"
+        },
+        "yaw_deg": {
+          "type": "number",
+          "description": "Finite degrees around Z. T4.02 normalizes to [0, 360)."
+        }
+      }
+    }
+  }
+}
