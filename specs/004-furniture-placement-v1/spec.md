@@ -2,9 +2,10 @@
 
 > Clasificación: T2 — nuevo dominio de datos, plan determinista, validación espacial y overlay Blender derivado.
 > Rama: `spec/004-furniture-placement-v1`
-> Estado: T4.01, T4.02, T4.03 y T4.04 — contrato, schema, validators, fixture
-> sintético, furniture plan puro, validación espacial, overlay Blender
-> reversible y tests implementados y validados; T4.05–T4.06 no iniciadas.
+> Estado: T4.01, T4.02, T4.03, T4.04 y T4.05 — contrato, schema, validators,
+> fixture sintético, furniture plan puro, validación espacial, overlay Blender
+> reversible, normalizer/comparator furniture y tests implementados y
+> validados; T4.06 no iniciada.
 
 ## Objetivo
 
@@ -405,8 +406,10 @@ en descartar el `.blend` derivado y conservar intacta la fuente.
 
 ## Normalized furniture scene
 
-El adapter independiente conceptual es
-`normalize_furniture_scene(scene_source)`. Su salida versionada
+El adapter independiente implementado es
+`normalize_furniture_scene(scene, room_id, layout_id)`. Su core puro
+`normalize_scene(scene_data, room_id, layout_id)` consume una extracción
+estructural sin Blender; el adapter Blender es read-only. Su salida versionada
 `furniture-scene-adapter-1` contiene únicamente el dominio del layout:
 
 ```text
@@ -433,6 +436,11 @@ Las entidades arquitectónicas no aparecen en este NormalizedScene. La
 protección de arquitectura se ejecuta como una comprobación paralela sobre la
 proyección arquitectónica antes y después.
 
+El ownership es estricto: un objeto o collection con metadata furniture del
+mismo `room_id` y `layout_id` solicitado que este fuera de ese root exacto se
+rechaza con `furniture_ownership_outside_root`. Los objetos ordinarios sin
+metadata furniture relevante y los dominios de otros layouts se ignoran.
+
 ## Furniture ComparisonReport
 
 El comparador conceptual es:
@@ -452,6 +460,25 @@ La protección de arquitectura queda fuera de la identidad del furniture
 report, pero forma parte de la acceptance del pipeline derivado: una
 acceptance no es válida si el furniture overlay pasa y la proyección
 arquitectónica cambia.
+
+## Evidencia de T4.05
+
+T4.05 queda implementada sin extender el dominio room:
+
+- normalizer: `blender/scripts/furniture/normalize_furniture_scene.py`;
+- comparator: `blender/scripts/furniture/compare_furniture_scene.py`;
+- tests puros: `tests/furniture/test_normalize_furniture_scene.py` y
+  `tests/furniture/test_furniture_scene_comparison.py`;
+- integración Blender read-only: `tests/furniture/blender_test_furniture_scene_normalization.py`;
+- acceptance temporal: `tests/furniture/blender_test_furniture_scene_real_acceptance.py`;
+- resultado: 26/26 tests puros y 6/6 tests Blender sintéticos;
+- acceptance temporal sobre generator-2: report válido, tres entidades,
+  mutación de geometría rechazada, arquitectura antes/después equivalente,
+  `room plan→scene` válido y fuente intacta;
+- entidades ordenadas por `(entity_type, entity_id)`, `item_id` semántico
+  separado del nombre físico, metadata y geometría comprobadas
+  independientemente, sin consulta al layout original ni a spatial validation;
+- no se crea artefacto canónico, preview final ni se inicia T4.06.
 
 ## Findings y estrategia anti-cascada
 
@@ -478,6 +505,7 @@ furniture_geometry_mismatch
 furniture_metadata_mismatch
 furniture_provenance_mismatch
 furniture_ownership_mismatch
+furniture_ownership_outside_root
 furniture_logical_signature_mismatch
 furniture_out_of_floor
 furniture_wall_intersection
@@ -678,26 +706,26 @@ sin cambiar la semántica de placement.
 
 ## Criterios de aceptación
 
-- [ ] Existe un contrato validable `furniture-layout-1` fuera de
+- [x] Existe un contrato validable `furniture-layout-1` fuera de
   `measurements/`, con IDs, unidades, coordenadas, dimensiones, estados y
   política de campos desconocidos definidos.
-- [ ] `build_furniture_plan(layout, room_plan)` es puro, no muta inputs,
+- [x] `build_furniture_plan(layout, room_plan)` es puro, no muta inputs,
   canoniza ordering/yaw y produce `furniture-placement-generator-1` con firma
   lógica estable.
-- [ ] La validación espacial distingue errores demostrables sobre geometría
+- [x] La validación espacial distingue errores demostrables sobre geometría
   efectiva de warnings heurísticos y conserva los límites de thickness
   fallback y openings proxy.
-- [ ] El overlay utiliza el namespace HSLAYOUT, no ejecuta reset de escena, no
+- [x] El overlay utiliza el namespace HSLAYOUT, no ejecuta reset de escena, no
   modifica `HS3D_ROOM_*`, no sobrescribe el `.blend` fuente y es regenerable por
   layout.
-- [ ] `normalize_furniture_scene` y
+- [x] `normalize_furniture_scene` y
   `compare_furniture_plan_to_scene` son independientes del room adapter y
   detectan entidades ausentes/inesperadas, geometry-vs-metadata, ownership,
   versiones, IDs, transforms y signatures.
 - [ ] La acceptance real de `living-room-main` demuestra arquitectura antes
   igual a después, fuente intacta, determinismo, report válido, preview y
   `.blend` derivado sin presentar dimensiones sintéticas como reales.
-- [ ] Los tests cubren schema/contract, plan, spatial validation, ordering,
+- [x] Los tests cubren schema/contract, plan, spatial validation, ordering,
   signatures, no mutación, regeneración, ownership, malformed input y
   anti-false-pass; los gates existentes de Slices 001–003 siguen pasando.
 - [ ] La documentación de setup registra comandos, hashes, límites,

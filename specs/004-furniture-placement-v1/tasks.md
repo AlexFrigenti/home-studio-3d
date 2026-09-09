@@ -1,16 +1,16 @@
 # Tareas: Furniture Placement v1
 
 > Clasificación: T2
-> Estado del checkpoint actual: T4.01, T4.02, T4.03 y T4.04 implementadas y
-> validadas; T4.05–T4.06 no iniciadas.
+> Estado del checkpoint actual: T4.01, T4.02, T4.03, T4.04 y T4.05
+> implementadas y validadas; T4.06 no iniciada.
 > Rama: `spec/004-furniture-placement-v1`
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 Furniture Placement v1 debe conservar `measurements/` como autoridad
 arquitectónica y separar el dominio de layouts, planes y overlays. Estas tareas
-son la descomposición aprobada; T4.01–T4.04 están cerradas en este checkpoint
-y T4.05–T4.06 siguen pendientes.
+son la descomposición aprobada; T4.01–T4.05 están cerradas en este checkpoint
+y T4.06 sigue pendiente.
 
 ## T4.01 — Fijar autoridad y contrato `furniture-layout-1`
 
@@ -135,27 +135,36 @@ y T4.05–T4.06 siguen pendientes.
 
 ## T4.05 — Normalizar y comparar furniture scene
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** crear un adapter y un ComparisonReport de furniture
   independientes de los contratos room.
 - **Archivos previstos:**
   `blender/scripts/furniture/normalize_furniture_scene.py`,
   `blender/scripts/furniture/compare_furniture_scene.py`,
   `tests/furniture/test_normalize_furniture_scene.py`,
-  `tests/furniture/test_furniture_scene_comparison.py`.
+  `tests/furniture/test_furniture_scene_comparison.py`,
+  `tests/furniture/blender_test_furniture_scene_normalization.py`,
+  `tests/furniture/blender_test_furniture_scene_real_acceptance.py`.
 - **Invariantes:** solo se gestiona el root HSLAYOUT solicitado; entities
   ordenadas por `(entity_type, entity_id)`; unidades métricas; parent transforms
   no soportados; paths excluidos; provenance solo materializada; arquitectura
-  no entra en el normalized furniture scene.
+  no entra en el normalized furniture scene; cualquier objeto o collection con
+  metadata furniture del mismo room/layout fuera del root exacto produce
+  `furniture_ownership_outside_root`; otros layouts y externos ordinarios se
+  ignoran.
 - **Tests:** root/collection ausente o duplicado; duplicate ID; entity
   malformed; units/roles/versiones incorrectas; missing/unexpected; type,
   dimensions, position, yaw, anchor, geometry, metadata, provenance,
   ownership y signature mutations; ordering equivalente; serialización estable;
   geometry-vs-metadata anti-false-pass; entidades `HS3D_ROOM_*` rechazadas como
-  furniture.
-- **Gates:** tests furniture y room gates sin modificar sus resultados.
+  furniture; objeto y collection furniture del mismo layout fuera del root;
+  imports de los dos módulos puros ejecutables de forma aislada.
+- **Gates:** tests puros T4.05 `10/10` y `16/16` ejecutables aisladamente;
+  `6/6` Blender sintéticos; tests furniture y room gates sin modificar sus
+  resultados.
 - **Blender:** No para el core sintético; read-only/integración sobre el
-  derivado se ejecuta en T4.06.
+  derivado generator-2 se ejecuta temporalmente, sin crear artefacto
+  canónico de T4.06.
 - **Cierre:** `furniture-scene-adapter-1` y
   `furniture-scene-comparison-1` producen findings estables y no extienden
   `room-scene-adapter-1` ni `room-scene-comparison-1`.
@@ -220,7 +229,6 @@ acceptance y no debe mezclarse con tareas posteriores de assets o UI.
 
 ## Estado del slice en este checkpoint
 
-T4.01, T4.02, T4.03 y T4.04 están `[x]`. T4.05–T4.06 permanecen `[ ]`. Este
-checkpoint crea únicamente el generator overlay y su evidencia temporal; no
-crea normalizer, comparator, escena canónica, preview ni artefacto versionado
-de acceptance.
+T4.01, T4.02, T4.03, T4.04 y T4.05 están `[x]`. T4.06 permanece `[ ]`. Este
+checkpoint crea el normalizer/comparator y su evidencia temporal; no crea
+escena canónica, preview ni artefacto versionado de acceptance.

@@ -10,10 +10,11 @@
 
 **Spec:** `specs/004-furniture-placement-v1/spec.md`
 
-**Current checkpoint:** T4.01, T4.02, T4.03 y T4.04 están implementadas y validadas.
+**Current checkpoint:** T4.01, T4.02, T4.03, T4.04 y T4.05 están implementadas y validadas.
 T4.02 produce un furniture plan puro con yaw canónico, geometría efectiva y
 firma determinista; T4.03 produce validación espacial pura y determinista;
-T4.04 produce un overlay Blender reversible; T4.05–T4.06 siguen sin iniciar.
+T4.04 produce un overlay Blender reversible; T4.05 produce normalización
+read-only y comparación pura; T4.06 sigue sin iniciar.
 
 ## Global Constraints
 
@@ -58,12 +59,15 @@ reflect completed checkpoints:
 - Created `tests/furniture/blender_test_furniture_generation.py` and
   `tests/furniture/blender_test_furniture_real_acceptance.py`: Blender CLI
   synthetic and temporary source-derived integration checks.
-- Create `blender/scripts/furniture/normalize_furniture_scene.py`: independent
+- Created `blender/scripts/furniture/normalize_furniture_scene.py`: independent
   HSLAYOUT adapter.
-- Create `blender/scripts/furniture/compare_furniture_scene.py`: pure plan to
+- Created `blender/scripts/furniture/compare_furniture_scene.py`: pure plan to
   normalized-furniture comparison and report serialization.
-- Create `tests/furniture/`: contract, plan, spatial, normalization,
-  comparison, ownership, mutation and deterministic regression tests.
+- Created `tests/furniture/test_normalize_furniture_scene.py`,
+  `tests/furniture/test_furniture_scene_comparison.py`,
+  `tests/furniture/blender_test_furniture_scene_normalization.py` and the
+  temporary real acceptance runner: normalization, comparison, ownership,
+  mutation and deterministic regression tests.
 - Create `docs/setup/004-furniture-placement-validation.md`: commands,
   acceptance evidence, artifact hashes, privacy and rollback after the real
   acceptance exists.
@@ -250,7 +254,8 @@ without extending the room adapter or comparator.
 **Interfaces:**
 
 ```text
-normalize_furniture_scene(scene_source) -> normalized_furniture_scene
+normalize_furniture_scene(scene, room_id, layout_id) -> normalized_furniture_scene
+normalize_scene(scene_data, room_id, layout_id) -> normalized_furniture_scene
 compare_furniture_plan_to_scene(plan, normalized_scene) -> comparison_report
 ```
 
@@ -258,20 +263,25 @@ compare_furniture_plan_to_scene(plan, normalized_scene) -> comparison_report
 metadata is limited to what Blender materializes; malformed roots, collections,
 roles, units, IDs, geometry, parent transforms and non-finite values fail;
 report findings are stable; missing/unexpected items do not cascade into
-unrelated fields.
+unrelated fields; furniture metadata for the requested room/layout outside its
+exact root is rejected for both objects and collections, while other layouts
+and ordinary external objects remain ignored.
 
 **Tests and gates:** valid synthetic normalized scene; duplicate/malformed
 entity; wrong units/version/identity/signature; missing/unexpected item; type,
 dimension, position, yaw, anchor, geometry and metadata mutation; equivalent
 ordering; repeated serialization; metadata-correct/geometry-bad and
 geometry-correct/metadata-bad anti-false-pass; architecture entities are not
-accepted as furniture entities.
+accepted as furniture entities; same-layout furniture object/collection
+outside-root rejection; standalone pure test execution.
 
-**Blender:** No for the core tests; read-only Blender is required only when
-connecting the adapter to the derived acceptance scene.
+**Blender:** No for the core tests; Blender background read-only is used for
+synthetic normalization and a temporary generator-2 acceptance. No source
+scene is saved and no canonical artifact is created.
 
-**Closure:** the independent adapter and report validate a furniture domain and
-cannot be mistaken for `room-scene-adapter-1` or `room-scene-comparison-1`.
+**Closure:** the independent adapter and report validate a furniture domain,
+are read-only/pure at their respective boundaries, and cannot be mistaken for
+`room-scene-adapter-1` or `room-scene-comparison-1`.
 
 ### T4.06 — Real acceptance, evidence and setup documentation
 
@@ -322,7 +332,7 @@ acceptance layout, derived binary and preview.
 
 Every task records its own pure tests and `git diff --check`. The complete
 slice additionally re-runs the room gates so a furniture change cannot hide a
-regression in Slices 001–003. Blender is used only in T4.04/T4.06 and only
+regression in Slices 001–003. Blender is used only in T4.04/T4.05/T4.06 and only
 with explicit read-only source handling and a new output path.
 
 Evidence must distinguish:
