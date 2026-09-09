@@ -2,10 +2,10 @@
 
 > Clasificación: T2 — nuevo dominio de datos, plan determinista, validación espacial y overlay Blender derivado.
 > Rama: `spec/004-furniture-placement-v1`
-> Estado: T4.01, T4.02, T4.03, T4.04 y T4.05 — contrato, schema, validators,
-> fixture sintético, furniture plan puro, validación espacial, overlay Blender
-> reversible, normalizer/comparator furniture y tests implementados y
-> validados; T4.06 no iniciada.
+> Estado: T4.01–T4.06 — contrato, schema, validators, fixture sintético,
+> furniture plan puro, validación espacial, overlay Blender reversible,
+> normalizer/comparator furniture, acceptance canónica, artefacto derivado,
+> preview técnico y documentación implementados y validados.
 
 ## Objetivo
 
@@ -722,13 +722,13 @@ sin cambiar la semántica de placement.
   `compare_furniture_plan_to_scene` son independientes del room adapter y
   detectan entidades ausentes/inesperadas, geometry-vs-metadata, ownership,
   versiones, IDs, transforms y signatures.
-- [ ] La acceptance real de `living-room-main` demuestra arquitectura antes
+- [x] La acceptance real de `living-room-main` demuestra arquitectura antes
   igual a después, fuente intacta, determinismo, report válido, preview y
   `.blend` derivado sin presentar dimensiones sintéticas como reales.
 - [x] Los tests cubren schema/contract, plan, spatial validation, ordering,
   signatures, no mutación, regeneración, ownership, malformed input y
   anti-false-pass; los gates existentes de Slices 001–003 siguen pasando.
-- [ ] La documentación de setup registra comandos, hashes, límites,
+- [x] La documentación de setup registra comandos, hashes, límites,
   privacidad, provenance parcial y rollback sin modificar los contratos room.
 
 ## Evidencia visual
@@ -738,6 +738,25 @@ sin cambiar la semántica de placement.
   son legibles, el overlay está separado de la arquitectura y el encuadre no
   implica que el proxy sea un modelo real.
 - No se exige render artístico ni materiales.
+
+## Evidencia de T4.06
+
+La acceptance canónica usa `layouts/living-room-main/slice-004-acceptance-v1.json`
+con tres proxies sintéticos. El `.blend` derivado es
+`blender/scenes/review/2026-09-09-living-room-main-slice-004-acceptance-v1-furniture-v1.blend`
+con SHA-256
+`7A0F5683D11C5203A9A01D8243C3173FE53022217AC7C00F36FB2DE9A18D422F`; el
+preview técnico es
+`renders/previews/2026-09-09-living-room-main-slice-004-acceptance-v1-furniture-v1/qa-top-orthographic.png`
+con SHA-256
+`0184EBD44140BB91178FB38E11B800C09B671B4366D95C0D50C4DE26AEA6F773`.
+The preview is sanitized by removing non-contractual textual PNG metadata,
+including Blender's local `tEXt/File` path, without changing decoded pixels;
+the runner checks this privacy invariant.
+La fuente generator-2 conserva su SHA esperado antes y después. El detalle de
+comandos, reportes, determinismo lógico, anti-false-pass, privacidad,
+provenance y rollback está en
+`docs/setup/004-furniture-placement-validation.md`.
 
 ## Decisiones posteriores a T4.01
 

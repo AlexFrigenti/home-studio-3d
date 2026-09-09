@@ -1,16 +1,15 @@
 # Tareas: Furniture Placement v1
 
 > Clasificación: T2
-> Estado del checkpoint actual: T4.01, T4.02, T4.03, T4.04 y T4.05
-> implementadas y validadas; T4.06 no iniciada.
+> Estado del checkpoint actual: T4.01, T4.02, T4.03, T4.04, T4.05 y T4.06
+> implementadas y validadas; Slice 004 cerrado.
 > Rama: `spec/004-furniture-placement-v1`
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 Furniture Placement v1 debe conservar `measurements/` como autoridad
 arquitectónica y separar el dominio de layouts, planes y overlays. Estas tareas
-son la descomposición aprobada; T4.01–T4.05 están cerradas en este checkpoint
-y T4.06 sigue pendiente.
+son la descomposición aprobada; T4.01–T4.06 están cerradas en este checkpoint.
 
 ## T4.01 — Fijar autoridad y contrato `furniture-layout-1`
 
@@ -171,13 +170,15 @@ y T4.06 sigue pendiente.
 
 ## T4.06 — Acceptance real, artefactos y documentación
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** cerrar la primera acceptance de Furniture Placement v1 sobre
   `living-room-main` con evidencia reproducible.
-- **Archivos previstos:** un layout bajo
-  `layouts/living-room-main/<layout-id>.json`, un `.blend` derivado, un
-  preview técnico, `docs/setup/004-furniture-placement-validation.md` y el
-  runner de acceptance estrictamente necesario.
+- **Archivos implementados:**
+  `layouts/living-room-main/slice-004-acceptance-v1.json`,
+  `blender/scenes/review/2026-09-09-living-room-main-slice-004-acceptance-v1-furniture-v1.blend`,
+  `renders/previews/2026-09-09-living-room-main-slice-004-acceptance-v1-furniture-v1/qa-top-orthographic.png`,
+  `docs/setup/004-furniture-placement-validation.md` y
+  `tests/furniture/blender_test_furniture_t406_acceptance.py`.
 - **Datos de acceptance:** dos o tres proxies, preferentemente `sofa`,
   `coffee_table` y `armchair`; todos `dimensions_status=synthetic` y
   `source_id` con prefijo `slice-004-acceptance-`.
@@ -191,8 +192,8 @@ y T4.06 sigue pendiente.
   golden v1 exacta; Python/JSON syntax; diff check; privacy/provenance review;
   acceptance Blender CLI y preview técnico.
 - **Blender:** Sí, CLI background preferido; MCP no necesario.
-- **Cierre:** layout, plan, spatial validation, overlay, normalized scene,
-  comparison, determinismo, anti-false-pass, arquitectura protegida,
+- **Cierre:** `[x]` layout, plan, spatial validation, overlay, normalized
+  scene, comparison, determinismo, anti-false-pass, arquitectura protegida,
   artefactos y documentación pasan con hashes registrados.
 
 ## Dependencias y checkpoints
@@ -214,21 +215,21 @@ acceptance y no debe mezclarse con tareas posteriores de assets o UI.
 
 ## Checklist de cierre futuro
 
-- [ ] El contrato `furniture-layout-1` está validado y no contamina room data.
-- [ ] El plan y su firma son deterministas y no mutan inputs.
+- [x] El contrato `furniture-layout-1` está validado y no contamina room data.
+- [x] El plan y su firma son deterministas y no mutan inputs.
 - [x] La spatial validity distingue errores geométricos y warnings.
 - [x] El overlay HSLAYOUT es reversible, idempotente y ownership-safe.
 - [x] La arquitectura antes/después es equivalente por evidencia estructural.
-- [ ] Normalizer y comparator furniture tienen contratos y findings estables.
-- [ ] Anti-false-pass cubre geometry correcta/metadata corrupta y viceversa.
-- [ ] Acceptance real de `living-room-main` pasa con dimensiones synthetic.
-- [ ] Artefacto derivado y preview tienen hashes y no sobrescriben la fuente.
-- [ ] Slices 001–003 siguen pasando sus gates.
-- [ ] Privacidad, provenance parcial, rollback y límites están documentados.
-- [ ] No se han añadido assets reales, UI, booleans, optimización ni multi-room.
+- [x] Normalizer y comparator furniture tienen contratos y findings estables.
+- [x] Anti-false-pass cubre geometry correcta/metadata corrupta y viceversa.
+- [x] Acceptance real de `living-room-main` pasa con dimensiones synthetic.
+- [x] Artefacto derivado y preview tienen hashes y no sobrescriben la fuente.
+- [x] Slices 001–003 siguen pasando sus gates.
+- [x] Privacidad, provenance parcial, rollback y límites están documentados.
+- [x] No se han añadido assets reales, UI, booleans, optimización ni multi-room.
 
 ## Estado del slice en este checkpoint
 
-T4.01, T4.02, T4.03, T4.04 y T4.05 están `[x]`. T4.06 permanece `[ ]`. Este
-checkpoint crea el normalizer/comparator y su evidencia temporal; no crea
-escena canónica, preview ni artefacto versionado de acceptance.
+T4.01, T4.02, T4.03, T4.04, T4.05 y T4.06 están `[x]`. Este checkpoint
+versiona el layout sintético de acceptance, el `.blend` derivado, el preview
+técnico y su documentación; no inicia Slice 005.

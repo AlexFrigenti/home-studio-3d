@@ -10,11 +10,12 @@
 
 **Spec:** `specs/004-furniture-placement-v1/spec.md`
 
-**Current checkpoint:** T4.01, T4.02, T4.03, T4.04 y T4.05 están implementadas y validadas.
+**Current checkpoint:** T4.01, T4.02, T4.03, T4.04, T4.05 y T4.06 están implementadas y validadas.
 T4.02 produce un furniture plan puro con yaw canónico, geometría efectiva y
 firma determinista; T4.03 produce validación espacial pura y determinista;
 T4.04 produce un overlay Blender reversible; T4.05 produce normalización
-read-only y comparación pura; T4.06 sigue sin iniciar.
+read-only y comparación pura; T4.06 cierra la acceptance canónica, el artefacto
+derivado, el preview técnico y la documentación del slice.
 
 ## Global Constraints
 
@@ -288,10 +289,11 @@ are read-only/pure at their respective boundaries, and cannot be mistaken for
 **Objective:** Validate the complete recommended slice on `living-room-main`
 using a small synthetic layout and record reproducible evidence.
 
-**Planned files:** one acceptance layout under
-`layouts/living-room-main/<layout-id>.json`, one derived review `.blend`, one
-technical preview, `docs/setup/004-furniture-placement-validation.md`, and
-any focused acceptance test/runner needed by the preceding contracts.
+**Implemented files:** `layouts/living-room-main/slice-004-acceptance-v1.json`,
+`blender/scenes/review/2026-09-09-living-room-main-slice-004-acceptance-v1-furniture-v1.blend`,
+`renders/previews/2026-09-09-living-room-main-slice-004-acceptance-v1-furniture-v1/qa-top-orthographic.png`,
+`docs/setup/004-furniture-placement-validation.md` and
+`tests/furniture/blender_test_furniture_t406_acceptance.py`.
 
 **Acceptance invariants:** room source hash unchanged; architecture before and
 after equal; furniture plan, spatial validation, normalized furniture scene and
@@ -307,9 +309,22 @@ review; authorized Blender CLI background acceptance. MCP is not required.
 **Blender:** Required for the acceptance and preview, with the source scene
 opened and the derived scene saved under a new name.
 
-**Closure:** documented real acceptance, hashes, deterministic report,
-anti-false-pass, architecture protection, preview review and rollback are all
-available; no task beyond T4.06 is implied.
+**Closure:** `[x]` documented real acceptance, hashes, deterministic report,
+anti-false-pass, architecture protection, preview review, privacy/provenance
+review and rollback are available; no task beyond T4.06 is implied.
+
+## T4.06 evidence
+
+The canonical acceptance layout is `slice-004-acceptance-v1`. The derived
+scene SHA-256 is
+`7A0F5683D11C5203A9A01D8243C3173FE53022217AC7C00F36FB2DE9A18D422F` and the
+technical preview SHA-256 is
+`0184EBD44140BB91178FB38E11B800C09B671B4366D95C0D50C4DE26AEA6F773`.
+The preview is sanitized without changing decoded pixels; textual PNG metadata,
+including Blender's local `tEXt/File` path, is removed and the runner guards
+against its reintroduction.
+The setup document records the command, report hashes, source preservation,
+logical determinism, anti-false-pass, privacy and rollback evidence.
 
 ## Dependency graph
 
