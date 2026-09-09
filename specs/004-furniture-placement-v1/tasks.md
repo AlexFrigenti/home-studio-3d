@@ -1,16 +1,16 @@
 # Tareas: Furniture Placement v1
 
 > Clasificación: T2
-> Estado del checkpoint actual: T4.01 y T4.02 implementadas y validadas;
-> T4.03–T4.06 no iniciadas.
+> Estado del checkpoint actual: T4.01, T4.02 y T4.03 implementadas y
+> validadas; T4.04–T4.06 no iniciadas.
 > Rama: `spec/004-furniture-placement-v1`
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 Furniture Placement v1 debe conservar `measurements/` como autoridad
 arquitectónica y separar el dominio de layouts, planes y overlays. Estas tareas
-son la descomposición aprobada; T4.01 está cerrada en este checkpoint y las
-restantes siguen pendientes.
+son la descomposición aprobada; T4.01–T4.03 están cerradas en este checkpoint
+y T4.04–T4.06 siguen pendientes.
 
 ## T4.01 — Fijar autoridad y contrato `furniture-layout-1`
 
@@ -72,7 +72,7 @@ restantes siguen pendientes.
 
 ## T4.03 — Validar spatial validity
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** separar los errores espaciales demostrables de las reglas de
   diseño que solo pueden ser warnings.
 - **Archivos previstos:**
@@ -81,21 +81,27 @@ restantes siguen pendientes.
 - **Invariantes:** se usan floor polygon, wall proxies, opening proxies y
   footprints/OBB efectivos del room plan; thickness unknown/fallback,
   `opening_direction=unknown`, `proxy_only=true` y
-  `constructive_geometry=false` se conservan como límites explícitos.
+  `constructive_geometry=false` se conservan como límites explícitos. El
+  binding de room/version/firma/units/coordinate system bloquea la geometría;
+  openings usan XY+Z cuando los rangos están disponibles y `fixed_elements=[]`
+  no infiere obstáculos.
 - **Errores contractuales:** dimensiones inválidas; duplicate ID; proxy fuera
   de floor; wall proxy intersection; opening proxy intersection; overlap de
   proxies de suelo no apilables; plan malformado.
 - **Warnings:** clearance humano, paso, swing de puerta, ergonomía, reglas de
   uso frente a muebles o ventanas y cualquier claim constructivo no demostrable.
-- **Tests:** posiciones dentro/fuera del floor; contacto límite bajo la
+- **Tests:** `54/54 PASS`; posiciones dentro/fuera del floor; contacto límite bajo la
   tolerancia; footprint rotado; wall/opening intersection; overlap;
   no-overlap; fixed element con geometría efectiva cuando exista;
-  fixed element sin geometría no inferido; ordering estable; warnings no
-  convertidos en errores; límites de fallback presentes en la salida.
+  fixed element sin geometría no inferido; consistency OBB↔footprint;
+  footprints/OBBs degenerados; room entities malformadas; orientación
+  collinear a distintas escalas; ordering estable; warnings no convertidos en
+  errores; límites de fallback presentes en la salida.
 - **Gates:** tests puros, suite measurements y diff check.
 - **Blender:** No.
-- **Cierre:** el resultado identifica entidades implicadas, es determinista y
-  no presenta una heurística como medición física.
+- **Cierre:** `[x]` El resultado `furniture-spatial-validation-1` identifica
+  entidades implicadas, es determinista, no muta inputs y no presenta una
+  heurística como medición física. Las limitations se agregan sin ruido.
 
 ## T4.04 — Generar overlay Blender reversible
 
@@ -194,7 +200,7 @@ acceptance y no debe mezclarse con tareas posteriores de assets o UI.
 
 - [ ] El contrato `furniture-layout-1` está validado y no contamina room data.
 - [ ] El plan y su firma son deterministas y no mutan inputs.
-- [ ] La spatial validity distingue errores geométricos y warnings.
+- [x] La spatial validity distingue errores geométricos y warnings.
 - [ ] El overlay HSLAYOUT es reversible, idempotente y ownership-safe.
 - [ ] La arquitectura antes/después es equivalente por evidencia estructural.
 - [ ] Normalizer y comparator furniture tienen contratos y findings estables.
@@ -207,6 +213,6 @@ acceptance y no debe mezclarse con tareas posteriores de assets o UI.
 
 ## Estado del slice en este checkpoint
 
-T4.01 y T4.02 están `[x]`. T4.03–T4.06 permanecen `[ ]`. Este checkpoint no
-crea spatial validation, overlay Blender, normalizer, comparator, escena,
-preview ni artefacto Blender.
+T4.01, T4.02 y T4.03 están `[x]`. T4.04–T4.06 permanecen `[ ]`. Este
+checkpoint no crea overlay Blender, normalizer, comparator, escena, preview ni
+artefacto Blender.

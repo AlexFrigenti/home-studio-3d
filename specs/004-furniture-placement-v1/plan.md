@@ -10,9 +10,10 @@
 
 **Spec:** `specs/004-furniture-placement-v1/spec.md`
 
-**Current checkpoint:** T4.01 y T4.02 están implementadas y validadas. T4.02
-produce un furniture plan puro con yaw canónico, geometría efectiva y firma
-determinista; T4.03–T4.06 siguen sin iniciar.
+**Current checkpoint:** T4.01, T4.02 y T4.03 están implementadas y validadas.
+T4.02 produce un furniture plan puro con yaw canónico, geometría efectiva y
+firma determinista; T4.03 produce validación espacial pura y determinista;
+T4.04–T4.06 siguen sin iniciar.
 
 ## Global Constraints
 
@@ -35,8 +36,8 @@ determinista; T4.03–T4.06 siguen sin iniciar.
 
 ## Planned file boundaries
 
-These paths are planned for implementation tasks and are not created by this
-design checkpoint:
+These paths are planned for implementation tasks; entries marked as created
+reflect completed checkpoints:
 
 - Create `layouts/schema/furniture-layout-v1.schema.json`: the machine-readable
   input contract after T4.01 decisions are accepted.
@@ -46,7 +47,7 @@ design checkpoint:
   validation and canonicalization.
 - Created `blender/scripts/furniture/build_furniture_plan.py`: pure plan,
   effective proxy geometry and logical signature.
-- Create `blender/scripts/furniture/validate_furniture_spatial.py`: floor,
+- Created `blender/scripts/furniture/validate_furniture_spatial.py`: floor,
   wall, opening and furniture-overlap checks plus explicitly separated
   warnings.
 - Create `blender/scripts/furniture/generate_furniture.py`: read-only source
@@ -150,34 +151,46 @@ effective room plan and proxy geometry.
 **Planned files:** `blender/scripts/furniture/validate_furniture_spatial.py`,
 `tests/furniture/test_furniture_spatial.py`.
 
-**Interfaces:**
+**Interface:**
 
 ```text
-validate_furniture_spatial(furniture_plan, room_plan) -> SpatialValidation
+validate_furniture_spatial(furniture_plan, room_plan) -> SpatialValidationReport
 ```
 
-**Errors:** non-positive/non-finite proxy; outside effective floor polygon;
-wall-proxy intersection; opening-proxy intersection; unsupported floor overlap;
-duplicate IDs or malformed plan.
+**Errors:** incompatible binding; malformed effective proxy; outside effective
+floor polygon; wall-proxy intersection; opening-proxy intersection; unsupported
+floor overlap; duplicate IDs or malformed plan. Geometry is checked only after
+the room identity, version, signature, units and coordinate-system binding
+passes.
 
 **Warnings:** human clearance, door swing, passage width, ergonomics, window
 design rules and other intent that needs data not present in the room contract.
 
-**Invariants:** calculations use effective geometry, retain entity IDs and
-never turn the 16 wall-thickness unknowns, `opening_direction=unknown`,
-`proxy_only=true` or `constructive_geometry=false` into false physical claims.
+**Invariants:** calculations use effective geometry already present in both
+plans, retain entity IDs, use `MATH_TOLERANCE_M=1e-6`, treat floor/wall/opening
+touching within tolerance as non-overlap, and never turn the 16 wall-thickness
+fallbacks, `opening_direction=unknown`, `proxy_only=true` or
+`constructive_geometry=false` into false physical claims. Opening checks use XY
+SAT plus Z overlap when both ranges are available, so an elevated window with
+no Z overlap does not produce a false collision. `fixed_elements=[]` is
+supported without inferred geometry.
 
-**Tests and gates:** boundary-touch tolerance; rotated OBB/footprint;
-outside-floor; wall and opening proxy intersections; fixed-element obstacle
-when effective geometry exists; unsupported fixed-element geometry is not
-inferred; two-item overlap; non-overlapping placement; stable finding ordering;
-warnings remain warnings; unknown/fallback caveats are present in structured
-output.
+**Tests and gates:** 54 pure tests cover binding, boundary-touch tolerance,
+rotated OBB/footprint, non-rectangular floor, outside-floor anti-cascade, wall
+and opening proxy intersections, measured/fallback walls, Z-separated windows,
+fixed-element limitations, two-item overlap, stable finding ordering,
+determinism and no mutation. `world_footprint_m` is authoritative and `obb_2d`
+is checked for finite, non-degenerate, orthonormal and mutually consistent
+derived geometry. Malformed room entities return `malformed_room_plan` without
+crashing. Limitations are aggregated by entity kind and code rather than
+repeated for every furniture pair. Cross-product comparisons use
+`MATH_TOLERANCE_M * max(vector_lengths, MATH_TOLERANCE_M)` in `m²`.
 
 **Blender:** No.
 
-**Closure:** spatial validity is deterministic, independently testable and
-honest about what is geometric proof versus a design heuristic.
+**Closure:** complete. Spatial validity is deterministic, independently
+testable and honest about what is geometric proof versus a design heuristic;
+no Blender overlay or later furniture task is started.
 
 ### T4.04 — Generate a reversible Blender overlay
 

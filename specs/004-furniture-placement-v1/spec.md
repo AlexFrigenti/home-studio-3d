@@ -2,9 +2,9 @@
 
 > Clasificación: T2 — nuevo dominio de datos, plan determinista, validación espacial y overlay Blender derivado.
 > Rama: `spec/004-furniture-placement-v1`
-> Estado: T4.01 y T4.02 — contrato, schema, validator, fixture sintético,
-> furniture plan puro y tests implementados y validados; T4.03–T4.06 no
-> iniciadas.
+> Estado: T4.01, T4.02 y T4.03 — contrato, schema, validators, fixture
+> sintético, furniture plan puro, validación espacial y tests implementados y
+> validados; T4.04–T4.06 no iniciadas.
 
 ## Objetivo
 
@@ -555,6 +555,32 @@ T4.02 queda implementada sin Blender ni cambios al room pipeline:
 - no se ejecuta spatial validation, no se usa Blender y no se crea furniture
   overlay.
 
+## Evidencia de T4.03
+
+T4.03 queda implementada como una capa pura y Blender-independent:
+
+- validador: `blender/scripts/furniture/validate_furniture_spatial.py`;
+- tests: `tests/furniture/test_furniture_spatial.py`;
+- resultado: `54/54 PASS`;
+- report serializable `furniture-spatial-validation-1` con binding bloqueante,
+  findings estables, summary, entidades comprobadas y limitations agregadas;
+- containment sobre el floor polygon efectivo, intersecciones SAT/OBB 2D y
+  solape Z cuando la geometría efectiva lo permite;
+- `world_footprint_m` es la autoridad geométrica furniture; `obb_2d` se valida
+  como representación derivada consistente en center, axes, half-extents y
+  corners;
+- footprints/OBBs degenerados y room geometry necesaria malformada producen
+  findings estructurados sin crashes ni checks derivados;
+- la tolerancia lineal `1e-6 m` se convierte en tolerancia de orientación
+  `m²` mediante `tolerance_m * max(vector_lengths, tolerance_m)`;
+- touching dentro de `MATH_TOLERANCE_M=1e-6` no produce error y los inputs no
+  se mutan;
+- wall thickness fallback, opening proxy/direction unknown y fixed elements
+  sin geometría efectiva se registran como limitations, nunca como claims
+  físicos adicionales; `fixed_elements=[]` no infiere obstáculos;
+- fuera de alcance: clearance humano, door swing, ergonomía, constructive
+  openings, Blender overlay, normalizer y comparator.
+
 ## Versiones
 
 | Contrato | Versión inicial |
@@ -656,8 +682,9 @@ sin cambiar la semántica de placement.
   `armchair`, `shelf` y `tv_unit`.
 - El layout acepta cualquier `yaw_deg` finito en grados; T4.02 normaliza el
   plan a `[0,360)`.
-- La política exacta de intersección con wall/opening proxies se implementará
-  y validará en T4.03 usando las primitivas efectivas del room plan.
+- La política exacta de intersección con wall/opening proxies queda
+  implementada y validada en T4.03 usando las primitivas efectivas del room
+  plan; el resultado sigue limitado a la geometría proxy representada.
 - Los nombres definitivos de artefactos de acceptance y la política de
   derivados se cerrarán en T4.06 antes de generar el primer `.blend`.
 
