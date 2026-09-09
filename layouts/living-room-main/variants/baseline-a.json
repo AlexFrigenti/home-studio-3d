@@ -1,0 +1,40 @@
+{
+  "layout_schema_version": "furniture-layout-1",
+  "layout_id": "slice-005-acceptance-baseline-a",
+  "room_id": "living-room-main",
+  "units": "m",
+  "coordinate_system": "canonical_room",
+  "placement_method": "manual",
+  "items": [
+    {
+      "id": "sofa",
+      "type": "sofa",
+      "dimensions_m": [2.2, 0.95, 0.85],
+      "dimensions_status": "synthetic",
+      "source_id": "slice-005-acceptance-sofa",
+      "position_xy_m": [-3.1, 1.2],
+      "anchor": "bottom_center",
+      "yaw_deg": 0.0
+    },
+    {
+      "id": "coffee_table",
+      "type": "coffee_table",
+      "dimensions_m": [1.0, 0.6, 0.4],
+      "dimensions_status": "synthetic",
+      "source_id": "slice-005-acceptance-coffee-table",
+      "position_xy_m": [-3.1, 0.2],
+      "anchor": "bottom_center",
+      "yaw_deg": 90.0
+    },
+    {
+      "id": "armchair",
+      "type": "armchair",
+      "dimensions_m": [0.8, 0.8, 0.9],
+      "dimensions_status": "synthetic",
+      "source_id": "slice-005-acceptance-armchair",
+      "position_xy_m": [-1.0, 1.2],
+      "anchor": "bottom_center",
+      "yaw_deg": 270.0
+    }
+  ]
+}
