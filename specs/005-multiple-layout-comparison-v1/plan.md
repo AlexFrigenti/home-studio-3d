@@ -4,7 +4,7 @@
 
 **Goal:** Añadir un comparator puro que compare dos o más FurniturePlans y sus SpatialValidationReports para la misma habitación, produciendo un VariantComparisonReport determinista y sin ranking subjetivo.
 
-**Architecture:** El nuevo módulo `compare_furniture_variants.py` recibirá registros explícitos `{furniture_plan, spatial_report}` y un `baseline_layout_id`. Validará binding y versiones, calculará sets y deltas geométricos/metadata, y resumirá los hechos espaciales ya reportados. No leerá layouts, room JSON ni Blender; T5.05 cerrará con fixtures sintéticos de `living-room-main`.
+**Architecture:** T5.01 implementa `compare_furniture_variants.py` con planes y wrappers espaciales explícitos, `baseline_layout_id`, validación de binding/versiones y serialización determinista. Los sets/deltas de items y el resumen espacial quedan para T5.02/T5.03. No leerá layouts, room JSON ni Blender.
 
 **Tech Stack:** Python estándar, mappings/dataclasses inmutables según los patrones furniture existentes, `unittest`, JSON canónico y SHA-256 lógico opcional. Sin `bpy`, dependencias externas ni cambios de room pipeline.
 
@@ -36,28 +36,30 @@
 - Reference: `specs/005-multiple-layout-comparison-v1/spec.md`
 
 **Interfaces:**
-- Consumes: dos o más registros con `furniture_plan`, `spatial_report` y `layout_id`, además de `baseline_layout_id` explícito.
+- Consumes: un `baseline_plan`, una secuencia de `variant_plans`, un wrapper espacial del baseline, una secuencia de wrappers espaciales de variantes y `baseline_layout_id` explícito.
 - Produces: `VariantComparisonReport` con `report_version="furniture-variant-comparison-1"`, serialización estable y `logical_signature` calculada sin incluirse a sí misma.
 
-- [ ] **Step 1: Escribir tests de contrato en rojo**
+- [x] **Step 1: Escribir tests de contrato en rojo**
 
-Cubrir `invalid_variant_count`, baseline ausente, IDs duplicados, binding room/version/unidades/coordinate system y rechazo de versiones desconocidas.
+Cubrir `missing_variant`, `baseline_layout_id_invalid`, IDs duplicados, binding room/version/unidades/coordinate system y rechazo de versiones desconocidas.
 
-- [ ] **Step 2: Ejecutar el módulo aislado**
+- [x] **Step 2: Ejecutar el módulo aislado**
 
 Run: `python -m unittest tests/furniture/test_furniture_variant_comparison.py`
 
 Expected: FAIL porque el módulo y su API todavía no existen.
 
-- [ ] **Step 3: Implementar el modelo y validación mínima**
+- [x] **Step 3: Implementar el modelo y validación mínima**
 
-Definir `VARIANT_COMPARISON_REPORT_VERSION`, `MATH_TOLERANCE_M`, el input wrapper inmutable, el report serializable y validación anti-cascade antes de cualquier delta.
+Definir `REPORT_VERSION="furniture-variant-comparison-1"`, el wrapper espacial explícito, el report serializable y validación anti-cascade antes de cualquier delta. T5.01 no ejecuta comparaciones numéricas de items, por lo que `MATH_TOLERANCE_M` se aplica en T5.02.
 
-- [ ] **Step 4: Ejecutar el contrato**
+- [x] **Step 4: Ejecutar el contrato**
 
 Run: `python -m unittest tests/furniture/test_furniture_variant_comparison.py`
 
 Expected: PASS para identidad, versiones, binding, canonicalización básica y no mutation.
+
+**Cierre T5.01:** implementado y validado. El report no emite `common_items`, `added_items`, `removed_items`, deltas de plan ni deltas espaciales.
 
 ### Task 5.02: Implementar sets y deltas de plan
 

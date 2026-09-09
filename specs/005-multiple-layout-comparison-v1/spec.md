@@ -1,6 +1,6 @@
 # Especificación: Multiple Layout Comparison / Variant Review v1
 
-> Estado: diseño documental aprobado para implementación posterior. Slice 005 no está implementado.
+> Estado: T5.01 implementado y validado; T5.02–T5.06 no implementados.
 >
 > Rama: `spec/005-multiple-layout-comparison-v1`
 
@@ -12,16 +12,20 @@ El slice compara hechos contractuales derivados de `FurniturePlan` y de los `Spa
 
 ## Alcance
 
-Slice 005 añadirá un core puro equivalente a:
+T5.01 implementa un core puro equivalente a:
 
 ```text
 compare_layout_variants(
-    variants,
+    baseline_plan,
+    variant_plans,
+    baseline_spatial_report,
+    variant_spatial_reports,
+    *,
     baseline_layout_id
 ) -> VariantComparisonReport
 ```
 
-Cada entrada de `variants` transportará un `FurniturePlan` y el `SpatialValidationReport` correspondiente, asociados explícitamente por `layout_id`. El comparator será serializable, determinista, no mutable e independiente de `bpy`, layouts originales y room JSON.
+El wrapper de cada report espacial es `{layout_id, room_id, room_plan_version, room_logical_signature, units, coordinate_system, report}` porque el `SpatialValidationReport` de T4 no materializa por sí solo todos esos campos de binding. El comparator es serializable, determinista, no mutable e independiente de `bpy`, layouts originales y room JSON. T5.01 valida contrato y binding; no compara todavía items ni facts espaciales.
 
 ## Fuentes de autoridad
 
@@ -47,20 +51,42 @@ La salida mínima es un mapping serializable con esta forma:
   "room_plan_version": "room-v1.1-generator-2",
   "room_logical_signature": "0000000000000000000000000000000000000000000000000000000000000000",
   "compared_layout_ids": ["layout-a", "layout-b"],
-  "per_layout": [],
-  "pairwise_deltas": [],
+  "units": "m",
+  "coordinate_system": "canonical_room",
+  "furniture_plan_version": "furniture-placement-generator-1",
+  "spatial_report_version": "furniture-spatial-validation-1",
   "errors": [],
   "warnings": [],
-  "limitations": [],
+  "info": [],
+  "summary": {
+    "variant_count": 2,
+    "layout_bindings": [
+      {
+        "layout_id": "layout-a",
+        "furniture_plan_logical_signature": "plan-a",
+        "spatial_report_version": "furniture-spatial-validation-1"
+      },
+      {
+        "layout_id": "layout-b",
+        "furniture_plan_logical_signature": "plan-b",
+        "spatial_report_version": "furniture-spatial-validation-1"
+      }
+    ],
+    "error_count": 0,
+    "warning_count": 0,
+    "info_count": 0
+  },
   "logical_signature": "0000000000000000000000000000000000000000000000000000000000000000"
 }
 ```
 
-`logical_signature` se calcula sobre la representación canónica sin ese propio campo. No es una golden binaria y no obliga a versionar un hash de cada acceptance.
+`logical_signature` se calcula sobre la representación canónica sin ese propio campo. No es una golden binaria y no obliga a versionar un hash de cada acceptance. T5.01 no emite `per_layout`, `pairwise_deltas` ni otros campos de T5.02/T5.03.
 
-### `per_layout`
+### `per_layout` (reservado tras T5.01)
 
-Cada resumen contiene únicamente hechos del plan y del report espacial ya recibido:
+El resumen por layout se reserva para T5.03. En T5.01, `summary` contiene únicamente `variant_count`, `layout_bindings` ordenados y conteos de errors/warnings/info del propio contrato.
+
+Cuando se implemente T5.03, cada resumen podrá contener únicamente hechos del plan y del report espacial ya recibido:
 
 - `layout_id`;
 - `furniture_plan_version`;
@@ -73,9 +99,9 @@ Cada resumen contiene únicamente hechos del plan y del report espacial ya recib
 
 Un `SpatialValidationReport.valid=false` se conserva como hecho de esa variante. No convierte por sí solo el report de comparación en inválido si la comparación contractual puede realizarse.
 
-### `pairwise_deltas`
+### `pairwise_deltas` (reservado tras T5.01)
 
-La estrategia v1 es baseline explícito → cada variante. Cada delta contiene:
+La estrategia futura es baseline explícito → cada variante. T5.01 no emite esta sección. Cuando se implemente T5.02, cada delta contendrá:
 
 - `from_layout_id`;
 - `to_layout_id`;
@@ -180,27 +206,27 @@ Todos los variants deben compartir exactamente:
 
 Un mismatch es error bloqueante. Las versiones desconocidas no se aceptan silenciosamente. Ante un error de binding no se emiten deltas geométricos ni de metadata.
 
-El comparator exige entre 2 y N variantes, IDs de layout únicos y un `baseline_layout_id` explícito que pertenezca al conjunto. La lista canónica de layouts se ordena por `layout_id`; los deltas v1 solo son baseline→variante, evitando una explosión O(N²). Comparaciones entre variantes no baseline quedan para una versión posterior.
+El comparator exige un baseline y al menos una variante, IDs de layout únicos y un `baseline_layout_id` explícito que pertenezca al conjunto. La lista canónica de layouts se ordena por `layout_id`; los deltas futuros solo serán baseline→variante, evitando una explosión O(N²). Comparaciones entre variantes no baseline quedan para una versión posterior.
 
 ## `valid`, errors y anti-cascade
 
-`valid` indica que el report pudo comparar contractualmente todos los inputs. Es independiente de que una variante tenga `spatial_valid=false`; esa condición aparece en `per_layout` y `spatial_deltas`.
+`valid` indica que el report pudo validar contractualmente todos los inputs. En T5.01 warnings/info no invalidan y permanecen vacíos; la validez espacial de una variante se consumirá en T5.03 sin recalcularla.
 
 Errores contractuales mínimos:
 
-- `invalid_variant_count`;
+- `missing_variant`;
 - `duplicate_layout_id`;
-- `missing_baseline_layout`;
+- `baseline_layout_id_invalid`;
 - `room_id_mismatch`;
 - `room_plan_version_mismatch`;
-- `room_logical_signature_mismatch`;
+- `room_plan_signature_mismatch`;
 - `units_mismatch`;
 - `coordinate_system_mismatch`;
-- `furniture_plan_version_mismatch`;
-- `spatial_report_version_mismatch`;
-- `spatial_report_binding_mismatch`;
-- `duplicate_item_id`;
-- `malformed_furniture_plan`;
+- `unsupported_furniture_plan_version`;
+- `unsupported_spatial_report_version`;
+- `spatial_report_missing`;
+- `spatial_report_layout_mismatch`;
+- `malformed_variant_input`;
 - `malformed_spatial_report`.
 
 Un binding inválido detiene los checks dependientes. Un item malformado produce un finding estable y no genera cascadas de deltas. Un item añadido o eliminado no produce findings de campos inexistentes.
@@ -233,6 +259,10 @@ No forman parte de Slice 005:
 - multi-room;
 - fixed elements nuevos;
 - artefacto `.blend` o preview comparativo.
+
+## Estado de implementación T5.01
+
+T5.01 está implementado en `blender/scripts/furniture/compare_furniture_variants.py` y cubierto por `tests/furniture/test_furniture_variant_comparison.py`. El módulo valida versiones, baseline explícito, cardinalidad, binding room/plan/spatial, ordering canónico, serialización JSON, firma lógica, inputs malformados y no mutación. No implementa comparación de items ni deltas espaciales.
 
 ## Acceptance propuesta
 

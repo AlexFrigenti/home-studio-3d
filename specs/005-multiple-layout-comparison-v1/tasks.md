@@ -1,6 +1,6 @@
 # Tareas: Multiple Layout Comparison / Variant Review v1
 
-> Estado del checkpoint actual: diseño documental creado; T5.01–T5.06 no implementadas.
+> Estado del checkpoint actual: T5.01 implementada y validada; T5.02–T5.06 no implementadas.
 >
 > Rama: `spec/005-multiple-layout-comparison-v1`
 
@@ -10,17 +10,19 @@ Slice 005 compara hechos entre dos o más variantes del mismo room mediante un c
 
 La salida es `furniture-variant-comparison-1`. El `baseline_layout_id` es explícito y los deltas v1 se calculan baseline→cada variante. `item_id` es identidad semántica. `MATH_TOLERANCE_M=1e-6` m se mantiene para magnitudes lineales; yaw usa delta periódico y tolerancia derivada de radio.
 
-`valid` significa que los inputs son comparables contractualmente. La validez espacial de cada variante se conserva en su summary y los errores/warnings/limitations espaciales se comparan sin recalcularlos. No existe ranking subjetivo.
+`valid` significa que los inputs son comparables contractualmente. El diseño posterior conservará la validez espacial de cada variante y comparará errores/warnings/limitations sin recalcularlos; T5.01 solo valida el binding del report espacial. No existe ranking subjetivo.
 
-## T5.01 — Variant comparison contract
+En el checkpoint T5.01, el report contiene únicamente binding/versiones, findings contractuales, summary de bindings y firma lógica. Los campos de items y los deltas espaciales se reservan para T5.02/T5.03.
 
-- [ ] Fijar `furniture-variant-comparison-1` y la representación serializable de `VariantComparisonReport`.
-- [ ] Fijar wrapper de entrada `{layout_id, furniture_plan, spatial_report}` y exigir `baseline_layout_id` explícito.
-- [ ] Validar 2..N variantes, IDs únicos, room binding, versiones, unidades y coordinate system.
-- [ ] Fijar ordering canónico, normalización de `-0.0`, floats finitos, firma lógica incluida en el report y exclusiones.
-- [ ] Cubrir errores de binding y anti-cascade antes de implementar deltas.
+## T5.01 [x] — Variant comparison contract
 
-**Cierre:** el contrato rechaza inputs incompatibles sin consultar Blender ni recalcular spatial validation.
+- [x] Fijar `furniture-variant-comparison-1` y la representación serializable de `VariantComparisonReport`.
+- [x] Fijar la API explícita con baseline, variantes y wrappers espaciales; exigir `baseline_layout_id` explícito.
+- [x] Validar un baseline + 1..N variantes, IDs únicos, room binding, versiones, unidades y coordinate system.
+- [x] Fijar ordering canónico, normalización de `-0.0`, floats finitos, firma lógica excluida de su propio payload y exclusiones.
+- [x] Cubrir errores de binding y anti-cascade antes de implementar deltas.
+
+**Cierre:** el contrato rechaza inputs incompatibles sin consultar Blender ni recalcular spatial validation. No emite todavía deltas de items ni deltas espaciales.
 
 ## T5.02 — Pure comparison engine
 
