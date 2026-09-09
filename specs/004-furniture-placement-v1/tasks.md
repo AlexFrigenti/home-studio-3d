@@ -1,16 +1,16 @@
 # Tareas: Furniture Placement v1
 
 > Clasificación: T2
-> Estado del checkpoint actual: T4.01, T4.02 y T4.03 implementadas y
-> validadas; T4.04–T4.06 no iniciadas.
+> Estado del checkpoint actual: T4.01, T4.02, T4.03 y T4.04 implementadas y
+> validadas; T4.05–T4.06 no iniciadas.
 > Rama: `spec/004-furniture-placement-v1`
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 Furniture Placement v1 debe conservar `measurements/` como autoridad
 arquitectónica y separar el dominio de layouts, planes y overlays. Estas tareas
-son la descomposición aprobada; T4.01–T4.03 están cerradas en este checkpoint
-y T4.04–T4.06 siguen pendientes.
+son la descomposición aprobada; T4.01–T4.04 están cerradas en este checkpoint
+y T4.05–T4.06 siguen pendientes.
 
 ## T4.01 — Fijar autoridad y contrato `furniture-layout-1`
 
@@ -105,26 +105,33 @@ y T4.04–T4.06 siguen pendientes.
 
 ## T4.04 — Generar overlay Blender reversible
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** añadir proxies furniture a una copia derivada de la escena
   arquitectónica sin modificar su ownership.
-- **Archivos previstos:**
+- **Archivos implementados:**
   `blender/scripts/furniture/generate_furniture.py`,
-  `tests/furniture/test_furniture_generation_contract.py`.
-- **Invariantes:** root `HSLAYOUT_<room_id>_<layout_id>`; collection `Furniture`;
-  objetos `HSLAYOUT_FURNITURE_<item_id>`; metadata `hs3d_layout_*`; no
+  `tests/furniture/test_furniture_generation_contract.py`,
+  `tests/furniture/blender_test_furniture_generation.py`,
+  `tests/furniture/blender_test_furniture_real_acceptance.py`.
+- **Invariantes:** root `HSLAYOUT_<room_id>_<layout_id>`; collection con role
+  lógico `Furniture` y datablock físico cualificado por room/layout;
+  objetos físicos `HSLAYOUT_FURNITURE_<room_id>_<layout_id>_<item_id>`;
+  `item_id` permanece como identidad semántica en metadata y puede repetirse
+  entre layouts sin colisión global Blender; no
   `read_factory_settings`; no delete de `HS3D_ROOM_*`; source `.blend` nunca
   sobrescrito; output existente rechazado por defecto; externos fuera de
   ownership; regenerar un layout no elimina otro.
-- **Tests:** path protection; namespace; metadata; dimensions y transforms;
+- **Tests:** `9/9 PASS` pure; `4/4 PASS` Blender sintético; acceptance CLI real
+  temporal PASS; path protection; namespace; metadata; dimensions y transforms;
   same plan twice; dos layouts aislados; snapshot architecture before/after;
   source SHA estable; collections y entidades room intactas; parent policy.
 - **Gates:** tests de contrato y una ejecución Blender CLI read/write
   autorizada únicamente sobre una copia derivada y una ruta nueva.
 - **Blender:** Sí para la integración real; no para la mayor parte de los
   tests de ownership.
-- **Cierre:** existe un `.blend` derivado reproducible, la arquitectura antes
-  y después es equivalente y el `.blend` fuente no cambia.
+- **Cierre:** `[x]` existe evidencia de `.blend` derivado temporal reproducible,
+  la arquitectura antes y después es equivalente, room plan-to-scene permanece
+  válido y el `.blend` fuente no cambia.
 
 ## T4.05 — Normalizar y comparar furniture scene
 
@@ -201,8 +208,8 @@ acceptance y no debe mezclarse con tareas posteriores de assets o UI.
 - [ ] El contrato `furniture-layout-1` está validado y no contamina room data.
 - [ ] El plan y su firma son deterministas y no mutan inputs.
 - [x] La spatial validity distingue errores geométricos y warnings.
-- [ ] El overlay HSLAYOUT es reversible, idempotente y ownership-safe.
-- [ ] La arquitectura antes/después es equivalente por evidencia estructural.
+- [x] El overlay HSLAYOUT es reversible, idempotente y ownership-safe.
+- [x] La arquitectura antes/después es equivalente por evidencia estructural.
 - [ ] Normalizer y comparator furniture tienen contratos y findings estables.
 - [ ] Anti-false-pass cubre geometry correcta/metadata corrupta y viceversa.
 - [ ] Acceptance real de `living-room-main` pasa con dimensiones synthetic.
@@ -213,6 +220,7 @@ acceptance y no debe mezclarse con tareas posteriores de assets o UI.
 
 ## Estado del slice en este checkpoint
 
-T4.01, T4.02 y T4.03 están `[x]`. T4.04–T4.06 permanecen `[ ]`. Este
-checkpoint no crea overlay Blender, normalizer, comparator, escena, preview ni
-artefacto Blender.
+T4.01, T4.02, T4.03 y T4.04 están `[x]`. T4.05–T4.06 permanecen `[ ]`. Este
+checkpoint crea únicamente el generator overlay y su evidencia temporal; no
+crea normalizer, comparator, escena canónica, preview ni artefacto versionado
+de acceptance.

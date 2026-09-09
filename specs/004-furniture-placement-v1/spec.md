@@ -2,9 +2,9 @@
 
 > Clasificación: T2 — nuevo dominio de datos, plan determinista, validación espacial y overlay Blender derivado.
 > Rama: `spec/004-furniture-placement-v1`
-> Estado: T4.01, T4.02 y T4.03 — contrato, schema, validators, fixture
-> sintético, furniture plan puro, validación espacial y tests implementados y
-> validados; T4.04–T4.06 no iniciadas.
+> Estado: T4.01, T4.02, T4.03 y T4.04 — contrato, schema, validators, fixture
+> sintético, furniture plan puro, validación espacial, overlay Blender
+> reversible y tests implementados y validados; T4.05–T4.06 no iniciadas.
 
 ## Objetivo
 
@@ -362,8 +362,14 @@ Se compararon tres alternativas:
 La elección v1 es `HSLAYOUT_*`:
 
 - root: `HSLAYOUT_<room_id>_<layout_id>`;
-- collection hija gestionada: `Furniture`;
-- objeto proxy: `HSLAYOUT_FURNITURE_<item_id>`;
+- collection hija gestionada lógicamente: `Furniture`; como los nombres de
+  datablock de Collection son globales en Blender, el datablock físico usa el
+  nombre determinista `HSLAYOUT_<room_id>_<layout_id>_Furniture` y conserva
+  `hs3d_layout_collection_role=Furniture`;
+- objeto proxy físico: `HSLAYOUT_FURNITURE_<room_id>_<layout_id>_<item_id>`;
+  `item_id` continúa siendo la identidad semántica independiente almacenada
+  en metadata; la cualificación evita colisiones globales de nombres Blender
+  entre layouts que contienen el mismo item.
 - metadata propia: claves `hs3d_layout_*`, sin reutilizar `hs3d_role` del
   dominio room.
 
@@ -581,6 +587,35 @@ T4.03 queda implementada como una capa pura y Blender-independent:
 - fuera de alcance: clearance humano, door swing, ergonomía, constructive
   openings, Blender overlay, normalizer y comparator.
 
+## Evidencia de T4.04
+
+T4.04 queda implementada como un overlay Blender derivado y ownership-safe:
+
+- generator: `blender/scripts/furniture/generate_furniture.py`;
+- core puro y contrato: `tests/furniture/test_furniture_generation_contract.py`;
+- integración sintética Blender: `tests/furniture/blender_test_furniture_generation.py`;
+- acceptance CLI real temporal: `tests/furniture/blender_test_furniture_real_acceptance.py`;
+- resultado puro: `9/9 PASS`;
+- resultado Blender sintético: `4/4 PASS` en Blender `5.2.1 LTS`;
+- fuente generator-2 abierta como read-only y salida derivada temporal creada
+  sin sobrescribirla;
+- fuente SHA antes/después:
+  `352FDC163F0126989A2969F07A0B543FDCCC777E6ED8A29F78043F9CD9178280`;
+- root gestionado `HSLAYOUT_<room_id>_<layout_id>`, role lógico `Furniture` y
+  proxies físicos `HSLAYOUT_FURNITURE_<room_id>_<layout_id>_<item_id>` con
+  metadata `hs3d_layout_*`;
+- `item_id` semántico se conserva sin derivarlo del nombre físico; dos layouts
+  pueden contener el mismo `item_id` con objetos Blender globalmente distintos;
+- regeneración limitada al root del mismo layout; otros layouts y objetos
+  externos se conservan; colisiones de ownership fallan de forma segura;
+- proxies cúbicos respetan dimensiones, `bottom_center`, posición, yaw
+  canónico, `z_min=0` y `z_max=height`;
+- `normalize_blender_scene` sigue clasificando HSLAYOUT como auxiliar externo;
+  la proyección arquitectónica antes/después es idéntica y
+  `compare_plan_to_scene` permanece válido antes y después;
+- no se implementan `normalize_furniture_scene`, comparator, ComparisonReport,
+  assets, preview ni artefacto canónico de T4.06.
+
 ## Versiones
 
 | Contrato | Versión inicial |
@@ -685,8 +720,8 @@ sin cambiar la semántica de placement.
 - La política exacta de intersección con wall/opening proxies queda
   implementada y validada en T4.03 usando las primitivas efectivas del room
   plan; el resultado sigue limitado a la geometría proxy representada.
-- Los nombres definitivos de artefactos de acceptance y la política de
-  derivados se cerrarán en T4.06 antes de generar el primer `.blend`.
+- Los nombres definitivos del artefacto de acceptance y preview versionados se
+  cerrarán en T4.06; T4.04 solo genera salidas derivadas nuevas y temporales.
 
 ## Evidencia de T4.01
 

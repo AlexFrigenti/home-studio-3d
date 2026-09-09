@@ -10,10 +10,10 @@
 
 **Spec:** `specs/004-furniture-placement-v1/spec.md`
 
-**Current checkpoint:** T4.01, T4.02 y T4.03 están implementadas y validadas.
+**Current checkpoint:** T4.01, T4.02, T4.03 y T4.04 están implementadas y validadas.
 T4.02 produce un furniture plan puro con yaw canónico, geometría efectiva y
 firma determinista; T4.03 produce validación espacial pura y determinista;
-T4.04–T4.06 siguen sin iniciar.
+T4.04 produce un overlay Blender reversible; T4.05–T4.06 siguen sin iniciar.
 
 ## Global Constraints
 
@@ -23,7 +23,8 @@ T4.04–T4.06 siguen sin iniciar.
 - `dimensions_m` is ordered `[width, depth, height]`; dimensions are finite and positive; `unknown` is not accepted for generated v1 proxies.
 - Furniture positions use `position_xy_m` at the center of the proxy base and finite `yaw_deg` degrees; T4.02 normalizes the plan output to `[0, 360)`.
 - The pure furniture plan version is `furniture-placement-generator-1` and carries the room plan version and logical signature it was built against.
-- The Blender namespace is `HSLAYOUT_<room_id>_<layout_id>` with a managed `Furniture` collection and `HSLAYOUT_FURNITURE_<item_id>` objects.
+- The Blender namespace is `HSLAYOUT_<room_id>_<layout_id>` with a managed `Furniture` collection and physical objects named `HSLAYOUT_FURNITURE_<room_id>_<layout_id>_<item_id>`; the semantic `item_id` remains separate metadata.
+- The logical collection role is `Furniture`; the physical Blender Collection datablock name is qualified by room and layout to remain unique across multiple layouts.
 - Furniture generation may only create or replace its own HSLAYOUT root; it must not call `read_factory_settings`, delete `HS3D_ROOM_*`, modify architecture collections or overwrite the source `.blend`.
 - `furniture-scene-adapter-1` and `furniture-scene-comparison-1` are independent contracts; `room-scene-adapter-1` is not extended.
 - Spatial errors are evaluated against effective room-plan geometry and are not claims of constructive openings, human clearance or physical wall certainty.
@@ -50,8 +51,13 @@ reflect completed checkpoints:
 - Created `blender/scripts/furniture/validate_furniture_spatial.py`: floor,
   wall, opening and furniture-overlap checks plus explicitly separated
   warnings.
-- Create `blender/scripts/furniture/generate_furniture.py`: read-only source
+- Created `blender/scripts/furniture/generate_furniture.py`: read-only source
   opening, owned overlay generation and derived-scene saving.
+- Created `tests/furniture/test_furniture_generation_contract.py`: pure overlay
+  naming, metadata, geometry, path, determinism and projection tests.
+- Created `tests/furniture/blender_test_furniture_generation.py` and
+  `tests/furniture/blender_test_furniture_real_acceptance.py`: Blender CLI
+  synthetic and temporary source-derived integration checks.
 - Create `blender/scripts/furniture/normalize_furniture_scene.py`: independent
   HSLAYOUT adapter.
 - Create `blender/scripts/furniture/compare_furniture_scene.py`: pure plan to
@@ -197,9 +203,10 @@ no Blender overlay or later furniture task is started.
 **Objective:** Materialize only furniture proxies on a new derived scene while
 preserving the source architecture.
 
-**Planned files:** `blender/scripts/furniture/generate_furniture.py`,
-`tests/furniture/test_furniture_generation_contract.py`, and a future
-read-only acceptance runner under `blender/scripts/furniture/` if needed.
+**Implemented files:** `blender/scripts/furniture/generate_furniture.py`,
+`tests/furniture/test_furniture_generation_contract.py`,
+`tests/furniture/blender_test_furniture_generation.py` and
+`tests/furniture/blender_test_furniture_real_acceptance.py`.
 
 **Interfaces:**
 
@@ -215,16 +222,20 @@ fail instead of silently overwriting; regenerated layout does not remove
 another layout.
 
 **Tests and gates:** source/output path protection; namespace and metadata;
-same plan twice; one-layout cleanup does not remove another; room collection
-and object snapshot unchanged; architecture projection/signature equal before
-and after; no parent transforms; metric units; generated cube dimensions and
-transforms agree with the plan.
+same plan twice; same `item_id` across two layouts; one-layout cleanup does
+not remove another; room collection and object snapshot unchanged;
+architecture projection/signature equal before and after; no parent transforms;
+metric units; generated cube dimensions and transforms agree with the plan;
+no Blender auto-suffixes.
 
-**Blender:** Required for the real overlay acceptance; pure ownership/path
+**Blender:** Required and executed with Blender `5.2.1 LTS` background CLI for
+synthetic and temporary source-derived overlay checks; pure ownership/path
 tests run without Blender.
 
-**Closure:** one derived `.blend` is generated without overwriting the source,
-and an independent architecture projection proves before == after.
+**Closure:** `[x]` one temporary derived `.blend` is generated without
+overwriting the source, ownership/idempotence/multiple-layout checks pass, and
+an independent architecture projection plus room plan-to-scene comparison
+proves before == after.
 
 ### T4.05 — Normalize and compare furniture scenes
 
