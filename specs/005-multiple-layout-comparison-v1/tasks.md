@@ -1,6 +1,6 @@
 # Tareas: Multiple Layout Comparison / Variant Review v1
 
-> Estado del checkpoint actual: T5.01 implementada y validada; T5.02–T5.06 no implementadas.
+> Estado del checkpoint actual: T5.01 y T5.02 implementadas y validadas; T5.03–T5.06 no implementadas.
 >
 > Rama: `spec/005-multiple-layout-comparison-v1`
 
@@ -12,7 +12,7 @@ La salida es `furniture-variant-comparison-1`. El `baseline_layout_id` es explí
 
 `valid` significa que los inputs son comparables contractualmente. El diseño posterior conservará la validez espacial de cada variante y comparará errores/warnings/limitations sin recalcularlos; T5.01 solo valida el binding del report espacial. No existe ranking subjetivo.
 
-En el checkpoint T5.01, el report contiene únicamente binding/versiones, findings contractuales, summary de bindings y firma lógica. Los campos de items y los deltas espaciales se reservan para T5.02/T5.03.
+En el checkpoint actual, el report contiene binding/versiones, findings contractuales, summary de bindings, sets/deltas de items y firma lógica. Los deltas espaciales se reservan para T5.03.
 
 ## T5.01 [x] — Variant comparison contract
 
@@ -24,15 +24,16 @@ En el checkpoint T5.01, el report contiene únicamente binding/versiones, findin
 
 **Cierre:** el contrato rechaza inputs incompatibles sin consultar Blender ni recalcular spatial validation. No emite todavía deltas de items ni deltas espaciales.
 
-## T5.02 — Pure comparison engine
+## T5.02 [x] — Pure comparison engine
 
-- [ ] Comparar sets `common`, `added` y `removed` por `item_id`.
-- [ ] Comparar posición, yaw periódico, dimensiones, footprint, OBB y z bounds.
-- [ ] Reportar `moved_items`, `rotated_items`, `resized_items` y `geometry_changed_items` con `from`, `to` y `delta`.
-- [ ] Reportar cambios de `type`, `dimensions_status` y `source_id` como metadata/provenance.
-- [ ] No inferir replacements ni identidad por proximidad.
+- [x] Comparar sets `common`, `added` y `removed` por `item_id`.
+- [x] Comparar posición, yaw periódico, dimensiones, footprint, OBB y z bounds.
+- [x] Reportar `moved_items`, `rotated_items`, `resized_items` y `geometry_changed_items` con valores baseline, variant y delta.
+- [x] Reportar cambios de `type`, `dimensions_status` y `source_id` como metadata/provenance.
+- [x] No inferir replacements ni identidad por proximidad.
+- [x] Rechazar dimensiones no positivas, z bounds invertidos y geometry degenerada con `malformed_item_data`.
 
-**Cierre:** dos planes compatibles producen deltas deterministas e independientes del ordering de entrada.
+**Cierre:** dos o más planes compatibles producen deltas deterministas baseline→variante e independientes del ordering de entrada. T5.02 no produce deltas espaciales.
 
 ## T5.03 — Spatial report delta integration
 

@@ -1,6 +1,6 @@
 # Especificación: Multiple Layout Comparison / Variant Review v1
 
-> Estado: T5.01 implementado y validado; T5.02–T5.06 no implementados.
+> Estado: T5.01 y T5.02 implementados y validados; T5.03–T5.06 no implementados.
 >
 > Rama: `spec/005-multiple-layout-comparison-v1`
 
@@ -12,7 +12,7 @@ El slice compara hechos contractuales derivados de `FurniturePlan` y de los `Spa
 
 ## Alcance
 
-T5.01 implementa un core puro equivalente a:
+T5.01 y T5.02 implementan un core puro equivalente a:
 
 ```text
 compare_layout_variants(
@@ -25,7 +25,7 @@ compare_layout_variants(
 ) -> VariantComparisonReport
 ```
 
-El wrapper de cada report espacial es `{layout_id, room_id, room_plan_version, room_logical_signature, units, coordinate_system, report}` porque el `SpatialValidationReport` de T4 no materializa por sí solo todos esos campos de binding. El comparator es serializable, determinista, no mutable e independiente de `bpy`, layouts originales y room JSON. T5.01 valida contrato y binding; no compara todavía items ni facts espaciales.
+El wrapper de cada report espacial es `{layout_id, room_id, room_plan_version, room_logical_signature, units, coordinate_system, report}` porque el `SpatialValidationReport` de T4 no materializa por sí solo todos esos campos de binding. El comparator es serializable, determinista, no mutable e independiente de `bpy`, layouts originales y room JSON. T5.01 valida contrato y binding; T5.02 compara únicamente items y metadata/provenance del plan. Los facts espaciales siguen reservados para T5.03.
 
 ## Fuentes de autoridad
 
@@ -72,15 +72,59 @@ La salida mínima es un mapping serializable con esta forma:
         "spatial_report_version": "furniture-spatial-validation-1"
       }
     ],
+    "variant_summaries": [
+      {
+        "layout_id": "layout-b",
+        "common_count": 0,
+        "added_count": 0,
+        "removed_count": 0,
+        "changed_count": 0,
+        "unchanged_count": 0,
+        "moved_count": 0,
+        "rotated_count": 0,
+        "resized_count": 0,
+        "metadata_changed_count": 0
+      }
+    ],
     "error_count": 0,
     "warning_count": 0,
     "info_count": 0
   },
+  "pairwise_deltas": [
+    {
+      "from_layout_id": "layout-a",
+      "to_layout_id": "layout-b",
+      "common_items": [],
+      "added_items": [],
+      "removed_items": [],
+      "changed_items": [],
+      "unchanged_items": [],
+      "geometry_changed_items": [],
+      "metadata_changed_items": [],
+      "moved_items": [],
+      "rotated_items": [],
+      "resized_items": [],
+      "classification": {},
+      "geometry_changes": [],
+      "metadata_changes": [],
+      "summary": {
+        "common_count": 0,
+        "added_count": 0,
+        "removed_count": 0,
+        "changed_count": 0,
+        "unchanged_count": 0,
+        "moved_count": 0,
+        "rotated_count": 0,
+        "resized_count": 0,
+        "metadata_changed_count": 0
+      }
+    }
+  ],
   "logical_signature": "0000000000000000000000000000000000000000000000000000000000000000"
 }
 ```
 
-`logical_signature` se calcula sobre la representación canónica sin ese propio campo. No es una golden binaria y no obliga a versionar un hash de cada acceptance. T5.01 no emite `per_layout`, `pairwise_deltas` ni otros campos de T5.02/T5.03.
+`logical_signature` se calcula sobre la representación canónica sin ese propio campo. No es una golden binaria y no obliga a versionar un hash de cada acceptance. T5.01 emite el binding; T5.02 añade `pairwise_deltas` y `variant_summaries`; T5.03 añadirá únicamente los facts espaciales derivados de reports ya calculados.
 
 ### `per_layout` (reservado tras T5.01)
 
@@ -99,23 +143,29 @@ Cuando se implemente T5.03, cada resumen podrá contener únicamente hechos del 
 
 Un `SpatialValidationReport.valid=false` se conserva como hecho de esa variante. No convierte por sí solo el report de comparación en inválido si la comparación contractual puede realizarse.
 
-### `pairwise_deltas` (reservado tras T5.01)
+### `pairwise_deltas` (T5.02)
 
-La estrategia futura es baseline explícito → cada variante. T5.01 no emite esta sección. Cuando se implemente T5.02, cada delta contendrá:
+La estrategia implementada es baseline explícito → cada variante, sin comparaciones variant→variant. Cada delta contiene:
 
 - `from_layout_id`;
 - `to_layout_id`;
 - `common_items`;
 - `added_items`;
 - `removed_items`;
+- `changed_items`;
+- `unchanged_items`;
 - `moved_items`;
 - `rotated_items`;
 - `resized_items`;
-- `geometry_changed_items` para footprint, OBB o z bounds que cambien sin quedar completamente descritos por posición, yaw o dimensiones;
-- `metadata_changes` para `type`, `dimensions_status` y `source_id`;
-- `spatial_deltas`.
+- `geometry_changed_items`;
+- `metadata_changed_items`;
+- `classification` por item común;
+- `geometry_changes` para posición, yaw, dimensiones, footprint, OBB y z bounds;
+- `metadata_changes` para `type`, `dimensions_status`, `source_id`, `anchor` y `placement_method` materializado.
 
-Todos los arrays se ordenan por identidad estable. Los registros de cambio contienen valores `from`, `to` y `delta` cuando aplica; no contienen handles Blender, timestamps ni rutas.
+`added_items` y `removed_items` contienen únicamente IDs semánticos. Los cambios de geometry y metadata contienen valores baseline, variant y delta cuando aplica. `spatial_deltas` no forma parte de T5.02 y permanece reservado para T5.03.
+
+Todos los arrays se ordenan por identidad estable. Los registros de cambio contienen valores `baseline`, `variant` y `delta` cuando aplica; no contienen handles Blender, timestamps ni rutas.
 
 ## Identidad y sets
 
@@ -129,12 +179,13 @@ El mismo `item_id` conserva identidad aunque cambien `type`, dimensiones, estado
 
 Un item eliminado y otro añadido con IDs distintos no se presenta como replacement. Si un mismo `item_id` contiene datos incompatibles o malformados, se emite un error estructurado y se omiten sus deltas derivados.
 
+La validación estructural T5.02 rechaza `dimensions_m` no finitas, cero o negativas; exige `z_min_m <= z_max_m`; y rechaza footprints y OBB degeneradas. La footprint debe aportar cuatro puntos 2D finitos con área no degenerada. `obb_2d` debe contener ejes 2D finitos, ortonormales y no degenerados, half-extents estrictamente positivos y corners no degeneradas. No se añade una regla nueva de consistencia entre footprint y OBB.
+
 ## Deltas geométricos
 
 Para items comunes se comparan independientemente:
 
 - `position_xy_m` y sus componentes `dx_m`, `dy_m`;
-- distancia lineal del movimiento;
 - yaw canónico y delta angular periódico;
 - `dimensions_m` y delta por componente;
 - footprint efectiva;
@@ -160,7 +211,7 @@ Se comparan sin inventar campos:
 - `dimensions_status`;
 - `source_id`;
 - `anchor`;
-- `placement_method` cuando esté materializado a nivel de plan;
+- `placement_method` cuando esté materializado a nivel de plan o en `provenance` del item;
 - `units`;
 - `coordinate_system`.
 
@@ -260,9 +311,9 @@ No forman parte de Slice 005:
 - fixed elements nuevos;
 - artefacto `.blend` o preview comparativo.
 
-## Estado de implementación T5.01
+## Estado de implementación T5.01–T5.02
 
-T5.01 está implementado en `blender/scripts/furniture/compare_furniture_variants.py` y cubierto por `tests/furniture/test_furniture_variant_comparison.py`. El módulo valida versiones, baseline explícito, cardinalidad, binding room/plan/spatial, ordering canónico, serialización JSON, firma lógica, inputs malformados y no mutación. No implementa comparación de items ni deltas espaciales.
+T5.01 y T5.02 están implementados en `blender/scripts/furniture/compare_furniture_variants.py` y cubiertos por `tests/furniture/test_furniture_variant_comparison.py`. El módulo valida versiones, baseline explícito, cardinalidad, binding room/plan/spatial, ordering canónico, serialización JSON, firma lógica, inputs malformados y no mutación. T5.02 añade sets semánticos y deltas baseline→variante de items, geometry efectiva y metadata/provenance. No implementa deltas espaciales, acceptance canónica ni Blender.
 
 ## Acceptance propuesta
 

@@ -4,7 +4,7 @@
 
 **Goal:** Añadir un comparator puro que compare dos o más FurniturePlans y sus SpatialValidationReports para la misma habitación, produciendo un VariantComparisonReport determinista y sin ranking subjetivo.
 
-**Architecture:** T5.01 implementa `compare_furniture_variants.py` con planes y wrappers espaciales explícitos, `baseline_layout_id`, validación de binding/versiones y serialización determinista. Los sets/deltas de items y el resumen espacial quedan para T5.02/T5.03. No leerá layouts, room JSON ni Blender.
+**Architecture:** T5.01 implementa `compare_furniture_variants.py` con planes y wrappers espaciales explícitos, `baseline_layout_id`, validación de binding/versiones y serialización determinista. T5.02 añade sets y deltas de items baseline→variante; el resumen/delta espacial queda para T5.03. No leerá layouts, room JSON ni Blender.
 
 **Tech Stack:** Python estándar, mappings/dataclasses inmutables según los patrones furniture existentes, `unittest`, JSON canónico y SHA-256 lógico opcional. Sin `bpy`, dependencias externas ni cambios de room pipeline.
 
@@ -71,25 +71,27 @@ Expected: PASS para identidad, versiones, binding, canonicalización básica y n
 - Consumes: planes ya construidos y validados con items ordenables por `id`.
 - Produces: `common_items`, `added_items`, `removed_items`, `moved_items`, `rotated_items`, `resized_items`, `geometry_changed_items` y `metadata_changes` dentro de cada delta baseline→variante.
 
-- [ ] **Step 1: Añadir tests de sets y cambios**
+- [x] **Step 1: Añadir tests de sets y cambios**
 
 Usar planes sintéticos con IDs comunes, añadidos y eliminados, y mutaciones independientes de posición, yaw, dimensiones, footprint/OBB/z bounds, type, dimensions status y source ID.
 
-- [ ] **Step 2: Ejecutar los tests nuevos**
+- [x] **Step 2: Ejecutar los tests nuevos**
 
 Run: `python -m unittest tests/furniture/test_furniture_variant_comparison.py`
 
 Expected: FAIL en cada familia de delta todavía no implementada.
 
-- [ ] **Step 3: Implementar comparación semántica**
+- [x] **Step 3: Implementar comparación semántica**
 
-Comparar por `item_id`, usar `MATH_TOLERANCE_M` para magnitudes lineales, shortest signed yaw delta periódico y la fórmula angular definida en la spec. Reportar metadata sin convertir un cambio de type/source en replacement.
+Comparar por `item_id`, usar `MATH_TOLERANCE_M` para magnitudes lineales, shortest signed yaw delta periódico y la fórmula angular definida en la spec. Rechazar datos estructuralmente imposibles —dimensiones no positivas, z bounds invertidos y geometry degenerada— con `malformed_item_data`. Reportar metadata sin convertir un cambio de type/source en replacement.
 
-- [ ] **Step 4: Verificar orden y no mutation**
+- [x] **Step 4: Verificar orden y no mutation**
 
 Run: `python -m unittest tests/furniture/test_furniture_variant_comparison.py`
 
 Expected: PASS con entradas reordenadas y snapshots de inputs sin cambios.
+
+**Cierre T5.02:** implementado y validado. Produce únicamente deltas de plan y metadata/provenance; no consume semánticamente `valid`, `errors`, `warnings` ni `limitations` del report espacial.
 
 ### Task 5.03: Integrar deltas de SpatialValidationReport
 

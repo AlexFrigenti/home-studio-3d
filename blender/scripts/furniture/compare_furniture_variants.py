@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass
+from decimal import Decimal
 from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
@@ -16,6 +17,7 @@ SPATIAL_REPORT_VERSION = "furniture-spatial-validation-1"
 ROOM_PLAN_VERSION = "room-v1.1-generator-2"
 EXPECTED_UNITS = "m"
 EXPECTED_COORDINATE_SYSTEM = "canonical_room"
+MATH_TOLERANCE_M = 1e-6
 
 _PLAN_REQUIRED_KEYS = {
     "furniture_plan_version",
@@ -88,7 +90,7 @@ class VariantFinding:
 
 @dataclass(frozen=True)
 class VariantComparisonReport:
-    """Serializable, contract-only result for T5.01."""
+    """Serializable result for the T5.01/T5.02 variant contract."""
 
     report_version: str
     valid: bool
@@ -105,6 +107,7 @@ class VariantComparisonReport:
     warnings: tuple[VariantFinding, ...]
     info: tuple[VariantFinding, ...]
     summary: Mapping[str, Any]
+    pairwise_deltas: tuple[Mapping[str, Any], ...]
     logical_signature: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -124,6 +127,7 @@ class VariantComparisonReport:
             "warnings": [finding.to_dict() for finding in self.warnings],
             "info": [finding.to_dict() for finding in self.info],
             "summary": _plain_value(self.summary),
+            "pairwise_deltas": _plain_value(self.pairwise_deltas),
             "logical_signature": self.logical_signature,
         }
 
@@ -531,6 +535,636 @@ def _compare_binding(
     return errors
 
 
+def _finite_sequence(value: Any, length: int) -> list[float] | None:
+    sequence = _as_sequence(value)
+    if sequence is None or len(sequence) != length:
+        return None
+    if not all(_is_finite_number(component) for component in sequence):
+        return None
+    return [0.0 if float(component) == 0.0 else float(component) for component in sequence]
+
+
+def _finite_point_list(value: Any, count: int) -> list[list[float]] | None:
+    sequence = _as_sequence(value)
+    if sequence is None or len(sequence) != count:
+        return None
+    points: list[list[float]] = []
+    for point in sequence:
+        normalized = _finite_sequence(point, 2)
+        if normalized is None:
+            return None
+        points.append(normalized)
+    return points
+
+
+def _point_set_is_degenerate(points: Sequence[Sequence[float]]) -> bool:
+    """Return whether a four-point footprint/corner set has duplicate or zero area."""
+
+    if len({(point[0], point[1]) for point in points}) != len(points):
+        return True
+    maximum_triangle_area = 0.0
+    for first in range(len(points)):
+        for second in range(first + 1, len(points)):
+            for third in range(second + 1, len(points)):
+                ax = points[second][0] - points[first][0]
+                ay = points[second][1] - points[first][1]
+                bx = points[third][0] - points[first][0]
+                by = points[third][1] - points[first][1]
+                maximum_triangle_area = max(maximum_triangle_area, abs(ax * by - ay * bx) / 2.0)
+    return maximum_triangle_area <= 0.0
+
+
+def _obb_axes_are_valid(axes: Sequence[Sequence[float]]) -> bool:
+    lengths = [math.hypot(axis[0], axis[1]) for axis in axes]
+    if any(abs(length - 1.0) > 1e-6 for length in lengths):
+        return False
+    dot_product = axes[0][0] * axes[1][0] + axes[0][1] * axes[1][1]
+    return abs(dot_product) <= 1e-6
+
+
+def _validate_item(
+    item: Any,
+    *,
+    layout_id: str,
+    index: int,
+) -> tuple[str | None, Mapping[str, Any] | None, list[VariantFinding]]:
+    path = f"items[{index}]"
+    if not isinstance(item, Mapping):
+        return None, None, [
+            _make_finding(
+                "malformed_item_data",
+                layout_id=layout_id,
+                field=path,
+                actual=item,
+                message="furniture plan item must be a mapping",
+            )
+        ]
+
+    item_id = item.get("id")
+    errors: list[VariantFinding] = []
+    if not _is_nonempty_string(item_id):
+        errors.append(
+            _make_finding(
+                "malformed_item_data",
+                layout_id=layout_id,
+                field=f"{path}.id",
+                actual=item_id,
+                message="item id must be a non-empty string",
+            )
+        )
+        return None, item, errors
+
+    string_fields = ("type", "dimensions_status", "source_id", "anchor")
+    for field in string_fields:
+        if not _is_nonempty_string(item.get(field)):
+            errors.append(
+                _make_finding(
+                    "malformed_item_data",
+                    layout_id=layout_id,
+                    field=f"{path}.{field}",
+                    actual=item.get(field),
+                    message="item metadata field must be a non-empty string",
+                )
+            )
+
+    dimensions = _finite_sequence(item.get("dimensions_m"), 3)
+    for field, length in (("position_xy_m", 2), ("dimensions_m", 3)):
+        if _finite_sequence(item.get(field), length) is None:
+            errors.append(
+                _make_finding(
+                    "malformed_item_data",
+                    layout_id=layout_id,
+                    field=f"{path}.{field}",
+                    actual=item.get(field),
+                    message="item numeric vector has the wrong shape or non-finite values",
+                )
+            )
+    if dimensions is not None and any(component <= 0.0 for component in dimensions):
+        errors.append(
+            _make_finding(
+                "malformed_item_data",
+                layout_id=layout_id,
+                field=f"{path}.dimensions_m",
+                actual=item.get("dimensions_m"),
+                message="item dimensions must be strictly positive",
+            )
+        )
+    if not _is_finite_number(item.get("yaw_deg")):
+        errors.append(
+            _make_finding(
+                "malformed_item_data",
+                layout_id=layout_id,
+                field=f"{path}.yaw_deg",
+                actual=item.get("yaw_deg"),
+                message="item yaw must be finite",
+            )
+        )
+
+    effective = item.get("effective_geometry")
+    if not isinstance(effective, Mapping):
+        errors.append(
+            _make_finding(
+                "malformed_item_data",
+                layout_id=layout_id,
+                field=f"{path}.effective_geometry",
+                actual=effective,
+                message="effective_geometry must be a mapping",
+            )
+        )
+    else:
+        effective_vectors = (
+            ("dimensions_m", 3),
+            ("position_xy_m", 2),
+        )
+        effective_dimensions = _finite_sequence(effective.get("dimensions_m"), 3)
+        for field, length in effective_vectors:
+            if _finite_sequence(effective.get(field), length) is None:
+                errors.append(
+                    _make_finding(
+                        "malformed_item_data",
+                        layout_id=layout_id,
+                        field=f"{path}.effective_geometry.{field}",
+                        actual=effective.get(field),
+                        message="effective geometry vector has the wrong shape or non-finite values",
+                    )
+                )
+        if effective_dimensions is not None and any(component <= 0.0 for component in effective_dimensions):
+            errors.append(
+                _make_finding(
+                    "malformed_item_data",
+                    layout_id=layout_id,
+                    field=f"{path}.effective_geometry.dimensions_m",
+                    actual=effective.get("dimensions_m"),
+                    message="effective geometry dimensions must be strictly positive",
+                )
+            )
+        if "local_footprint_m" in effective and _finite_point_list(effective.get("local_footprint_m"), 4) is None:
+            errors.append(
+                _make_finding(
+                    "malformed_item_data",
+                    layout_id=layout_id,
+                    field=f"{path}.effective_geometry.local_footprint_m",
+                    actual=effective.get("local_footprint_m"),
+                )
+            )
+        if not _is_finite_number(effective.get("yaw_deg")):
+            errors.append(
+                _make_finding(
+                    "malformed_item_data",
+                    layout_id=layout_id,
+                    field=f"{path}.effective_geometry.yaw_deg",
+                    actual=effective.get("yaw_deg"),
+                )
+            )
+        world_footprint = _finite_point_list(effective.get("world_footprint_m"), 4)
+        if world_footprint is None:
+            errors.append(
+                _make_finding(
+                    "malformed_item_data",
+                    layout_id=layout_id,
+                    field=f"{path}.effective_geometry.world_footprint_m",
+                    actual=effective.get("world_footprint_m"),
+                )
+            )
+        elif _point_set_is_degenerate(world_footprint):
+            errors.append(
+                _make_finding(
+                    "malformed_item_data",
+                    layout_id=layout_id,
+                    field=f"{path}.effective_geometry.world_footprint_m",
+                    actual=effective.get("world_footprint_m"),
+                    message="world footprint must contain a non-degenerate four-point area",
+                )
+            )
+        obb = effective.get("obb_2d")
+        if not isinstance(obb, Mapping):
+            errors.append(
+                _make_finding(
+                    "malformed_item_data",
+                    layout_id=layout_id,
+                    field=f"{path}.effective_geometry.obb_2d",
+                    actual=obb,
+                )
+            )
+        else:
+            center = _finite_sequence(obb.get("center_xy_m"), 2)
+            if center is None:
+                errors.append(
+                    _make_finding(
+                        "malformed_item_data",
+                        layout_id=layout_id,
+                        field=f"{path}.effective_geometry.obb_2d.center_xy_m",
+                        actual=obb.get("center_xy_m"),
+                    )
+                )
+            raw_axes = _as_sequence(obb.get("axes_xy"))
+            axes = (
+                [_finite_sequence(axis, 2) for axis in raw_axes]
+                if raw_axes is not None and len(raw_axes) == 2
+                else None
+            )
+            if axes is None or any(axis is None for axis in axes):
+                errors.append(
+                    _make_finding(
+                        "malformed_item_data",
+                        layout_id=layout_id,
+                        field=f"{path}.effective_geometry.obb_2d.axes_xy",
+                        actual=obb.get("axes_xy"),
+                    )
+                )
+            half_extents = _finite_sequence(obb.get("half_extents_m"), 2)
+            if half_extents is None:
+                errors.append(
+                    _make_finding(
+                        "malformed_item_data",
+                        layout_id=layout_id,
+                        field=f"{path}.effective_geometry.obb_2d.half_extents_m",
+                        actual=obb.get("half_extents_m"),
+                    )
+                )
+            corners = _finite_point_list(obb.get("corners_m"), 4)
+            if corners is None:
+                errors.append(
+                    _make_finding(
+                        "malformed_item_data",
+                        layout_id=layout_id,
+                        field=f"{path}.effective_geometry.obb_2d.corners_m",
+                        actual=obb.get("corners_m"),
+                    )
+                )
+            elif (
+                center is not None
+                and axes is not None
+                and all(axis is not None for axis in axes)
+                and half_extents is not None
+                and corners is not None
+                and (
+                    not _obb_axes_are_valid(axes)  # type: ignore[arg-type]
+                    or any(extent <= 0.0 for extent in half_extents)
+                    or _point_set_is_degenerate(corners)
+                )
+            ):
+                errors.append(
+                    _make_finding(
+                        "malformed_item_data",
+                        layout_id=layout_id,
+                        field=f"{path}.effective_geometry.obb_2d",
+                        actual=obb,
+                        message="obb_2d must be a non-degenerate orthonormal box",
+                    )
+                )
+        for field in ("z_min_m", "z_max_m"):
+            if not _is_finite_number(effective.get(field)):
+                errors.append(
+                    _make_finding(
+                        "malformed_item_data",
+                        layout_id=layout_id,
+                        field=f"{path}.effective_geometry.{field}",
+                        actual=effective.get(field),
+                    )
+                )
+        z_min = effective.get("z_min_m")
+        z_max = effective.get("z_max_m")
+        if _is_finite_number(z_min) and _is_finite_number(z_max) and float(z_min) > float(z_max):
+            errors.append(
+                _make_finding(
+                    "malformed_item_data",
+                    layout_id=layout_id,
+                    field=f"{path}.effective_geometry.z_bounds_m",
+                    actual=[z_min, z_max],
+                    message="z_min_m must be less than or equal to z_max_m",
+                )
+            )
+
+    provenance = item.get("provenance")
+    if provenance is not None and not isinstance(provenance, Mapping):
+        errors.append(
+            _make_finding(
+                "malformed_item_data",
+                layout_id=layout_id,
+                field=f"{path}.provenance",
+                actual=provenance,
+                message="provenance must be a mapping when present",
+            )
+        )
+    return item_id, item, errors
+
+
+def _extract_item_map(
+    plan: Any,
+    *,
+    layout_id: str,
+) -> tuple[dict[str, Mapping[str, Any]] | None, list[VariantFinding]]:
+    if not isinstance(plan, Mapping) or not isinstance(plan.get("items"), list):
+        return None, [
+            _make_finding(
+                "malformed_item_data",
+                layout_id=layout_id,
+                field="items",
+                actual=plan.get("items") if isinstance(plan, Mapping) else plan,
+                message="FurniturePlan items must be a list for T5.02",
+            )
+        ]
+
+    item_map: dict[str, Mapping[str, Any]] = {}
+    errors: list[VariantFinding] = []
+    for index, item in enumerate(plan["items"]):
+        item_id, item_mapping, item_errors = _validate_item(item, layout_id=layout_id, index=index)
+        errors.extend(item_errors)
+        if item_id is None or item_mapping is None:
+            continue
+        if item_id in item_map:
+            errors.append(
+                _make_finding(
+                    "duplicate_item_id",
+                    layout_id=layout_id,
+                    field=f"items[{index}].id",
+                    actual=item_id,
+                    message="item ids must be unique within a FurniturePlan",
+                )
+            )
+            continue
+        item_map[item_id] = item_mapping
+    if errors:
+        return None, errors
+    return item_map, []
+
+
+def _numeric_equal(left: Any, right: Any, tolerance: float = MATH_TOLERANCE_M) -> bool:
+    return _is_finite_number(left) and _is_finite_number(right) and abs(float(left) - float(right)) <= tolerance
+
+
+def _numeric_delta(variant: Any, baseline: Any) -> float:
+    """Return a stable decimal-style difference without rounding source values."""
+
+    delta = float(Decimal(str(variant)) - Decimal(str(baseline)))
+    return 0.0 if delta == 0.0 else delta
+
+
+def _sequence_equal(left: Any, right: Any, tolerance: float = MATH_TOLERANCE_M) -> bool:
+    left_sequence = _as_sequence(left)
+    right_sequence = _as_sequence(right)
+    if left_sequence is None or right_sequence is None or len(left_sequence) != len(right_sequence):
+        return False
+    return all(_numeric_equal(a, b, tolerance) for a, b in zip(left_sequence, right_sequence))
+
+
+def _point_sets_equal(left: Any, right: Any, tolerance: float = MATH_TOLERANCE_M) -> bool:
+    left_points = _finite_point_list(left, len(left) if _as_sequence(left) is not None else 0)
+    right_points = _finite_point_list(right, len(right) if _as_sequence(right) is not None else 0)
+    if left_points is None or right_points is None or len(left_points) != len(right_points):
+        return False
+    remaining = list(right_points)
+    for point in left_points:
+        match_index = next(
+            (index for index, candidate in enumerate(remaining) if _sequence_equal(point, candidate, tolerance)),
+            None,
+        )
+        if match_index is None:
+            return False
+        remaining.pop(match_index)
+    return not remaining
+
+
+def _canonical_yaw_deg(value: Any) -> float:
+    result = math.fmod(float(value), 360.0)
+    if result < 0.0:
+        result += 360.0
+    return 0.0 if result == 0.0 else result
+
+
+def _signed_yaw_delta_deg(baseline: Any, variant: Any) -> float:
+    delta = (_canonical_yaw_deg(variant) - _canonical_yaw_deg(baseline) + 180.0) % 360.0 - 180.0
+    return 0.0 if delta == 0.0 else delta
+
+
+def _max_item_radius_m(item: Mapping[str, Any]) -> float:
+    effective = item["effective_geometry"]
+    points = effective["local_footprint_m"] if "local_footprint_m" in effective else effective["world_footprint_m"]
+    radii = [math.hypot(float(point[0]), float(point[1])) for point in points]
+    return max(radii, default=0.0)
+
+
+def _yaw_equal(baseline: Mapping[str, Any], variant: Mapping[str, Any]) -> tuple[bool, float]:
+    delta = _signed_yaw_delta_deg(baseline["yaw_deg"], variant["yaw_deg"])
+    radius = max(_max_item_radius_m(baseline), _max_item_radius_m(variant), MATH_TOLERANCE_M)
+    return abs(math.radians(delta) * radius) <= MATH_TOLERANCE_M, delta
+
+
+def _metadata_value(item: Mapping[str, Any], field: str) -> Any:
+    if field == "placement_method":
+        if field in item:
+            return item[field]
+        provenance = item.get("provenance")
+        return provenance.get(field) if isinstance(provenance, Mapping) else None
+    return item.get(field)
+
+
+def _obb_core_equal(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
+    left_axes = _as_sequence(left.get("axes_xy"))
+    right_axes = _as_sequence(right.get("axes_xy"))
+    return (
+        _sequence_equal(left.get("center_xy_m"), right.get("center_xy_m"))
+        and left_axes is not None
+        and right_axes is not None
+        and len(left_axes) == len(right_axes)
+        and all(_sequence_equal(left_axis, right_axis) for left_axis, right_axis in zip(left_axes, right_axes))
+        and _sequence_equal(left.get("half_extents_m"), right.get("half_extents_m"))
+    )
+
+
+def _obb_equal(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
+    return _obb_core_equal(left, right) and _point_sets_equal(left.get("corners_m"), right.get("corners_m"))
+
+
+def _geometry_change(
+    baseline_item: Mapping[str, Any],
+    variant_item: Mapping[str, Any],
+) -> tuple[dict[str, Any], bool, bool]:
+    change: dict[str, Any] = {"item_id": baseline_item["id"]}
+    moved = False
+
+    baseline_position = _finite_sequence(baseline_item["position_xy_m"], 2)
+    variant_position = _finite_sequence(variant_item["position_xy_m"], 2)
+    baseline_effective = baseline_item["effective_geometry"]
+    variant_effective = variant_item["effective_geometry"]
+    effective_position_changed = not _sequence_equal(
+        baseline_effective.get("position_xy_m"), variant_effective.get("position_xy_m")
+    )
+    position_changed = not _sequence_equal(baseline_position, variant_position) or effective_position_changed
+    if position_changed:
+        moved = True
+        entry = {
+            "baseline_position_xy_m": _plain_value(baseline_position),
+            "variant_position_xy_m": _plain_value(variant_position),
+            "dx_m": _safe_value(_numeric_delta(variant_position[0], baseline_position[0])),
+            "dy_m": _safe_value(_numeric_delta(variant_position[1], baseline_position[1])),
+        }
+        if effective_position_changed:
+            entry["effective_geometry_changed"] = True
+        change["position"] = entry
+
+    yaw_equal, yaw_delta = _yaw_equal(baseline_item, variant_item)
+    effective_yaw_delta = _signed_yaw_delta_deg(baseline_effective["yaw_deg"], variant_effective["yaw_deg"])
+    effective_yaw_changed = abs(math.radians(effective_yaw_delta) * max(_max_item_radius_m(baseline_item), _max_item_radius_m(variant_item), MATH_TOLERANCE_M)) > MATH_TOLERANCE_M
+    if not yaw_equal or effective_yaw_changed:
+        entry = {
+            "baseline_yaw_deg": _safe_value(_canonical_yaw_deg(baseline_item["yaw_deg"])),
+            "variant_yaw_deg": _safe_value(_canonical_yaw_deg(variant_item["yaw_deg"])),
+            "delta_yaw_deg": _safe_value(yaw_delta),
+        }
+        if effective_yaw_changed:
+            entry["effective_geometry_changed"] = True
+        change["yaw"] = entry
+
+    baseline_dimensions = _finite_sequence(baseline_item["dimensions_m"], 3)
+    variant_dimensions = _finite_sequence(variant_item["dimensions_m"], 3)
+    effective_dimensions_changed = not _sequence_equal(
+        baseline_effective.get("dimensions_m"), variant_effective.get("dimensions_m")
+    )
+    dimensions_changed = not _sequence_equal(baseline_dimensions, variant_dimensions) or effective_dimensions_changed
+    if dimensions_changed:
+        entry = {
+            "baseline_dimensions_m": _plain_value(baseline_dimensions),
+            "variant_dimensions_m": _plain_value(variant_dimensions),
+            "delta_m": _plain_value([_numeric_delta(variant_dimensions[i], baseline_dimensions[i]) for i in range(3)]),
+        }
+        if effective_dimensions_changed:
+            entry["effective_geometry_changed"] = True
+        change["dimensions"] = entry
+
+    baseline_footprint = baseline_effective["world_footprint_m"]
+    variant_footprint = variant_effective["world_footprint_m"]
+    footprint_changed = not _point_sets_equal(baseline_footprint, variant_footprint)
+    if footprint_changed:
+        change["footprint"] = {
+            "baseline_world_footprint_m": _plain_value(baseline_footprint),
+            "variant_world_footprint_m": _plain_value(variant_footprint),
+            "changed": True,
+        }
+
+    baseline_obb = baseline_effective["obb_2d"]
+    variant_obb = variant_effective["obb_2d"]
+    obb_core_changed = not _obb_core_equal(baseline_obb, variant_obb)
+    obb_changed = not _obb_equal(baseline_obb, variant_obb)
+    if obb_changed and (obb_core_changed or not footprint_changed):
+        change["obb"] = {
+            "baseline_obb_2d": _plain_value(baseline_obb),
+            "variant_obb_2d": _plain_value(variant_obb),
+            "changed": True,
+        }
+
+    baseline_z = [baseline_effective["z_min_m"], baseline_effective["z_max_m"]]
+    variant_z = [variant_effective["z_min_m"], variant_effective["z_max_m"]]
+    if not _sequence_equal(baseline_z, variant_z):
+        change["z_bounds"] = {
+            "baseline_z_bounds_m": _plain_value(baseline_z),
+            "variant_z_bounds_m": _plain_value(variant_z),
+            "delta_m": _plain_value([_numeric_delta(variant_z[i], baseline_z[i]) for i in range(2)]),
+        }
+
+    geometry_changed = len(change) > 1
+    return change, geometry_changed, moved
+
+
+def _metadata_changes(
+    baseline_item: Mapping[str, Any],
+    variant_item: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    changes: list[dict[str, Any]] = []
+    for field in ("type", "dimensions_status", "source_id", "anchor", "placement_method"):
+        baseline_value = _metadata_value(baseline_item, field)
+        variant_value = _metadata_value(variant_item, field)
+        if baseline_value != variant_value:
+            changes.append(
+                {
+                    "field": field,
+                    "baseline": _plain_value(baseline_value),
+                    "variant": _plain_value(variant_value),
+                }
+            )
+    return changes
+
+
+def _build_pairwise_delta(
+    baseline_layout_id: str,
+    variant_layout_id: str,
+    baseline_items: Mapping[str, Mapping[str, Any]],
+    variant_items: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    baseline_ids = set(baseline_items)
+    variant_ids = set(variant_items)
+    common_items = sorted(baseline_ids & variant_ids)
+    added_items = sorted(variant_ids - baseline_ids)
+    removed_items = sorted(baseline_ids - variant_ids)
+    geometry_changes: list[dict[str, Any]] = []
+    metadata_changes: list[dict[str, Any]] = []
+    classification: dict[str, str] = {}
+    geometry_changed_items: list[str] = []
+    metadata_changed_items: list[str] = []
+    moved_items: list[str] = []
+    rotated_items: list[str] = []
+    resized_items: list[str] = []
+    unchanged_items: list[str] = []
+
+    for item_id in common_items:
+        geometry, geometry_changed, moved = _geometry_change(
+            baseline_items[item_id], variant_items[item_id]
+        )
+        metadata = _metadata_changes(baseline_items[item_id], variant_items[item_id])
+        if geometry_changed:
+            geometry_changes.append(geometry)
+            geometry_changed_items.append(item_id)
+        if metadata:
+            metadata_changes.append({"item_id": item_id, "changes": metadata})
+            metadata_changed_items.append(item_id)
+        if moved:
+            moved_items.append(item_id)
+        if "yaw" in geometry:
+            rotated_items.append(item_id)
+        if any(field in geometry for field in ("dimensions", "z_bounds")):
+            resized_items.append(item_id)
+        if geometry_changed and metadata:
+            classification[item_id] = "geometry_and_metadata_changed"
+        elif geometry_changed:
+            classification[item_id] = "geometry_changed"
+        elif metadata:
+            classification[item_id] = "metadata_changed"
+        else:
+            classification[item_id] = "unchanged"
+            unchanged_items.append(item_id)
+
+    summary = {
+        "common_count": len(common_items),
+        "added_count": len(added_items),
+        "removed_count": len(removed_items),
+        "changed_count": len(set(geometry_changed_items) | set(metadata_changed_items)),
+        "unchanged_count": len(unchanged_items),
+        "moved_count": len(moved_items),
+        "rotated_count": len(rotated_items),
+        "resized_count": len(resized_items),
+        "metadata_changed_count": len(metadata_changed_items),
+    }
+    return {
+        "from_layout_id": baseline_layout_id,
+        "to_layout_id": variant_layout_id,
+        "common_items": common_items,
+        "added_items": added_items,
+        "removed_items": removed_items,
+        "changed_items": sorted(set(geometry_changed_items) | set(metadata_changed_items)),
+        "unchanged_items": unchanged_items,
+        "geometry_changed_items": geometry_changed_items,
+        "metadata_changed_items": metadata_changed_items,
+        "moved_items": moved_items,
+        "rotated_items": rotated_items,
+        "resized_items": resized_items,
+        "classification": classification,
+        "geometry_changes": geometry_changes,
+        "metadata_changes": metadata_changes,
+        "summary": summary,
+    }
+
+
 def _build_report(
     *,
     baseline_layout_id: str | None,
@@ -538,9 +1172,23 @@ def _build_report(
     binding_rows: Sequence[Mapping[str, Any]],
     baseline_info: Mapping[str, Any] | None,
     errors: Sequence[VariantFinding],
+    pairwise_deltas: Sequence[Mapping[str, Any]] = (),
 ) -> VariantComparisonReport:
     ordered_errors = tuple(sorted(errors, key=_finding_sort_key))
     ordered_ids = tuple(sorted(set(compared_layout_ids)))
+    ordered_deltas = tuple(
+        sorted(
+            (_plain_value(delta) for delta in pairwise_deltas),
+            key=lambda delta: (str(delta.get("to_layout_id", "")), str(delta.get("from_layout_id", ""))),
+        )
+    )
+    variant_summaries = [
+        {
+            "layout_id": delta["to_layout_id"],
+            **_plain_value(delta["summary"]),
+        }
+        for delta in ordered_deltas
+    ]
     summary = {
         "variant_count": len(compared_layout_ids),
         "layout_bindings": [
@@ -551,6 +1199,7 @@ def _build_report(
             }
             for row in sorted(binding_rows, key=lambda item: item["layout_id"])
         ],
+        "variant_summaries": variant_summaries,
         "error_count": len(ordered_errors),
         "warning_count": 0,
         "info_count": 0,
@@ -571,6 +1220,7 @@ def _build_report(
         "warnings": [],
         "info": [],
         "summary": summary,
+        "pairwise_deltas": list(ordered_deltas),
     }
     logical_signature = _signature(report_data)
     return VariantComparisonReport(
@@ -589,6 +1239,7 @@ def _build_report(
         warnings=(),
         info=(),
         summary=MappingProxyType(summary),
+        pairwise_deltas=ordered_deltas,
         logical_signature=logical_signature,
     )
 
@@ -601,7 +1252,7 @@ def compare_layout_variants(
     *,
     baseline_layout_id: str,
 ) -> VariantComparisonReport:
-    """Validate T5.01 bindings without comparing furniture items or spatial deltas."""
+    """Compare baseline FurniturePlan items to each variant without Blender or spatial recomputation."""
 
     errors: list[VariantFinding] = []
     baseline_info, baseline_errors = _validate_plan(baseline_plan)
@@ -712,12 +1363,44 @@ def compare_layout_variants(
                         )
                     )
 
+    pairwise_deltas: list[Mapping[str, Any]] = []
+    if not errors and baseline_info is not None:
+        baseline_items, baseline_item_errors = _extract_item_map(
+            baseline_plan,
+            layout_id=baseline_info["layout_id"],
+        )
+        errors.extend(baseline_item_errors)
+        variant_item_rows: list[tuple[str, dict[str, Mapping[str, Any]] | None]] = []
+        for index, variant in enumerate(variants):
+            variant_info = plan_infos[index + 1]
+            if variant_info is None:
+                continue
+            variant_items, variant_item_errors = _extract_item_map(
+                variant,
+                layout_id=variant_info["layout_id"],
+            )
+            errors.extend(variant_item_errors)
+            variant_item_rows.append((variant_info["layout_id"], variant_items))
+        if not errors and baseline_items is not None:
+            for variant_layout_id, variant_items in sorted(variant_item_rows, key=lambda row: row[0]):
+                if variant_items is None:
+                    continue
+                pairwise_deltas.append(
+                    _build_pairwise_delta(
+                        baseline_info["layout_id"],
+                        variant_layout_id,
+                        baseline_items,
+                        variant_items,
+                    )
+                )
+
     return _build_report(
         baseline_layout_id=baseline_layout_id_value,
         compared_layout_ids=known_layout_ids,
         binding_rows=binding_rows,
         baseline_info=baseline_info,
         errors=errors,
+        pairwise_deltas=pairwise_deltas,
     )
 
 
@@ -725,6 +1408,7 @@ __all__ = [
     "EXPECTED_COORDINATE_SYSTEM",
     "EXPECTED_UNITS",
     "FURNITURE_PLAN_VERSION",
+    "MATH_TOLERANCE_M",
     "REPORT_VERSION",
     "ROOM_PLAN_VERSION",
     "SPATIAL_REPORT_VERSION",

@@ -23,7 +23,74 @@ ROOM_ID = "synthetic-room"
 ROOM_SIGNATURE = "room-signature-001"
 
 
+def _effective_geometry(dimensions, position, yaw):
+    width, depth, height = dimensions
+    radians = math.radians(yaw)
+    cosine = math.cos(radians)
+    sine = math.sin(radians)
+    local_footprint = [
+        [-width / 2.0, -depth / 2.0],
+        [width / 2.0, -depth / 2.0],
+        [width / 2.0, depth / 2.0],
+        [-width / 2.0, depth / 2.0],
+    ]
+    world_footprint = [
+        [
+            point[0] * cosine - point[1] * sine + position[0],
+            point[0] * sine + point[1] * cosine + position[1],
+        ]
+        for point in local_footprint
+    ]
+    return {
+        "dimensions_m": list(dimensions),
+        "anchor": "bottom_center",
+        "position_xy_m": list(position),
+        "yaw_deg": yaw,
+        "local_footprint_m": local_footprint,
+        "world_footprint_m": world_footprint,
+        "obb_2d": {
+            "center_xy_m": list(position),
+            "axes_xy": [[cosine, sine], [-sine, cosine]],
+            "half_extents_m": [width / 2.0, depth / 2.0],
+            "corners_m": [list(point) for point in world_footprint],
+        },
+        "z_min_m": 0.0,
+        "z_max_m": height,
+    }
+
+
+def _item(
+    item_id="sofa",
+    *,
+    item_type="sofa",
+    dimensions=(2.0, 1.0, 0.8),
+    position=(0.0, 0.0),
+    yaw=0.0,
+    dimensions_status="synthetic",
+    source_id="synthetic-sofa",
+    placement_method="manual",
+    effective_geometry=None,
+):
+    return {
+        "id": item_id,
+        "type": item_type,
+        "dimensions_m": list(dimensions),
+        "dimensions_status": dimensions_status,
+        "source_id": source_id,
+        "position_xy_m": list(position),
+        "anchor": "bottom_center",
+        "yaw_deg": yaw,
+        "effective_geometry": effective_geometry or _effective_geometry(dimensions, position, yaw),
+        "provenance": {
+            "source_id": source_id,
+            "dimensions_status": dimensions_status,
+            "placement_method": placement_method,
+        },
+    }
+
+
 def _plan(layout_id="baseline", **overrides):
+    item = _item()
     plan = {
         "furniture_plan_version": FURNITURE_PLAN_VERSION,
         "layout_schema_version": "furniture-layout-1",
@@ -34,15 +101,7 @@ def _plan(layout_id="baseline", **overrides):
         "units": "m",
         "coordinate_system": "canonical_room",
         "logical_signature": f"plan-signature-{layout_id}",
-        "items": [
-            {
-                "id": "sofa",
-                "type": "sofa",
-                "dimensions_m": [2.0, 1.0, 0.8],
-                "position_xy_m": [0.0, 0.0],
-                "yaw_deg": 0.0,
-            }
-        ],
+        "items": [item],
     }
     plan.update(overrides)
     return plan
@@ -163,16 +222,306 @@ class VariantComparisonContractTests(unittest.TestCase):
         self.assertEqual(report.to_dict()["warnings"], [])
         self.assertEqual(report.to_dict()["info"], [])
 
-    def test_no_item_delta_fields_are_emitted_in_t501(self):
+    def test_item_delta_fields_are_emitted_in_t502(self):
         data = _compare().to_dict()
 
-        self.assertNotIn("common_items", data)
-        self.assertNotIn("added_items", data)
-        self.assertNotIn("removed_items", data)
-        self.assertNotIn("moved_items", data)
-        self.assertNotIn("rotated_items", data)
-        self.assertNotIn("resized_items", data)
+        self.assertIn("pairwise_deltas", data)
+        delta = data["pairwise_deltas"][0]
+        self.assertEqual(delta["common_items"], ["sofa"])
+        self.assertEqual(delta["added_items"], [])
+        self.assertEqual(delta["removed_items"], [])
+        self.assertEqual(delta["unchanged_items"], ["sofa"])
+        self.assertEqual(delta["changed_items"], [])
         self.assertNotIn("spatial_deltas", data)
+
+    def test_added_removed_and_common_sets_use_semantic_ids_only(self):
+        baseline = _plan(
+            "baseline",
+            items=[_item("sofa"), _item("lamp", item_type="chair", source_id="synthetic-lamp")],
+        )
+        variant = _plan(
+            "variant-a",
+            items=[_item("sofa"), _item("coffee-table", item_type="table", source_id="synthetic-table")],
+        )
+
+        delta = _compare(baseline=baseline, variants=[variant]).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(delta["common_items"], ["sofa"])
+        self.assertEqual(delta["added_items"], ["coffee-table"])
+        self.assertEqual(delta["removed_items"], ["lamp"])
+        self.assertTrue(all(isinstance(item_id, str) for item_id in delta["added_items"] + delta["removed_items"]))
+        self.assertNotIn("items", delta["added_items"] if delta["added_items"] else {})
+
+    def test_item_list_reordering_does_not_change_delta_or_signature(self):
+        baseline_items = [_item("sofa"), _item("chair", item_type="chair", source_id="synthetic-chair")]
+        variant_items = [
+            _item("sofa", position=(0.25, 0.0)),
+            _item("chair", item_type="chair", source_id="synthetic-chair"),
+        ]
+        first = _compare(
+            baseline=_plan("baseline", items=baseline_items),
+            variants=[_plan("variant-a", items=variant_items)],
+        )
+        second = _compare(
+            baseline=_plan("baseline", items=list(reversed(baseline_items))),
+            variants=[_plan("variant-a", items=list(reversed(variant_items)))],
+        )
+
+        self.assertEqual(first.to_dict(), second.to_dict())
+        self.assertEqual(first.logical_signature, second.logical_signature)
+
+    def test_position_delta_reports_dx_dy_and_classifies_movement(self):
+        variant = _plan("variant-a", items=[_item(position=(0.25, -0.5))])
+
+        delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(delta["changed_items"], ["sofa"])
+        self.assertEqual(delta["moved_items"], ["sofa"])
+        self.assertEqual(delta["classification"], {"sofa": "geometry_changed"})
+        self.assertEqual(delta["geometry_changes"][0]["position"]["dx_m"], 0.25)
+        self.assertEqual(delta["geometry_changes"][0]["position"]["dy_m"], -0.5)
+
+    def test_position_delta_within_tolerance_is_unchanged(self):
+        variant = _plan("variant-a", items=[_item(position=(0.5e-6, -0.5e-6))])
+
+        delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(delta["unchanged_items"], ["sofa"])
+        self.assertEqual(delta["changed_items"], [])
+        self.assertEqual(delta["moved_items"], [])
+
+    def test_position_delta_above_tolerance_is_changed(self):
+        variant = _plan("variant-a", items=[_item(position=(1.1e-6, 0.0))])
+
+        delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(delta["moved_items"], ["sofa"])
+
+    def test_yaw_delta_is_periodic_and_reports_canonical_values(self):
+        equivalent = _compare(variants=[_plan("variant-a", items=[_item(yaw=360.0)])])
+        changed = _compare(variants=[_plan("variant-a", items=[_item(yaw=45.0)])])
+
+        equivalent_delta = equivalent.to_dict()["pairwise_deltas"][0]
+        changed_delta = changed.to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(equivalent_delta["unchanged_items"], ["sofa"])
+        self.assertEqual(changed_delta["rotated_items"], ["sofa"])
+        self.assertEqual(changed_delta["geometry_changes"][0]["yaw"]["baseline_yaw_deg"], 0.0)
+        self.assertEqual(changed_delta["geometry_changes"][0]["yaw"]["variant_yaw_deg"], 45.0)
+        self.assertEqual(changed_delta["geometry_changes"][0]["yaw"]["delta_yaw_deg"], 45.0)
+
+    def test_yaw_uses_derived_tolerance(self):
+        radius = math.hypot(1.0, 0.5)
+        tolerance_deg = math.degrees(1e-6 / radius)
+        within = _compare(variants=[_plan("variant-a", items=[_item(yaw=tolerance_deg / 2.0)])])
+        outside = _compare(variants=[_plan("variant-a", items=[_item(yaw=tolerance_deg * 2.0)])])
+
+        self.assertEqual(within.to_dict()["pairwise_deltas"][0]["unchanged_items"], ["sofa"])
+        self.assertEqual(outside.to_dict()["pairwise_deltas"][0]["rotated_items"], ["sofa"])
+
+    def test_dimensions_and_z_bounds_are_compared_independently(self):
+        item = _item(dimensions=(2.2, 1.0, 0.8))
+        item["effective_geometry"]["z_max_m"] = 1.1
+        variant = _plan("variant-a", items=[item])
+
+        delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+        geometry = delta["geometry_changes"][0]
+
+        self.assertEqual(delta["resized_items"], ["sofa"])
+        self.assertEqual(geometry["dimensions"]["delta_m"], [0.2, 0.0, 0.0])
+        self.assertEqual(geometry["z_bounds"]["delta_m"], [0.0, 0.3])
+
+    def test_footprint_corruption_is_detected_independently(self):
+        effective = _effective_geometry((2.0, 1.0, 0.8), (0.0, 0.0), 0.0)
+        effective["world_footprint_m"][0][0] += 0.01
+        variant = _plan("variant-a", items=[_item(effective_geometry=effective)])
+
+        delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(delta["geometry_changes"][0]["footprint"]["changed"], True)
+
+    def test_obb_corruption_is_detected_when_footprint_is_unchanged(self):
+        effective = _effective_geometry((2.0, 1.0, 0.8), (0.0, 0.0), 0.0)
+        effective["obb_2d"]["half_extents_m"][0] += 0.1
+        variant = _plan("variant-a", items=[_item(effective_geometry=effective)])
+
+        delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(delta["geometry_changes"][0]["obb"]["changed"], True)
+        self.assertNotIn("footprint", delta["geometry_changes"][0])
+
+    def test_metadata_changes_preserve_item_identity(self):
+        variant_item = _item(
+            item_type="chair",
+            dimensions_status="measured",
+            source_id="synthetic-sofa-revised",
+            placement_method="manual",
+        )
+        variant = _plan("variant-a", items=[variant_item])
+
+        delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(delta["common_items"], ["sofa"])
+        self.assertEqual(delta["metadata_changed_items"], ["sofa"])
+        self.assertEqual(delta["geometry_changed_items"], [])
+        fields = {change["field"] for change in delta["metadata_changes"][0]["changes"]}
+        self.assertEqual(fields, {"type", "dimensions_status", "source_id"})
+
+    def test_geometry_and_metadata_changes_have_combined_classification(self):
+        variant_item = _item(item_type="chair", position=(0.2, 0.0))
+        variant = _plan("variant-a", items=[variant_item])
+
+        delta = _compare(variants=[variant]).to_dict()["pairwise_deltas"][0]
+
+        self.assertEqual(delta["classification"], {"sofa": "geometry_and_metadata_changed"})
+
+    def test_multiple_variants_have_independent_baseline_deltas(self):
+        variants = [
+            _plan("variant-b", items=[_item(position=(0.2, 0.0))]),
+            _plan("variant-a", items=[_item(item_type="chair")]),
+        ]
+
+        report = _compare(variants=variants).to_dict()
+
+        self.assertEqual([delta["to_layout_id"] for delta in report["pairwise_deltas"]], ["variant-a", "variant-b"])
+        self.assertEqual(report["summary"]["variant_summaries"][0]["layout_id"], "variant-a")
+        self.assertEqual(report["summary"]["variant_summaries"][1]["layout_id"], "variant-b")
+
+    def test_item_and_metadata_changes_update_logical_signature(self):
+        base_report = _compare().logical_signature
+        changed_item = _item(position=(0.2, 0.0))
+        changed_report = _compare(variants=[_plan("variant-a", items=[changed_item])]).logical_signature
+        added_report = _compare(
+            baseline=_plan("baseline", items=[_item("sofa"), _item("chair", item_type="chair")]),
+            variants=[_plan("variant-a", items=[_item("sofa")])],
+        ).logical_signature
+
+        self.assertNotEqual(base_report, changed_report)
+        self.assertNotEqual(base_report, added_report)
+
+    def test_negative_dimensions_are_structured_invalid_without_item_delta(self):
+        variant = _plan("variant-a", items=[_item(dimensions=(-1.0, 0.8, 0.7))])
+
+        report = _compare(variants=[variant])
+
+        data = report.to_dict()
+        self.assertFalse(report.valid)
+        self.assertIn("malformed_item_data", {finding["code"] for finding in data["errors"]})
+        self.assertEqual(data["pairwise_deltas"], [])
+
+    def test_zero_dimension_is_structured_invalid(self):
+        variant = _plan("variant-a", items=[_item(dimensions=(0.0, 0.8, 0.7))])
+
+        report = _compare(variants=[variant])
+
+        self.assertFalse(report.valid)
+        self.assertIn("malformed_item_data", {finding["code"] for finding in report.to_dict()["errors"]})
+
+    def test_inverted_z_bounds_are_structured_invalid_without_z_delta(self):
+        effective = _effective_geometry((2.0, 1.0, 0.8), (0.0, 0.0), 0.0)
+        effective["z_min_m"] = 0.8
+        effective["z_max_m"] = 0.2
+        variant = _plan("variant-a", items=[_item(effective_geometry=effective)])
+
+        report = _compare(variants=[variant])
+
+        data = report.to_dict()
+        self.assertFalse(report.valid)
+        self.assertIn("malformed_item_data", {finding["code"] for finding in data["errors"]})
+        self.assertEqual(data["pairwise_deltas"], [])
+
+    def test_equal_z_bounds_are_allowed_by_structural_ordering(self):
+        effective = _effective_geometry((2.0, 1.0, 0.8), (0.0, 0.0), 0.0)
+        effective["z_min_m"] = 0.4
+        effective["z_max_m"] = 0.4
+        variant = _plan("variant-a", items=[_item(effective_geometry=effective)])
+
+        report = _compare(variants=[variant])
+
+        self.assertTrue(report.valid)
+        self.assertEqual(
+            report.to_dict()["pairwise_deltas"][0]["geometry_changes"][0]["z_bounds"]["delta_m"],
+            [0.4, -0.4],
+        )
+
+    def test_degenerate_footprint_is_structured_invalid(self):
+        effective = _effective_geometry((2.0, 1.0, 0.8), (0.0, 0.0), 0.0)
+        effective["world_footprint_m"] = [[0.0, 0.0]] * 4
+        variant = _plan("variant-a", items=[_item(effective_geometry=effective)])
+
+        report = _compare(variants=[variant])
+
+        data = report.to_dict()
+        self.assertFalse(report.valid)
+        self.assertIn("malformed_item_data", {finding["code"] for finding in data["errors"]})
+        self.assertEqual(data["pairwise_deltas"], [])
+
+    def test_collinear_footprint_is_structured_invalid(self):
+        effective = _effective_geometry((2.0, 1.0, 0.8), (0.0, 0.0), 0.0)
+        effective["world_footprint_m"] = [[-1.0, 0.0], [0.0, 0.0], [1.0, 0.0], [2.0, 0.0]]
+        variant = _plan("variant-a", items=[_item(effective_geometry=effective)])
+
+        report = _compare(variants=[variant])
+
+        self.assertFalse(report.valid)
+        self.assertIn("malformed_item_data", {finding["code"] for finding in report.to_dict()["errors"]})
+
+    def test_degenerate_obb_is_structured_invalid(self):
+        effective = _effective_geometry((2.0, 1.0, 0.8), (0.0, 0.0), 0.0)
+        effective["obb_2d"]["half_extents_m"][0] = 0.0
+        effective["obb_2d"]["axes_xy"] = [[0.0, 0.0], [0.0, 0.0]]
+        effective["obb_2d"]["corners_m"] = [[0.0, 0.0]] * 4
+        variant = _plan("variant-a", items=[_item(effective_geometry=effective)])
+
+        report = _compare(variants=[variant])
+
+        data = report.to_dict()
+        self.assertFalse(report.valid)
+        self.assertIn("malformed_item_data", {finding["code"] for finding in data["errors"]})
+        self.assertEqual(data["pairwise_deltas"], [])
+
+    def test_valid_rotated_obb_and_reordered_corners_remain_valid(self):
+        base_effective = _effective_geometry((2.0, 1.0, 0.8), (0.0, 0.0), 45.0)
+        variant_effective = copy.deepcopy(base_effective)
+        variant_effective["world_footprint_m"] = list(reversed(variant_effective["world_footprint_m"]))
+        variant_effective["obb_2d"]["corners_m"] = list(reversed(variant_effective["obb_2d"]["corners_m"]))
+        baseline = _plan("baseline", items=[_item(yaw=45.0, effective_geometry=base_effective)])
+        variant = _plan("variant-a", items=[_item(yaw=45.0, effective_geometry=variant_effective)])
+
+        report = _compare(baseline=baseline, variants=[variant])
+
+        self.assertTrue(report.valid)
+        self.assertEqual(report.to_dict()["pairwise_deltas"][0]["unchanged_items"], ["sofa"])
+
+    def test_malformed_item_data_is_structured_and_does_not_crash(self):
+        malformed_position = _item()
+        malformed_position["position_xy_m"] = [0.0]
+        malformed_yaw = _item()
+        malformed_yaw["yaw_deg"] = math.inf
+        malformed_dimensions = _item()
+        malformed_dimensions["dimensions_m"] = [2.0, 1.0]
+        malformed_items = [
+            [None],
+            [_item("sofa"), _item("sofa")],
+            [malformed_position],
+            [malformed_yaw],
+            [malformed_dimensions],
+        ]
+
+        for items in malformed_items:
+            with self.subTest(items=items):
+                report = _compare(variants=[_plan("variant-a", items=items)])
+                codes = {finding["code"] for finding in report.to_dict()["errors"]}
+                self.assertFalse(report.valid)
+                self.assertTrue(codes & {"malformed_item_data", "duplicate_item_id"})
+
+    def test_t502_does_not_emit_spatial_deltas(self):
+        data = _compare(variants=[_plan("variant-a", items=[_item(position=(0.2, 0.0))])]).to_dict()
+
+        self.assertNotIn("spatial_deltas", data)
+        self.assertNotIn("errors_introduced", data)
+        self.assertNotIn("warnings_introduced", data)
+        self.assertNotIn("limitations_introduced", data)
 
     def test_no_variants_is_structured_invalid_report(self):
         report = _compare(variants=[], variant_reports=[])
