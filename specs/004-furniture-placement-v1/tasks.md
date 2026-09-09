@@ -1,19 +1,19 @@
 # Tareas: Furniture Placement v1
 
 > Clasificación: T2
-> Estado del checkpoint actual: diseño documental creado; implementación no iniciada.
+> Estado del checkpoint actual: T4.01 implementada y validada; T4.02–T4.06 no iniciadas.
 > Rama: `spec/004-furniture-placement-v1`
 
 Estados: `[ ]` pendiente · `[~]` en curso · `[x]` validada · `[!]` bloqueada.
 
 Furniture Placement v1 debe conservar `measurements/` como autoridad
 arquitectónica y separar el dominio de layouts, planes y overlays. Estas tareas
-son la descomposición aprobada para una futura implementación; ninguna tarea
-se ejecuta en el checkpoint de diseño actual.
+son la descomposición aprobada; T4.01 está cerrada en este checkpoint y las
+restantes siguen pendientes.
 
 ## T4.01 — Fijar autoridad y contrato `furniture-layout-1`
 
-- **Estado:** `[ ]`
+- **Estado:** `[x]`
 - **Objetivo:** materializar el contrato de entrada fuera de `measurements/`
   y fijar la política de campos, IDs, unidades, estados y provenance mínima.
 - **Archivos previstos:**
@@ -25,17 +25,20 @@ se ejecuta en el checkpoint de diseño actual.
   `placement_method=manual`; `anchor=bottom_center`; dimensions ordenadas
   `[width, depth, height]`, positivas y finitas; IDs únicos con sintaxis slug;
   unknown fields rechazados; `dimensions_status` explícito; `unknown` no
-  aceptado para generar proxies.
+  aceptado para generar proxies; cualquier yaw finito en grados es válido y
+  T4.02 se encargará de normalizarlo.
 - **Tests:** documento válido mínimo; tipos admitidos; campos ausentes;
   campos desconocidos; IDs inválidos/duplicados; unidades y coordenadas
   incorrectas; placement method incorrecto; dimensiones inválidas o no
-  finitas; statuses válidos e `unknown` rechazado; yaw/posición inválidos;
-  canonicalización y no mutación.
+  finitas; statuses válidos e `unknown` rechazado; yaw no finito y posición
+  inválida; determinismo y no mutación.
 - **Gates:** tests de `tests/furniture/`, JSON syntax, `git diff --check` y
   suite existente de measurements.
 - **Blender:** No.
 - **Cierre:** schema y validador emiten el mismo contrato versionado, sin tocar
   room schemas, measurements ni un layout de acceptance.
+- **Evidencia:** schema, validator puro, fixture sintético y `26/26 PASS` en
+  `tests/furniture/test_furniture_layout.py`; no se usó Blender.
 
 ## T4.02 — Construir el furniture plan puro
 
@@ -198,7 +201,6 @@ acceptance y no debe mezclarse con tareas posteriores de assets o UI.
 
 ## Estado del slice en este checkpoint
 
-T4.01–T4.06 permanecen `[ ]`. Este commit documental, si se autoriza en una
-fase posterior, solo prepara la implementación; no crea schema funcional,
-layout JSON, módulos Python, tests furniture, escenas, previews ni artefactos
-Blender.
+T4.01 está `[x]`. T4.02–T4.06 permanecen `[ ]`. Este checkpoint no crea
+furniture plan, spatial validation, overlay Blender, normalizer, comparator,
+escena, preview ni artefacto Blender.

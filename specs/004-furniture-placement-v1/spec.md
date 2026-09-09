@@ -2,7 +2,8 @@
 
 > Clasificación: T2 — nuevo dominio de datos, plan determinista, validación espacial y overlay Blender derivado.
 > Rama: `spec/004-furniture-placement-v1`
-> Estado: diseño aprobado documentalmente; implementación no iniciada.
+> Estado: T4.01 — contrato, schema, validator, fixture sintético y tests
+> implementados y validados; T4.02–T4.06 no iniciadas.
 
 ## Objetivo
 
@@ -41,7 +42,7 @@ dimensiones sintéticas como observaciones reales.
 - Validación pura del layout y construcción de un
   `furniture-placement-generator-1` determinista.
 - Coordenadas `canonical_room` en metros, anchor `bottom_center` y yaw
-  horizontal normalizado.
+  horizontal finito; el furniture plan normaliza el yaw.
 - Validación espacial contractual contra el floor polygon, wall proxies,
   opening proxies y otros furniture proxies cuando la geometría efectiva del
   room plan permite demostrar el resultado.
@@ -179,7 +180,7 @@ de un documento válido es:
 | `source_id` | obligatorio | referencia estable de origen, sin ruta personal | sí |
 | `position_xy_m` | obligatorio | centro de la base en `canonical_room` | sí |
 | `anchor` | obligatorio | en v1 debe ser `bottom_center` | sí |
-| `yaw_deg` | obligatorio | giro horizontal en grados, normalizado a `[0, 360)` | sí |
+| `yaw_deg` | obligatorio | giro horizontal finito en grados; T4.02 lo normaliza a `[0, 360)` | sí |
 
 En v1 no se añaden `label`, `notes`, `floor_contact`, `model_ref`,
 `asset_ref`, pitch, roll, escalado libre ni campos de catálogo. Un futuro
@@ -221,8 +222,8 @@ Furniture reutiliza el sistema arquitectónico `canonical_room` del room plan:
 - límites locales del proxy: `x=[-width/2,+width/2]`,
   `y=[-depth/2,+depth/2]`, `z=[0,height]`;
 - rotación: `yaw_deg` alrededor de Z; pitch y roll no existen en v1;
-- ángulos: grados en JSON, normalizados determinísticamente mediante módulo
-  360 a `[0,360)`.
+- ángulos: grados finitos en JSON; T4.02 los normaliza determinísticamente
+  mediante módulo 360 a `[0,360)` sin mutar el layout de entrada.
 
 Así, para un sofá de `2.20 × 0.95 × 0.85 m`, `position_xy_m` representa el
 centro de su base, no una esquina ni el centro geométrico de altura. La misma
@@ -629,14 +630,25 @@ sin cambiar la semántica de placement.
   implica que el proxy sea un modelo real.
 - No se exige render artístico ni materiales.
 
-## Decisiones pendientes antes de implementar
+## Decisiones posteriores a T4.01
 
-- Aprobar en T4.01 el conjunto inicial cerrado de `type` o reducirlo a los
-  tres tipos de acceptance.
-- Confirmar la política exacta de intersección con wall/opening proxies según
-  las primitivas geométricas disponibles en el room plan.
-- Confirmar nombres de los archivos de acceptance y la política de artefactos
-  derivados antes de generar el primer `.blend`.
+- El conjunto inicial cerrado de `type` queda fijado en `sofa`, `coffee_table`,
+  `armchair`, `shelf` y `tv_unit`.
+- El layout acepta cualquier `yaw_deg` finito en grados; T4.02 normaliza el
+  plan a `[0,360)`.
+- La política exacta de intersección con wall/opening proxies se implementará
+  y validará en T4.03 usando las primitivas efectivas del room plan.
+- Los nombres definitivos de artefactos de acceptance y la política de
+  derivados se cerrarán en T4.06 antes de generar el primer `.blend`.
 
-Estas decisiones no bloquean el diseño, pero deben resolverse en T4.01 antes
-de crear el schema o el layout real.
+## Evidencia de T4.01
+
+T4.01 queda implementada sin abrir Blender ni tocar el room pipeline:
+
+- schema: `layouts/schema/furniture-layout-v1.schema.json`;
+- validator puro: `blender/scripts/furniture/validate_furniture_layout.py`;
+- fixture sintético: `layouts/fixtures/furniture-layout-v1-synthetic.json`;
+- tests contractuales: `tests/furniture/test_furniture_layout.py`;
+- resultado: `26/26 PASS`;
+- no se construye furniture plan, no se ejecuta spatial validation y no existe
+  todavía overlay, normalizer ni comparator furniture.

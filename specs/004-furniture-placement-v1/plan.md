@@ -10,13 +10,17 @@
 
 **Spec:** `specs/004-furniture-placement-v1/spec.md`
 
+**Current checkpoint:** T4.01 está implementada y validada con schema,
+validator puro, fixture sintético y 26 tests contractuales. T4.02–T4.06 siguen
+sin iniciar.
+
 ## Global Constraints
 
 - `measurements/` remains the source of truth for architecture; layouts are not room measurements.
 - The canonical layout location is `layouts/<room_id>/<layout_id>.json`; there is no mutable `current` alias.
 - The input contract is `furniture-layout-1`, with `units=m`, `coordinate_system=canonical_room`, `placement_method=manual` and `anchor=bottom_center`.
 - `dimensions_m` is ordered `[width, depth, height]`; dimensions are finite and positive; `unknown` is not accepted for generated v1 proxies.
-- Furniture positions use `position_xy_m` at the center of the proxy base and `yaw_deg` in degrees normalized to `[0, 360)`.
+- Furniture positions use `position_xy_m` at the center of the proxy base and finite `yaw_deg` degrees; T4.02 normalizes the plan output to `[0, 360)`.
 - The pure furniture plan version is `furniture-placement-generator-1` and carries the room plan version and logical signature it was built against.
 - The Blender namespace is `HSLAYOUT_<room_id>_<layout_id>` with a managed `Furniture` collection and `HSLAYOUT_FURNITURE_<item_id>` objects.
 - Furniture generation may only create or replace its own HSLAYOUT root; it must not call `read_factory_settings`, delete `HS3D_ROOM_*`, modify architecture collections or overwrite the source `.blend`.
@@ -121,7 +125,8 @@ geometry, provenance and `logical_signature`.
 **Invariants:** room identity and units match; no architecture is copied into
 the layout; no input mutation; identical canonical inputs produce byte-stable
 plan serialization and signature; geometry uses the bottom-center anchor and
-canonical room coordinates.
+canonical room coordinates. T4.02, not T4.01, owns modulo-360 yaw
+normalization.
 
 **Tests and gates:** room/layout mismatch; version/signature mismatch;
 ordering-independent input; yaw values such as `-360`, `0`, `360` and `720`;
