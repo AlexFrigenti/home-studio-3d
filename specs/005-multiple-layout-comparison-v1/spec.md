@@ -1,6 +1,6 @@
 # Especificación: Multiple Layout Comparison / Variant Review v1
 
-> Estado: T5.01–T5.05 implementados y validados; T5.06 no implementado.
+> Estado: T5.01–T5.06 implementados y auditados; Slice 005 listo para revisión documental/PR.
 >
 > Rama: `spec/005-multiple-layout-comparison-v1`
 
@@ -311,9 +311,9 @@ No forman parte de Slice 005:
 - fixed elements nuevos;
 - artefacto `.blend` o preview comparativo.
 
-## Estado de implementación T5.01–T5.05
+## Estado de implementación T5.01–T5.06
 
-T5.01–T5.05 están implementados en `blender/scripts/furniture/compare_furniture_variants.py` y cubiertos por los tests puros de furniture. El módulo valida versiones, baseline explícito, cardinalidad, binding room/plan/spatial, ordering canónico, serialización JSON, firma lógica, inputs malformados y no mutación. T5.02 añade sets semánticos y deltas baseline→variante de items, geometry efectiva y metadata/provenance. T5.03 añade summaries por layout y `spatial_delta` de errores, warnings, limitations, checked items y transiciones de validez, sin invocar el validador espacial. T5.04 amplía la regresión con 75 tests de contrato, mutaciones, límites de tolerancia, payloads malformados, deduplicación, determinismo, firma y no mutación. T5.05 añade una acceptance end-to-end pura para `living-room-main` con layouts JSON sintéticos, FurniturePlans y SpatialValidationReports producidos por los productores reales. No usa Blender ni implementa T5.06.
+T5.01–T5.05 están implementados en `blender/scripts/furniture/compare_furniture_variants.py` y cubiertos por los tests puros de furniture. El módulo valida versiones, baseline explícito, cardinalidad, binding room/plan/spatial, ordering canónico, serialización JSON, firma lógica, inputs malformados y no mutación. T5.02 añade sets semánticos y deltas baseline→variante de items, geometry efectiva y metadata/provenance. T5.03 añade summaries por layout y `spatial_delta` de errores, warnings, limitations, checked items y transiciones de validez, sin invocar el validador espacial. T5.04 amplía la regresión con 75 tests de contrato, mutaciones, límites de tolerancia, payloads malformados, deduplicación, determinismo, firma y no mutación. T5.05 añade una acceptance end-to-end pura para `living-room-main` con layouts JSON sintéticos, FurniturePlans y SpatialValidationReports producidos por los productores reales. T5.06 consolida la evidencia, privacy/provenance, compatibilidad, limitaciones y gates en `docs/setup/005-multiple-layout-comparison-validation.md`. No usa Blender ni inicia Slice 006.
 
 ## Acceptance T5.05 — living-room-main
 

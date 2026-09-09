@@ -183,7 +183,7 @@ Exigir room binding común, summaries por layout, deltas esperados, spatial vali
 
 Mutar un deepcopy del wrapper espacial de C para demostrar que un cambio adicional altera el delta y la firma, sin guardar una variante inválida adicional como layout canónico.
 
-**Cierre T5.05:** implementado y validado con cinco tests de acceptance. La pipeline real produce el room plan `room-v1.1-generator-2`; A y B son espacialmente válidas; C produce `furniture_out_of_floor` y la transición objetiva `became_invalid`. La comparación sigue siendo contractualmente válida, determinista y sin mutación, sin Blender ni artefactos visuales.
+**Cierre T5.05:** implementado y validado con cinco tests de acceptance. La pipeline real produce el room plan `room-v1.1-generator-2` con firma `182824cc89031546eade026dca25f419430e29527ab1785d0397879300c5186a`; las firmas de FurniturePlan son `b107d146c81a300858d33d48265d7e42480c88f6ed8443e6a54f80a008e19a0c` (A), `32b40195178f96178e2ba64ecc637e09c4c941ccc6fabe50c216049a0a52d70e` (B) y `a723fb4c9e89495aa441dd184b8cb2a3579badfcfee47de8714465e9493b8c96` (C); el report produce `42754f8500d836c9e8e901129ee7c49d65d3c2505b7d78e8369480484011e6c8`. A y B son espacialmente válidas; C produce `furniture_out_of_floor` y la transición objetiva `became_invalid`. La comparación sigue siendo contractualmente válida, determinista y sin mutación, sin Blender ni artefactos visuales.
 
 ### Task 5.06: Auditoría final y documentación de acceptance
 
@@ -197,22 +197,24 @@ Mutar un deepcopy del wrapper espacial de C para demostrar que un cambio adicion
 - Consumes: comparator, tests, fixtures y contratos de Slice 004.
 - Produces: evidencia documental de Slice 005; no inicia Slice 006.
 
-- [ ] **Step 1: Ejecutar gates furniture y room requeridos**
+- [x] **Step 1: Ejecutar gates furniture y room requeridos**
 
 Run: `python -m unittest discover -s tests/furniture -p 'test_*.py'` y `python -m unittest discover -s tests/measurements -p 'test_*.py'`.
 
 Expected: las suites existentes y las nuevas pasan sin Blender.
 
-- [ ] **Step 2: Ejecutar syntax, JSON, privacy y diff checks**
+- [x] **Step 2: Ejecutar syntax, JSON, privacy y diff checks**
 
 Run: `python -c "import ast,json; from pathlib import Path; [ast.parse(p.read_text(encoding='utf-8'), filename=str(p)) for p in Path('.').rglob('*.py') if '.git' not in p.parts and '__pycache__' not in p.parts]; [json.loads(p.read_text(encoding='utf-8')) for p in Path('.').rglob('*.json') if '.git' not in p.parts]"`, validación JSON de fixtures, búsqueda de rutas/secrets y `git diff --check`.
 
 Expected: PASS; sin paths personales, timestamps, UUIDs ni artefactos no autorizados.
 
-- [ ] **Step 3: Auditar coherencia documental**
+- [x] **Step 3: Auditar coherencia documental**
 
 Verificar que spec, plan y tasks usan exactamente `furniture-variant-comparison-1`, baseline explícito, baseline→variantes, mismas exclusiones y ningún claim de Blender/visual work.
 
-- [ ] **Step 4: Registrar cierre**
+- [x] **Step 4: Registrar cierre**
 
-Documentar acceptance pura, limitations, provenance sintética, determinismo y boundary de Visual Furnishing & Materials. No crear `.blend`, preview ni iniciar Slice 006.
+Documentar acceptance pura, limitations, provenance sintética, determinismo y boundary de Visual Furnishing & Materials. El cierre queda registrado en `docs/setup/005-multiple-layout-comparison-validation.md`; no se crean `.blend` ni previews y no se inicia Slice 006.
+
+**Cierre T5.06:** auditoría documental, privacy, provenance, compatibilidad y gates completados. Slice 005 queda listo para revisión documental/PR.

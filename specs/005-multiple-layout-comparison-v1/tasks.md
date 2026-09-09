@@ -1,12 +1,12 @@
 # Tareas: Multiple Layout Comparison / Variant Review v1
 
-> Estado del checkpoint actual: T5.01–T5.05 implementadas y validadas; T5.06 no implementada.
+> Estado del checkpoint actual: T5.01–T5.06 implementadas y auditadas; Slice 005 listo para revisión documental/PR.
 >
 > Rama: `spec/005-multiple-layout-comparison-v1`
 
 ## Contrato del slice
 
-Slice 005 compara hechos entre dos o más variantes del mismo room mediante un comparator puro. Consume `furniture-layout-1`, `furniture-placement-generator-1`, `furniture-spatial-validation-1` y `room-v1.1-generator-2` sin modificar ninguno.
+Slice 005 compara hechos entre dos o más variantes del mismo room mediante un comparator puro. Consume `furniture-layout-1`, `furniture-placement-generator-1`, `furniture-spatial-validation-1` y `room-v1.1-generator-2` sin modificar ninguno. El binding usa unidades `m` y coordinate system `canonical_room`.
 
 La salida es `furniture-variant-comparison-1`. El `baseline_layout_id` es explícito y los deltas v1 se calculan baseline→cada variante. `item_id` es identidad semántica. `MATH_TOLERANCE_M=1e-6` m se mantiene para magnitudes lineales; yaw usa delta periódico y tolerancia derivada de radio.
 
@@ -63,17 +63,17 @@ En el checkpoint actual, el report contiene binding/versiones, findings contract
 - [x] Verificar room binding, summaries, deltas, spatial validity, limitations, ordering, signature y no mutation.
 - [x] Mantener las mutaciones espaciales adicionales como probes negativos en memoria, no como acceptance layout canónico.
 
-**Cierre:** acceptance pura reproducible para `living-room-main`, cubierta por cinco tests, sin Blender, `.blend` ni preview. A y B son válidas; C introduce `furniture_out_of_floor` y se reporta como `became_invalid` sin invalidar contractualmente el comparador.
+**Cierre:** acceptance pura reproducible para `living-room-main`, cubierta por cinco tests, sin Blender, `.blend` ni preview. Room signature: `182824cc89031546eade026dca25f419430e29527ab1785d0397879300c5186a`. FurniturePlan signatures A/B/C: `b107d146c81a300858d33d48265d7e42480c88f6ed8443e6a54f80a008e19a0c`, `32b40195178f96178e2ba64ecc637e09c4c941ccc6fabe50c216049a0a52d70e` y `a723fb4c9e89495aa441dd184b8cb2a3579badfcfee47de8714465e9493b8c96`; VariantComparisonReport: `42754f8500d836c9e8e901129ee7c49d65d3c2505b7d78e8369480484011e6c8`. A y B son válidas; C introduce `furniture_out_of_floor` y se reporta como `became_invalid` sin invalidar contractualmente el comparador.
 
-## T5.06 — Documentation, privacy and final audit
+## T5.06 [x] — Documentation, privacy and final audit
 
-- [ ] Reconciliar spec, plan y tasks contra la implementación real y los tests.
-- [ ] Ejecutar furniture pure suite, room pure suite, Python/JSON syntax y `git diff --check`.
-- [ ] Auditar privacy: sin rutas, UUIDs, timestamps, secrets, datos personales ni provenance inventada.
-- [ ] Documentar acceptance, determinismo, limitations, rollback y provenance sintética.
-- [ ] Mantener Visual Furnishing & Materials fuera de scope y no iniciar Slice 006.
+- [x] Reconciliar spec, plan y tasks contra la implementación real y los tests.
+- [x] Ejecutar furniture pure suite, room pure suite, Python/JSON syntax y `git diff --check`.
+- [x] Auditar privacy: sin rutas, UUIDs, timestamps, secrets, datos personales ni provenance inventada.
+- [x] Documentar acceptance, determinismo, limitations, rollback y provenance sintética.
+- [x] Mantener Visual Furnishing & Materials fuera de scope y no iniciar Slice 006.
 
-**Cierre:** Slice 005 queda listo para revisión documental/PR sin artefactos Blender y sin trabajo de Slice 006.
+**Cierre:** Slice 005 queda listo para revisión documental/PR sin artefactos Blender y sin trabajo de Slice 006. La evidencia consolidada está en `docs/setup/005-multiple-layout-comparison-validation.md`.
 
 ## Dependencias y exclusiones
 
@@ -90,12 +90,12 @@ Fuera de scope: Blender/MCP, side-by-side rendering, cámaras, dashboard, assets
 
 ## Checklist de cierre del slice
 
-- [ ] `VariantComparisonReport` es puro, serializable y determinista.
-- [ ] Todos los variants comparten room binding y versiones soportadas.
-- [ ] `item_id` permanece como identidad semántica.
-- [ ] Geometry, metadata/provenance y spatial facts se distinguen.
-- [ ] No se recalcula spatial validation.
-- [ ] No existe ranking subjetivo.
-- [ ] Acceptance `living-room-main` es sintética y reproducible.
-- [ ] No hay Blender/MCP ni artefactos visuales.
-- [ ] Slice 006 permanece sin iniciar.
+- [x] `VariantComparisonReport` es puro, serializable y determinista.
+- [x] Todos los variants comparten room binding y versiones soportadas.
+- [x] `item_id` permanece como identidad semántica.
+- [x] Geometry, metadata/provenance y spatial facts se distinguen.
+- [x] No se recalcula spatial validation.
+- [x] No existe ranking subjetivo.
+- [x] Acceptance `living-room-main` es sintética y reproducible.
+- [x] No hay Blender/MCP ni artefactos visuales.
+- [x] Slice 006 permanece sin iniciar.
