@@ -34,6 +34,9 @@
 - Slice 006 — Visual Furnishing & Materials v1 está validado en la rama
   `spec/006-visual-furnishing-materials-v1` y pendiente de revisión final e
   integración.
+- Slice 007 — Architectural Openings & Fixed Visual Elements v1 ha pasado la
+  auditoría final en la rama `spec/007-architectural-openings-fixed-visual-v1`
+  y está listo para revisión precommit; no está integrado en `main`.
 - El flujo room vigente es `measurements/` → generation plan determinista → generación arquitectónica en Blender → `NormalizedScene` → comparación `room → plan` y `plan → scene`.
 - El contrato room actual usa `room-v1.1-generator-2`, con `room-scene-adapter-1` y `room-scene-comparison-1`; la compatibilidad v1 se conserva.
 - `measurements/` sigue siendo la autoridad arquitectónica; la escena es un derivado validado.
@@ -43,10 +46,14 @@
 - Slice 004 tiene acceptance sintética canónica, `.blend` derivado, preview técnico, privacy guard y firmas lógicas deterministas.
 - Slice 005 tiene comparación de variantes, acceptance canónica y gates puros integrados en `main`.
 - Slice 006 tiene escena derivada visual, preview de review, materiales procedurales v1 y validación lógica/documental completa en su rama.
+- Slice 007 tiene una escena derivada con namespace `HSARCH_VISUAL_*`, seis
+  openings visuales, cuatro materiales procedurales y auditoría final PASS; su
+  presentación mantiene los proxies técnicos como autoridad y no añade
+  geometría constructiva.
 
 ## Limitaciones actuales
 
-- Los openings siguen siendo proxies técnicos (`proxy_only=true`, `constructive_geometry=false`); no hay booleanos ni geometría constructiva.
+- Los openings siguen siendo proxies técnicos (`proxy_only=true`, `constructive_geometry=false`); Slice 007 añade solo una capa visual procedural separada, sin booleanos ni geometría constructiva.
 - El mobiliario sigue limitado a proxies/cuboids sintéticos; no hay assets reales, catálogo ni materiales artísticos finales.
 - Los layouts siguen siendo JSON manuales; no hay comparación A/B/C de variantes, ergonomía, circulación ni recomendaciones.
 - No existe validación multi-room como producto.
@@ -57,8 +64,8 @@
 
 ## Próximo horizonte
 
-No hay un Slice 007 iniciado. El trabajo posterior deberá definirse mediante un
-nuevo slice aprobado.
+Slice 007 está auditado y listo para revisión precommit. No hay un Slice 008
+definido; el trabajo posterior deberá definirse mediante un nuevo slice aprobado.
 
 ## Contrato común de calidad
 
