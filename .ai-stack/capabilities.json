@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "capabilities": [
+    {
+      "id": "home-studio-blender-cli",
+      "description": "Blender CLI for bounded scene inspection and materialization.",
+      "surfaces": [
+        "codex-cli",
+        "claude-code"
+      ],
+      "checks": [
+        {
+          "id": "version",
+          "primitive": "executable-version",
+          "target": "blender-cli"
+        }
+      ]
+    },
+    {
+      "id": "home-studio-blender-mcp",
+      "description": "Live Blender MCP for explicitly selected scene interaction.",
+      "surfaces": [
+        "codex-cli",
+        "claude-code"
+      ],
+      "checks": [
+        {
+          "id": "probe",
+          "primitive": "mcp-live",
+          "target": "blender-mcp"
+        }
+      ]
+    }
+  ]
+}

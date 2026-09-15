@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-development-stack.local/schemas/machine-binding-store.schema.json",
+  "title": "AI Development Stack Machine Binding Store",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "bindings"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "bindings": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItemProperties": ["symbolicTarget", "targetClass"],
+      "items": { "$ref": "#/$defs/binding" }
+    }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "localPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "anyOf": [
+        { "pattern": "^[A-Za-z]:[\\\\/][^\\u0000]+$" },
+        { "pattern": "^/(?!/)[^\\u0000]+$" }
+      ]
+    },
+    "executableResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path"],
+      "properties": {
+        "kind": { "const": "executable-path" },
+        "path": { "$ref": "#/$defs/localPath" }
+      }
+    },
+    "mcpResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "host", "port"],
+      "properties": {
+        "kind": { "const": "loopback-endpoint" },
+        "host": { "enum": ["127.0.0.1", "::1"] },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbolicTarget", "targetClass", "resource"],
+      "properties": {
+        "symbolicTarget": { "$ref": "#/$defs/identifier" },
+        "targetClass": { "enum": ["executable", "mcp-endpoint"] },
+        "resource": {
+          "oneOf": [
+            { "$ref": "#/$defs/executableResource" },
+            { "$ref": "#/$defs/mcpResource" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "targetClass": { "const": "executable" } } },
+          "then": { "properties": { "resource": { "$ref": "#/$defs/executableResource" } } }
+        },
+        {
+          "if": { "properties": { "targetClass": { "const": "mcp-endpoint" } } },
+          "then": { "properties": { "resource": { "$ref": "#/$defs/mcpResource" } } }
+        }
+      ]
+    }
+  }
+}

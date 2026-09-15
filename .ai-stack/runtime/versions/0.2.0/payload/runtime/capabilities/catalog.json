@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "primitives": [
+    {
+      "id": "executable-version",
+      "driver": "version",
+      "targetClass": "executable",
+      "effect": "local-exec",
+      "preflightAllowed": true,
+      "timeoutMs": 2000,
+      "importance": "essential",
+      "freshness": { "maxAgeSeconds": 60, "fingerprintInputs": ["binding"] },
+      "evidence": { "fields": [{ "name": "version", "type": "version" }], "maxProperties": 1 },
+      "configSchema": { "fields": [], "maxProperties": 0 },
+      "degradedPolicyContribution": "block"
+    },
+    {
+      "id": "mcp-live",
+      "driver": "mcp",
+      "targetClass": "mcp-endpoint",
+      "effect": "network-read",
+      "preflightAllowed": false,
+      "timeoutMs": 3000,
+      "importance": "essential",
+      "freshness": { "maxAgeSeconds": 30, "fingerprintInputs": ["binding"] },
+      "evidence": { "fields": [{ "name": "reachable", "type": "boolean" }], "maxProperties": 1 },
+      "configSchema": { "fields": [], "maxProperties": 0 },
+      "degradedPolicyContribution": "block"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "runtime-node",
+      "surfaces": ["claude-code", "codex-cli", "codex-app", "gemini-cli", "antigravity-ide", "antigravity-desktop"],
+      "checks": [
+        {
+          "id": "executable",
+          "targetId": "node-executable",
+          "importance": "essential",
+          "driver": "executable",
+          "effect": "local-exec",
+          "preflightAllowed": true,
+          "timeoutMs": 2000,
+          "freshness": { "maxAgeSeconds": 60, "fingerprintInputs": ["node-executable"] },
+          "evidence": {
+            "fields": [{ "name": "present", "type": "boolean" }, { "name": "version", "type": "version" }],
+            "maxProperties": 2
+          }
+        },
+        {
+          "id": "version",
+          "targetId": "node-version",
+          "importance": "essential",
+          "driver": "version",
+          "effect": "local-exec",
+          "preflightAllowed": true,
+          "timeoutMs": 2000,
+          "freshness": { "maxAgeSeconds": 60, "fingerprintInputs": ["node-version"] },
+          "evidence": { "fields": [{ "name": "version", "type": "version" }], "maxProperties": 1 }
+        }
+      ],
+      "degradedPolicy": "block",
+      "repairs": []
+    },
+    {
+      "id": "workflow-superpowers",
+      "surfaces": ["claude-code", "codex-cli", "codex-app", "gemini-cli", "antigravity-ide", "antigravity-desktop"],
+      "checks": [
+        {
+          "id": "registration",
+          "targetId": "surface-registration",
+          "importance": "essential",
+          "driver": "file-config",
+          "effect": "local-read",
+          "preflightAllowed": true,
+          "timeoutMs": 1000,
+          "freshness": { "maxAgeSeconds": 300, "fingerprintInputs": ["surface-registration"] },
+          "evidence": { "fields": [{ "name": "registered", "type": "boolean" }], "maxProperties": 1 }
+        },
+        {
+          "id": "skill-set",
+          "targetId": "shared-skill-set",
+          "importance": "auxiliary",
+          "driver": "file-config",
+          "effect": "local-read",
+          "preflightAllowed": true,
+          "timeoutMs": 1000,
+          "freshness": { "maxAgeSeconds": 300, "fingerprintInputs": ["shared-skill-set"] },
+          "evidence": { "fields": [{ "name": "present", "type": "boolean" }], "maxProperties": 1 }
+        }
+      ],
+      "degradedPolicy": "allow-with-warning",
+      "repairs": []
+    },
+    {
+      "id": "mcp-context7",
+      "surfaces": ["claude-code", "codex-cli", "codex-app", "gemini-cli", "antigravity-ide", "antigravity-desktop"],
+      "checks": [
+        {
+          "id": "registration",
+          "targetId": "mcp-registration",
+          "importance": "essential",
+          "driver": "mcp",
+          "effect": "local-read",
+          "preflightAllowed": true,
+          "timeoutMs": 1000,
+          "freshness": { "maxAgeSeconds": 120, "fingerprintInputs": ["mcp-registration"] },
+          "evidence": { "fields": [{ "name": "registered", "type": "boolean" }], "maxProperties": 1 }
+        },
+        {
+          "id": "probe",
+          "targetId": "context7-endpoint",
+          "importance": "auxiliary",
+          "driver": "mcp",
+          "effect": "network-read",
+          "preflightAllowed": false,
+          "timeoutMs": 3000,
+          "freshness": { "maxAgeSeconds": 30, "fingerprintInputs": ["context7-endpoint"] },
+          "evidence": { "fields": [{ "name": "reachable", "type": "boolean" }], "maxProperties": 1 }
+        }
+      ],
+      "degradedPolicy": "allow-with-warning",
+      "repairs": []
+    }
+  ]
+}

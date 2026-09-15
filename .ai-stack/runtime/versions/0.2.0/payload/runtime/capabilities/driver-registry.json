@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "drivers": [
+    { "id": "executable", "module": "src/capabilities/drivers/executable.mjs" },
+    { "id": "version", "module": "src/capabilities/drivers/version.mjs" },
+    { "id": "file-config", "module": "src/capabilities/drivers/file-config.mjs" },
+    { "id": "mcp", "module": "src/capabilities/drivers/mcp.mjs" },
+    { "id": "authentication", "module": "src/capabilities/drivers/authentication.mjs" },
+    { "id": "network", "module": "src/capabilities/drivers/network.mjs" }
+  ]
+}

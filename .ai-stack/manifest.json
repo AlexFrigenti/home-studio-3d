@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "stackVersion": "0.2.0",
+  "projectSkill": ".agents/skills/home-studio-3d/SKILL.md",
+  "updatePolicy": {
+    "patch": "auto-if-valid",
+    "minor": "require-authorization",
+    "major": "explicit-migration"
+  },
+  "capabilities": [
+    {
+      "id": "home-studio-blender-cli",
+      "level": "REQUIRED",
+      "activation": {
+        "tasks": [
+          "slice-007-read-only-verification",
+          "slice-007-controlled-regeneration"
+        ]
+      }
+    },
+    {
+      "id": "home-studio-blender-mcp",
+      "level": "RECOMMENDED",
+      "activation": {
+        "tasks": [
+          "slice-007-controlled-regeneration"
+        ]
+      }
+    },
+    {
+      "id": "home-studio-blender-mcp",
+      "level": "REQUIRED",
+      "activation": {
+        "tasks": [
+          "slice-007-live-mcp-verification"
+        ]
+      }
+    }
+  ],
+  "capabilityDefinitions": ".ai-stack/capabilities.json",
+  "context": {
+    "documents": [
+      "AGENTS.md",
+      "PROJECT_CONTEXT.md",
+      "README.md",
+      "CONTRIBUTING.md",
+      ".quality/QUALITY.md",
+      "docs/decisions/001-blender-distribution.md",
+      "docs/decisions/002-blender-mcp-selection.md",
+      "specs/001-blender-codex-mcp-foundation/spec.md",
+      "specs/001-blender-codex-mcp-foundation/plan.md",
+      "specs/001-blender-codex-mcp-foundation/tasks.md",
+      "specs/002-room-measurement-and-reconstruction/spec.md",
+      "specs/002-room-measurement-and-reconstruction/plan.md",
+      "specs/002-room-measurement-and-reconstruction/tasks.md",
+      "specs/003-real-room-scene-comparison-and-validation/spec.md",
+      "specs/003-real-room-scene-comparison-and-validation/plan.md",
+      "specs/003-real-room-scene-comparison-and-validation/tasks.md",
+      "specs/004-furniture-placement-v1/spec.md",
+      "specs/004-furniture-placement-v1/plan.md",
+      "specs/004-furniture-placement-v1/tasks.md",
+      "specs/005-multiple-layout-comparison-v1/spec.md",
+      "specs/005-multiple-layout-comparison-v1/plan.md",
+      "specs/005-multiple-layout-comparison-v1/tasks.md",
+      "specs/006-visual-furnishing-materials-v1/spec.md",
+      "specs/006-visual-furnishing-materials-v1/plan.md",
+      "specs/006-visual-furnishing-materials-v1/tasks.md",
+      "specs/007-architectural-openings-fixed-visual-v1/spec.md",
+      "specs/007-architectural-openings-fixed-visual-v1/plan.md",
+      "specs/007-architectural-openings-fixed-visual-v1/tasks.md"
+    ]
+  }
+}
