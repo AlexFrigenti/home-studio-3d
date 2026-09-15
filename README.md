@@ -8,11 +8,9 @@ El proyecto se compartirá entre el portátil y el PC de sobremesa mediante Git/
 
 ## Estado actual
 
-Los slices 001–005 están integrados en `main`. Slice 006 está validado en la
-rama `spec/006-visual-furnishing-materials-v1` y pendiente de integración.
-Slice 007 ha pasado su auditoría final en la rama
-`spec/007-architectural-openings-fixed-visual-v1` y queda listo para revisión
-precommit; ninguno de los dos se integra en este checkpoint. El flujo validado
+Los slices 001–007 están integrados en `main`. Slice 007 — Architectural
+Openings Fixed Visual v1 — está cerrada y verificada mediante la PR #8. El
+baseline actual es `main` después de Slice 007. El flujo validado
 para `living-room-main` es:
 
 `measurements/` → generation plan determinista → arquitectura Blender → normalización y comparación de room → layout furniture validado → `FurniturePlan` → spatial validation → overlay Blender reversible → normalización y comparación furniture → acceptance técnica → capa visual procedural y review presentation de Slice 006 → capa visual procedural HSARCH de openings de Slice 007.
@@ -32,5 +30,5 @@ El dominio furniture usa el contrato `furniture-layout-1`, mantiene `measurement
 
 ## Próximo horizonte
 
-Slice 007 está auditado y listo para revisión precommit. No existe todavía un
+Slice 007 está integrada, cerrada y verificada en `main`. No existe todavía un
 Slice 008 definido; cualquier trabajo posterior requiere un nuevo slice aprobado.

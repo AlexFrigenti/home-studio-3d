@@ -27,16 +27,16 @@
 - Slice 003 — Real Room Scene Comparison and Validation está integrado en `main`.
 - Slice 004 — Furniture Placement v1 está integrado en `main`.
 - Slice 005 — Multiple Layout Comparison v1 está integrado en `main`.
+- Slice 006 — Visual Furnishing & Materials v1 está integrado en `main`.
+- Slice 007 — Architectural Openings Fixed Visual v1 está integrado, cerrado y
+  verificado en `main` mediante la PR #8.
 
 ## Estado actual
 
 - `living-room-main` es la habitación real validada de referencia.
-- Slice 006 — Visual Furnishing & Materials v1 está validado en la rama
-  `spec/006-visual-furnishing-materials-v1` y pendiente de revisión final e
-  integración.
-- Slice 007 — Architectural Openings & Fixed Visual Elements v1 ha pasado la
-  auditoría final en la rama `spec/007-architectural-openings-fixed-visual-v1`
-  y está listo para revisión precommit; no está integrado en `main`.
+- `main` es el baseline actual después de la integración de Slices 006 y 007.
+- Slice 007 — Architectural Openings Fixed Visual v1 está integrado,
+  cerrado y verificado en `main` mediante la PR #8.
 - El flujo room vigente es `measurements/` → generation plan determinista → generación arquitectónica en Blender → `NormalizedScene` → comparación `room → plan` y `plan → scene`.
 - El contrato room actual usa `room-v1.1-generator-2`, con `room-scene-adapter-1` y `room-scene-comparison-1`; la compatibilidad v1 se conserva.
 - `measurements/` sigue siendo la autoridad arquitectónica; la escena es un derivado validado.
@@ -45,11 +45,11 @@
 - `HSLAYOUT_*` permanece separado de `HS3D_ROOM_*`; el furniture overlay no modifica la arquitectura.
 - Slice 004 tiene acceptance sintética canónica, `.blend` derivado, preview técnico, privacy guard y firmas lógicas deterministas.
 - Slice 005 tiene comparación de variantes, acceptance canónica y gates puros integrados en `main`.
-- Slice 006 tiene escena derivada visual, preview de review, materiales procedurales v1 y validación lógica/documental completa en su rama.
+- Slice 006 tiene escena derivada visual, preview de review, materiales procedurales v1 y validación lógica/documental completa integrada en `main`.
 - Slice 007 tiene una escena derivada con namespace `HSARCH_VISUAL_*`, seis
-  openings visuales, cuatro materiales procedurales y auditoría final PASS; su
-  presentación mantiene los proxies técnicos como autoridad y no añade
-  geometría constructiva.
+-  openings visuales, cuatro materiales procedurales y auditoría final PASS;
+  está integrada en `main`, mantiene los proxies técnicos como autoridad y no
+  añade geometría constructiva.
 
 ## Limitaciones actuales
 
@@ -64,8 +64,8 @@
 
 ## Próximo horizonte
 
-Slice 007 está auditado y listo para revisión precommit. No hay un Slice 008
-definido; el trabajo posterior deberá definirse mediante un nuevo slice aprobado.
+Slices 001–007 están integrados en `main`. No hay un Slice 008 definido; el
+trabajo posterior deberá definirse mediante un nuevo slice aprobado.
 
 ## Contrato común de calidad
 
