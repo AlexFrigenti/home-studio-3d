@@ -8,15 +8,24 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / ".ai-stack" / "manifest.json"
 DEFINITIONS_PATH = REPO_ROOT / ".ai-stack" / "capabilities.json"
 SKILL_PATH = REPO_ROOT / ".agents" / "skills" / "home-studio-3d" / "SKILL.md"
-SNAPSHOT_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "0.3.0" / "snapshot.json"
-CHECKSUMS_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "0.3.0" / "checksums.json"
+SNAPSHOT_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "0.4.0" / "snapshot.json"
+CHECKSUMS_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "0.4.0" / "checksums.json"
 ACTIVE_CHECKSUMS_PATH = REPO_ROOT / ".ai-stack" / "checksums.json"
 
-EXPECTED_STACK_VERSION = "0.3.0"
+EXPECTED_STACK_VERSION = "0.4.0"
 EXPECTED_PROJECT_SKILL = ".agents/skills/home-studio-3d/SKILL.md"
 EXPECTED_DEFINITIONS_REFERENCE = ".ai-stack/capabilities.json"
-EXPECTED_SNAPSHOT_DIGEST = "9f39d939d479865f4e88c3d410cea97252e7e188b20d0397a1b5b2738de0922b"
-EXPECTED_CHECKSUMS_DIGEST = "e36da7579e560209fe37c92ab2e353fceb05e2a80823ffab8534165590b5c337"
+EXPECTED_SNAPSHOT_DIGEST = "8833ad6a41a86625c82e4a778f1af262a69dfa6f2d22bb55d0cf08380a18238b"
+EXPECTED_CHECKSUMS_DIGEST = "76ffc7f74dc8fbbdaca127972d52dfaaefa6f2d2ae409701b53f720c7a9b0fbb"
+
+EXPECTED_TASKS = [
+    "offline-reentry",
+    "project-documentation-read",
+    "slice-007-controlled-regeneration",
+    "slice-007-live-mcp-verification",
+    "slice-007-protected-promotion",
+    "slice-007-read-only-verification",
+]
 
 EXPECTED_CONTEXT_DOCUMENTS = [
     "AGENTS.md",
@@ -112,10 +121,12 @@ class ProjectContractTests(unittest.TestCase):
                 "capabilities",
                 "capabilityDefinitions",
                 "context",
+                "tasks",
             },
         )
-        self.assertEqual(manifest["schemaVersion"], 1)
+        self.assertEqual(manifest["schemaVersion"], 2)
         self.assertEqual(manifest["stackVersion"], EXPECTED_STACK_VERSION)
+        self.assertEqual(manifest["tasks"], EXPECTED_TASKS)
         self.assertEqual(manifest["projectSkill"], EXPECTED_PROJECT_SKILL)
         self.assertEqual(manifest["capabilityDefinitions"], EXPECTED_DEFINITIONS_REFERENCE)
         self.assertEqual(
@@ -264,7 +275,7 @@ class ProjectContractTests(unittest.TestCase):
         self.assertEqual(snapshot["contentRoot"], "payload")
         self.assertEqual(snapshot["checksumsFile"], "checksums.json")
         self.assertEqual(checksums["algorithm"], "sha256")
-        self.assertEqual(len(checksums["files"]), 197)
+        self.assertEqual(len(checksums["files"]), 199)
         self.assertEqual(len(snapshot["runtimeDependencyClosure"]["packages"]), 5)
 
 
