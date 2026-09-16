@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "stackVersion": "0.3.0",
+  "schemaVersion": 2,
+  "stackVersion": "0.4.0",
   "projectSkill": ".agents/skills/home-studio-3d/SKILL.md",
   "updatePolicy": {
     "patch": "auto-if-valid",
@@ -69,5 +69,13 @@
       "specs/007-architectural-openings-fixed-visual-v1/plan.md",
       "specs/007-architectural-openings-fixed-visual-v1/tasks.md"
     ]
-  }
+  },
+  "tasks": [
+    "offline-reentry",
+    "project-documentation-read",
+    "slice-007-controlled-regeneration",
+    "slice-007-live-mcp-verification",
+    "slice-007-protected-promotion",
+    "slice-007-read-only-verification"
+  ]
 }

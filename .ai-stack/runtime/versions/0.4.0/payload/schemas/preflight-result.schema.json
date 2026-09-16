@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-development-stack.local/schemas/preflight-result.schema.json",
+  "title": "AI Development Stack Preflight Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "tasks", "evaluatedCapabilities", "blockers", "warnings", "suggestedRepairIds"],
+  "properties": {
+    "status": { "enum": ["ready", "ready-with-warnings", "blocked"] },
+    "tasks": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/taskId" } },
+    "evaluatedCapabilities": { "type": "array", "items": { "$ref": "#/$defs/evaluation" } },
+    "blockers": { "type": "array", "items": { "$ref": "#/$defs/reasonRecord" } },
+    "warnings": { "type": "array", "items": { "$ref": "#/$defs/reasonRecord" } },
+    "suggestedRepairIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "taskId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "surface": { "enum": ["claude-code", "codex-cli", "codex-app", "gemini-cli", "antigravity-ide", "antigravity-desktop"] },
+    "reasonRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "checkId": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activation", "taskIds", "manifestIndex"],
+      "properties": {
+        "activation": { "enum": ["always", "tasks"] },
+        "taskIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/taskId" } },
+        "manifestIndex": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "surface", "requirement", "state", "sufficient", "reasons", "blockers", "warnings", "suggestedRepairIds", "provenance"],
+      "allOf": [
+        {
+          "if": {
+            "required": ["requirement", "state"],
+            "properties": {
+              "requirement": { "const": "REQUIRED" },
+              "state": { "enum": ["unavailable", "unknown"] }
+            }
+          },
+          "then": {
+            "properties": {
+              "sufficient": { "const": false }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "capability": { "$ref": "#/$defs/identifier" },
+        "surface": { "$ref": "#/$defs/surface" },
+        "requirement": { "enum": ["REQUIRED", "RECOMMENDED", "OPTIONAL"] },
+        "state": { "enum": ["available", "degraded", "unavailable", "unknown"] },
+        "sufficient": { "type": "boolean" },
+        "reasons": { "type": "array", "items": { "$ref": "#/$defs/reasonRecord" } },
+        "blockers": { "type": "array", "items": { "$ref": "#/$defs/reasonRecord" } },
+        "warnings": { "type": "array", "items": { "$ref": "#/$defs/reasonRecord" } },
+        "suggestedRepairIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "provenance": { "type": "array", "items": { "$ref": "#/$defs/provenance" } }
+      }
+    }
+  }
+}
