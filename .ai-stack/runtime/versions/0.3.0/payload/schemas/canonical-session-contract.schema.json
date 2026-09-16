@@ -1,0 +1,412 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-development-stack.local/schemas/canonical-session-contract.schema.json",
+  "title": "AI Development Stack Canonical Session Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "surface",
+    "identity",
+    "psc",
+    "preflight",
+    "projectSkill",
+    "context",
+    "status",
+    "warnings",
+    "blockers",
+    "checkpoints",
+    "trace",
+    "handoff"
+  ],
+  "$defs": {
+    "surface": {
+      "enum": [
+        "claude-code",
+        "codex-cli",
+        "codex-app",
+        "gemini-cli",
+        "antigravity-ide",
+        "antigravity-desktop"
+      ]
+    },
+    "stackVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "gitHead": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "sha256Digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "projectRelativePath": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*:)(?!.*\\\\)(?!.*\\u0000)(?!.*(?:^|/)(?:\\.|\\.\\.)(?:/|$))[^/\\\\]+(?:/[^/\\\\]+)*$"
+    },
+    "reference": {
+      "oneOf": [
+        { "$ref": "#/$defs/projectRelativePath" },
+        { "const": "contract:preflight" }
+      ]
+    },
+    "reasonCode": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "category", "guarantee"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "category": {
+          "enum": [
+            "native-integration",
+            "context-state",
+            "capability",
+            "integrity-security"
+          ]
+        },
+        "guarantee": {
+          "enum": [
+            "bootstrap",
+            "snapshot",
+            "psc",
+            "preflight",
+            "project-skill",
+            "context",
+            "handoff",
+            "authorization",
+            "session"
+          ]
+        },
+        "safeDetails": {
+          "type": "object",
+          "additionalProperties": false,
+          "maxProperties": 8,
+          "properties": {
+            "reference": { "$ref": "#/$defs/reference" },
+            "expected": { "type": "string", "maxLength": 128 },
+            "actual": { "type": "string", "maxLength": 128 },
+            "status": { "type": "string", "maxLength": 64 },
+            "surface": { "$ref": "#/$defs/surface" }
+          }
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "digest"],
+      "properties": {
+        "reference": { "$ref": "#/$defs/reference" },
+        "digest": { "$ref": "#/$defs/sha256Digest" }
+      }
+    },
+    "contextKind": {
+      "enum": ["psc", "project-skill", "preflight", "document"]
+    },
+    "minimumContextItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reference"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/contextKind" },
+        "reference": { "$ref": "#/$defs/reference" }
+      }
+    },
+    "selectedContextItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reference", "digest", "reasonCode"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/contextKind" },
+        "reference": { "$ref": "#/$defs/reference" },
+        "digest": { "$ref": "#/$defs/sha256Digest" },
+        "reasonCode": { "$ref": "#/$defs/reasonCode" }
+      }
+    },
+    "additionalRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "reference", "reason", "decision", "blocking", "traceable"],
+      "properties": {
+        "requestId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+        "reference": { "$ref": "#/$defs/reference" },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "decision": { "enum": ["selected", "rejected", "unavailable", "escalated"] },
+        "blocking": { "type": "boolean" },
+        "traceable": { "const": true }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checkpointId", "status", "inputs"],
+      "properties": {
+        "checkpointId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+        "status": { "enum": ["verified", "invalidated", "blocked"] },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/binding" }
+        },
+        "reasons": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reason" }
+        }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "surface",
+        "stackSnapshot",
+        "psc",
+        "preflight",
+        "projectSkill",
+        "requiredContext",
+        "result"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "surface": { "$ref": "#/$defs/surface" },
+        "stackSnapshot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stackVersion", "activeChecksumsReference", "activeChecksumsDigest"],
+          "properties": {
+            "stackVersion": { "$ref": "#/$defs/stackVersion" },
+            "activeChecksumsReference": { "$ref": "#/$defs/projectRelativePath" },
+            "activeChecksumsDigest": { "$ref": "#/$defs/sha256Digest" }
+          }
+        },
+        "psc": { "$ref": "#/$defs/binding" },
+        "preflight": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reference", "digest"],
+          "properties": {
+            "reference": { "const": "contract:preflight" },
+            "digest": { "$ref": "#/$defs/sha256Digest" }
+          }
+        },
+        "projectSkill": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reference", "digest"],
+          "properties": {
+            "reference": { "$ref": "#/$defs/projectRelativePath" },
+            "digest": { "$ref": "#/$defs/sha256Digest" }
+          }
+        },
+        "requiredContext": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "reference", "digest", "reasonCode"],
+            "properties": {
+              "kind": { "$ref": "#/$defs/contextKind" },
+              "reference": { "$ref": "#/$defs/reference" },
+              "digest": { "$ref": "#/$defs/sha256Digest" },
+              "reasonCode": { "$ref": "#/$defs/reasonCode" }
+            }
+          },
+          "allOf": [
+            {
+              "contains": {
+                "type": "object",
+                "required": ["kind"],
+                "properties": { "kind": { "const": "psc" } }
+              }
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": ["kind"],
+                "properties": { "kind": { "const": "project-skill" } }
+              }
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": ["kind"],
+                "properties": { "kind": { "const": "preflight" } }
+              }
+            }
+          ]
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reasons"],
+          "properties": {
+            "status": { "enum": ["materialized", "blocked"] },
+            "reasons": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/reason" }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "status": { "const": "blocked" } },
+                "required": ["status"]
+              },
+              "then": {
+                "properties": { "reasons": { "type": "array", "minItems": 1 } }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "surface": { "$ref": "#/$defs/surface" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stack", "project"],
+      "properties": {
+        "stack": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stackVersion", "activeChecksumsReference", "activeChecksumsDigest"],
+          "properties": {
+            "stackVersion": { "$ref": "#/$defs/stackVersion" },
+            "activeChecksumsReference": { "$ref": "#/$defs/projectRelativePath" },
+            "activeChecksumsDigest": { "$ref": "#/$defs/sha256Digest" }
+          }
+        },
+        "project": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pscDigest", "gitHead"],
+          "properties": {
+            "pscDigest": { "$ref": "#/$defs/sha256Digest" },
+            "gitHead": { "$ref": "#/$defs/gitHead" }
+          }
+        }
+      }
+    },
+    "psc": { "$ref": "#/$defs/binding" },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "digest"],
+      "properties": {
+        "reference": { "const": "contract:preflight" },
+        "digest": { "$ref": "#/$defs/sha256Digest" }
+      }
+    },
+    "projectSkill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "digest"],
+      "properties": {
+        "reference": { "$ref": "#/$defs/projectRelativePath" },
+        "digest": { "$ref": "#/$defs/sha256Digest" }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum", "selected", "additionalRequests"],
+      "properties": {
+        "minimum": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "$ref": "#/$defs/minimumContextItem" },
+          "allOf": [
+            {
+              "contains": {
+                "type": "object",
+                "required": ["kind"],
+                "properties": { "kind": { "const": "psc" } }
+              }
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": ["kind"],
+                "properties": { "kind": { "const": "project-skill" } }
+              }
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": ["kind"],
+                "properties": { "kind": { "const": "preflight" } }
+              }
+            }
+          ]
+        },
+        "selected": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/selectedContextItem" }
+        },
+        "additionalRequests": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/additionalRequest" }
+        }
+      }
+    },
+    "status": { "enum": ["ready", "ready-with-warnings", "blocked"] },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reason" }
+    },
+    "blockers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reason" }
+    },
+    "checkpoints": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/checkpoint" }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selectionReasons", "sourceReferences"],
+      "properties": {
+        "selectionReasons": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reason" }
+        },
+        "sourceReferences": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reference" }
+        }
+      }
+    },
+    "handoff": { "$ref": "#/$defs/handoff" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "blocked" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": { "blockers": { "type": "array", "minItems": 1 } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "enum": ["ready", "ready-with-warnings"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": { "blockers": { "type": "array", "maxItems": 0 } }
+      }
+    }
+  ]
+}

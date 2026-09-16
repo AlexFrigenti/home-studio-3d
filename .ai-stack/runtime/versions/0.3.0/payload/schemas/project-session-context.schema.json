@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-development-stack.local/schemas/project-session-context.schema.json",
+  "title": "AI Development Stack Project Session Context v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "project", "git", "context", "preflight"],
+  "$defs": {
+    "projectRelativePath": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*:)(?!.*\\\\)(?!.*\\u0000)(?!.*(?:^|/)(?:\\.|\\.\\.)(?:/|$))[^/\\\\]+(?:/[^/\\\\]+)*$"
+    }
+  },
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stackVersion", "projectSkill"],
+      "properties": {
+        "stackVersion": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+        "projectSkill": { "type": "string", "pattern": "^\\.agents/skills/(?!\\.{1,2}/)[A-Za-z0-9._-]+/SKILL\\.md$" }
+      }
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["head", "branch", "detached", "workingTree", "upstream", "ahead", "behind"],
+      "properties": {
+        "head": { "type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$" },
+        "branch": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "detached": { "type": "boolean" },
+        "workingTree": { "enum": ["clean", "dirty"] },
+        "upstream": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+        "ahead": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+        "behind": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "detached": { "const": false } }, "required": ["detached"] },
+          "then": { "properties": { "branch": { "type": "string", "minLength": 1 } } }
+        },
+        {
+          "if": { "properties": { "detached": { "const": true } }, "required": ["detached"] },
+          "then": { "properties": { "branch": { "type": "null" } } }
+        },
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "upstream": { "type": "null" },
+                "ahead": { "type": "null" },
+                "behind": { "type": "null" }
+              }
+            },
+            {
+              "properties": {
+                "upstream": { "type": "string", "minLength": 1 },
+                "ahead": { "type": "integer", "minimum": 0 },
+                "behind": { "type": "integer", "minimum": 0 }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["documents"],
+      "properties": {
+        "documents": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/projectRelativePath" }
+        }
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest", "stackIntegrity", "projectSkill", "contextDocuments", "git"],
+      "properties": {
+        "manifest": { "const": "pass" },
+        "stackIntegrity": { "const": "pass" },
+        "projectSkill": { "const": "pass" },
+        "contextDocuments": { "const": "pass" },
+        "git": { "const": "pass" }
+      }
+    }
+  }
+}

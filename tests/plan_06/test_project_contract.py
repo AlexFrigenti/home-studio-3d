@@ -8,15 +8,15 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / ".ai-stack" / "manifest.json"
 DEFINITIONS_PATH = REPO_ROOT / ".ai-stack" / "capabilities.json"
 SKILL_PATH = REPO_ROOT / ".agents" / "skills" / "home-studio-3d" / "SKILL.md"
-SNAPSHOT_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "0.2.0" / "snapshot.json"
-CHECKSUMS_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "0.2.0" / "checksums.json"
+SNAPSHOT_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "0.3.0" / "snapshot.json"
+CHECKSUMS_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "0.3.0" / "checksums.json"
 ACTIVE_CHECKSUMS_PATH = REPO_ROOT / ".ai-stack" / "checksums.json"
 
-EXPECTED_STACK_VERSION = "0.2.0"
+EXPECTED_STACK_VERSION = "0.3.0"
 EXPECTED_PROJECT_SKILL = ".agents/skills/home-studio-3d/SKILL.md"
 EXPECTED_DEFINITIONS_REFERENCE = ".ai-stack/capabilities.json"
-EXPECTED_SNAPSHOT_DIGEST = "fc5b8f2714f249c0fb6a1d7a3505cb52e5a79022b646e465651aab445b92b72e"
-EXPECTED_CHECKSUMS_DIGEST = "71c6dcc3c6c029fde20b1c5c261bd21cffddd5c940313c404cb28e265d290b5c"
+EXPECTED_SNAPSHOT_DIGEST = "9f39d939d479865f4e88c3d410cea97252e7e188b20d0397a1b5b2738de0922b"
+EXPECTED_CHECKSUMS_DIGEST = "e36da7579e560209fe37c92ab2e353fceb05e2a80823ffab8534165590b5c337"
 
 EXPECTED_CONTEXT_DOCUMENTS = [
     "AGENTS.md",
@@ -50,8 +50,17 @@ EXPECTED_CONTEXT_DOCUMENTS = [
 ]
 
 EXPECTED_DEFINITIONS = {
-    "home-studio-blender-cli": ("version", "executable-version", "blender-cli"),
-    "home-studio-blender-mcp": ("probe", "mcp-live", "blender-mcp"),
+    "home-studio-blender-cli": {
+        "id": "version",
+        "primitive": "executable-version",
+        "target": "blender-cli",
+        "config": {"version-parsing": "semver-token"},
+    },
+    "home-studio-blender-mcp": {
+        "id": "probe",
+        "primitive": "mcp-live",
+        "target": "blender-mcp",
+    },
 }
 
 FORBIDDEN_DECLARATION_KEYS = {
@@ -141,11 +150,7 @@ class ProjectContractTests(unittest.TestCase):
             self.assertEqual(capability["surfaces"], ["codex-cli", "claude-code"])
             self.assertEqual(len(capability["checks"]), 1)
             check = capability["checks"][0]
-            self.assertEqual(set(check), {"id", "primitive", "target"})
-            self.assertEqual(
-                (check["id"], check["primitive"], check["target"]),
-                EXPECTED_DEFINITIONS[capability["id"]],
-            )
+            self.assertEqual(check, EXPECTED_DEFINITIONS[capability["id"]])
             self.assertRegex(check["target"], r"^[a-z][a-z0-9-]*$")
             self.assertNotRegex(check["target"], r"[:\\/]")
 
@@ -259,7 +264,7 @@ class ProjectContractTests(unittest.TestCase):
         self.assertEqual(snapshot["contentRoot"], "payload")
         self.assertEqual(snapshot["checksumsFile"], "checksums.json")
         self.assertEqual(checksums["algorithm"], "sha256")
-        self.assertEqual(len(checksums["files"]), 196)
+        self.assertEqual(len(checksums["files"]), 197)
         self.assertEqual(len(snapshot["runtimeDependencyClosure"]["packages"]), 5)
 
 

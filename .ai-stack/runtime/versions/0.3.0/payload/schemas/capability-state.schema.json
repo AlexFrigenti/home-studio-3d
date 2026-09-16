@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-development-stack.local/schemas/capability-state.schema.json",
+  "title": "AI Development Stack Capability State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "observedAt", "capabilities"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "capabilities": {
+      "type": "array",
+      "uniqueItemProperties": ["capability", "surface"],
+      "items": { "$ref": "#/$defs/capabilityStateRecord" }
+    }
+  },
+  "$defs": {
+    "capabilityStateRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "surface", "state", "checks", "reasons"],
+      "properties": {
+        "capability": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "surface": { "enum": ["claude-code", "codex-cli", "codex-app", "gemini-cli", "antigravity-ide", "antigravity-desktop"] },
+        "state": { "enum": ["available", "degraded", "unavailable", "unknown"] },
+        "checks": { "type": "array", "uniqueItemProperties": ["id"], "items": { "$ref": "#/$defs/checkStateRecord" } },
+        "reasons": { "type": "array", "items": { "$ref": "#/$defs/reasonRecord" } }
+      }
+    },
+    "checkStateRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "importance", "result", "observedAt", "validUntil"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "importance": { "enum": ["essential", "auxiliary"] },
+        "result": { "enum": ["pass", "fail", "unknown"] },
+        "reasonCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "evidence": { "$ref": "#/$defs/safeEvidence" },
+        "observedAt": { "type": "string", "format": "date-time" },
+        "validUntil": { "type": "string", "format": "date-time" },
+        "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "safeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "present": { "type": "boolean" },
+        "registered": { "type": "boolean" },
+        "reachable": { "type": "boolean" },
+        "authenticated": { "enum": [true, false, "unknown"] },
+        "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+        "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "reasonRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "checkId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+      }
+    }
+  }
+}

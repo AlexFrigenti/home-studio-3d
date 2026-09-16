@@ -12,7 +12,10 @@
         {
           "id": "version",
           "primitive": "executable-version",
-          "target": "blender-cli"
+          "target": "blender-cli",
+          "config": {
+            "version-parsing": "semver-token"
+          }
         }
       ]
     },
