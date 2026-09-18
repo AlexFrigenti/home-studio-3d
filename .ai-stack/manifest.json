@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "stackVersion": "0.4.0",
+  "stackVersion": "1.1.0",
   "projectSkill": ".agents/skills/home-studio-3d/SKILL.md",
   "updatePolicy": {
     "patch": "auto-if-valid",

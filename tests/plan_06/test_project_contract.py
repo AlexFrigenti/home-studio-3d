@@ -8,15 +8,15 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / ".ai-stack" / "manifest.json"
 DEFINITIONS_PATH = REPO_ROOT / ".ai-stack" / "capabilities.json"
 SKILL_PATH = REPO_ROOT / ".agents" / "skills" / "home-studio-3d" / "SKILL.md"
-SNAPSHOT_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "0.4.0" / "snapshot.json"
-CHECKSUMS_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "0.4.0" / "checksums.json"
+SNAPSHOT_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "1.1.0" / "snapshot.json"
+CHECKSUMS_PATH = REPO_ROOT / ".ai-stack" / "runtime" / "versions" / "1.1.0" / "checksums.json"
 ACTIVE_CHECKSUMS_PATH = REPO_ROOT / ".ai-stack" / "checksums.json"
 
-EXPECTED_STACK_VERSION = "0.4.0"
+EXPECTED_STACK_VERSION = "1.1.0"
 EXPECTED_PROJECT_SKILL = ".agents/skills/home-studio-3d/SKILL.md"
 EXPECTED_DEFINITIONS_REFERENCE = ".ai-stack/capabilities.json"
-EXPECTED_SNAPSHOT_DIGEST = "8833ad6a41a86625c82e4a778f1af262a69dfa6f2d22bb55d0cf08380a18238b"
-EXPECTED_CHECKSUMS_DIGEST = "76ffc7f74dc8fbbdaca127972d52dfaaefa6f2d2ae409701b53f720c7a9b0fbb"
+EXPECTED_SNAPSHOT_DIGEST = "6c2d4aecef0f6fee69b62a68cdfa245dec86ade7e095261fdd4ad4010e68b242"
+EXPECTED_CHECKSUMS_DIGEST = "cb5cee99c807475cacfbc404abf6aa8d3d673d17ed0238856cb5f14ca074304c"
 
 EXPECTED_TASKS = [
     "offline-reentry",
@@ -275,7 +275,7 @@ class ProjectContractTests(unittest.TestCase):
         self.assertEqual(snapshot["contentRoot"], "payload")
         self.assertEqual(snapshot["checksumsFile"], "checksums.json")
         self.assertEqual(checksums["algorithm"], "sha256")
-        self.assertEqual(len(checksums["files"]), 199)
+        self.assertEqual(len(checksums["files"]), 200)
         self.assertEqual(len(snapshot["runtimeDependencyClosure"]["packages"]), 5)
 
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "stackVersion": "0.4.0",
+  "stackVersion": "1.1.0",
   "algorithm": "sha256",
   "files": [
     {
@@ -685,8 +685,8 @@
     },
     {
       "path": "src/adapters/handoff.mjs",
-      "size": 7868,
-      "sha256": "871a95cb8c9d8e07d2fa335b59fdb3e59ce2ff0609528412dbd2f521591631ee"
+      "size": 8080,
+      "sha256": "1e5a9cd58ab1ad506dc29004f5b13b8d7278760ef6b5477718abd0faa1521172"
     },
     {
       "path": "src/adapters/managed-artifacts.mjs",
@@ -695,8 +695,8 @@
     },
     {
       "path": "src/adapters/materialization.mjs",
-      "size": 2360,
-      "sha256": "73fab26b97c653301f22cbb62acd3d8f0337b8fd9055426d848e0c9b3f28a620"
+      "size": 9068,
+      "sha256": "f45f34244b0e08cfcc2d49a7db2dd40609e316e229bcd94014c075f089da02fe"
     },
     {
       "path": "src/adapters/schema.mjs",
@@ -715,8 +715,8 @@
     },
     {
       "path": "src/adapters/session.mjs",
-      "size": 17179,
-      "sha256": "958b828957afef354875a619002abd326e3deadaf302271f0d35c1b5db1b2422"
+      "size": 17659,
+      "sha256": "3aafc86d5e4f1394097c71c68d92e5565585171946863f6495bfd5b89115e263"
     },
     {
       "path": "src/adapters/surfaces/antigravity-desktop.mjs",
@@ -750,8 +750,8 @@
     },
     {
       "path": "src/bootstrap/bootstrap.mjs",
-      "size": 1839,
-      "sha256": "0cc756f3a6a5076d6f41a508428828a72049b69d5d01f89899ad14d222426594"
+      "size": 2150,
+      "sha256": "95de99d5189fc5227b8a63d50dc401c839e3b93f9956106484cbf36e42a9899f"
     },
     {
       "path": "src/bootstrap/build-psc.mjs",
@@ -765,8 +765,8 @@
     },
     {
       "path": "src/bootstrap/errors.mjs",
-      "size": 1757,
-      "sha256": "8e9d0e3a0e5ed15d76bcedbfb20a435413c231c970a22e464573e65a13eca2ab"
+      "size": 1830,
+      "sha256": "6aec23e0921116276996400caef5b46740dd475aca93c8dd1454404387f89110"
     },
     {
       "path": "src/bootstrap/inspect-git.mjs",
@@ -775,13 +775,18 @@
     },
     {
       "path": "src/bootstrap/inspect-project.mjs",
-      "size": 4271,
-      "sha256": "58d2265cedb79a9068a7fa501c833716b10227e7deb2a3210581fac00da62efe"
+      "size": 4822,
+      "sha256": "f484271d994fe66eaaebb66ba9d989b91dd31cbe5c03048175c92551796579fb"
     },
     {
       "path": "src/bootstrap/paths.mjs",
       "size": 2270,
       "sha256": "a4be24ae5cd763c0be3f40d123ad508cd956d01248b3221a02fc3f8d71f3a381"
+    },
+    {
+      "path": "src/bootstrap/project-skill.mjs",
+      "size": 4147,
+      "sha256": "9f17d9d81efc004d6dda489ad11581a1e75d67d845fd89486ec99fef2cd4daeb"
     },
     {
       "path": "src/bootstrap/publish-psc.mjs",
@@ -825,8 +830,8 @@
     },
     {
       "path": "src/capabilities/doctor.mjs",
-      "size": 6897,
-      "sha256": "abb9acb6cc88ee8a942f3e9078158a04941733a138969b0aab73ff91a6190804"
+      "size": 6929,
+      "sha256": "284671ccc19d799f3c64658e637f28a08659106460b5cc6b97f61b7511d4ba0d"
     },
     {
       "path": "src/capabilities/driver-registry.mjs",
@@ -885,8 +890,8 @@
     },
     {
       "path": "src/capabilities/observation.mjs",
-      "size": 3477,
-      "sha256": "1371ba6afd660969a5fb4634d8218281b8e7628866eb8aec5aa5ae0896c69faf"
+      "size": 3744,
+      "sha256": "05d408d30117ba5cb51572f76a3753fcf59655f54fc07a002fa60c7499a949e3"
     },
     {
       "path": "src/capabilities/preflight.mjs",
