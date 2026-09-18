@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-development-stack.local/schemas/repair-proposal.schema.json",
+  "title": "AI Development Stack Repair Proposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "capability", "surfaces", "applicableWhen", "operations", "impact", "noChanges", "verificationChecks", "rollback", "preconditionFingerprint", "proposalDigest"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "#/$defs/identifier" },
+    "capability": { "$ref": "#/$defs/identifier" },
+    "surfaces": { "type": "array", "minItems": 1, "maxItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/surface" } },
+    "applicableWhen": { "type": "array", "items": { "$ref": "#/$defs/condition" } },
+    "operations": { "type": "array", "items": { "$ref": "#/$defs/operation" } },
+    "impact": { "$ref": "#/$defs/impact" },
+    "noChanges": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 256 } },
+    "verificationChecks": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supported", "policy"],
+      "properties": {
+        "supported": { "type": "boolean" },
+        "policy": { "enum": ["restore-on-failure", "report-only"] }
+      }
+    },
+    "preconditionFingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "proposalDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "surface": { "enum": ["claude-code", "codex-cli", "codex-app", "gemini-cli", "antigravity-ide", "antigravity-desktop"] },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "field", "value"],
+      "properties": {
+        "type": { "enum": ["state-equals", "evidence-equals"] },
+        "field": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)*$" },
+        "value": {
+          "anyOf": [
+            { "type": "string", "maxLength": 256 },
+            { "type": "boolean" },
+            { "type": "number", "maximum": 2147483647, "minimum": -2147483648 },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "targetId", "arguments"],
+      "properties": {
+        "type": { "enum": ["write-allowlisted-config", "delete-allowlisted-config", "run-allowlisted-executable"] },
+        "targetId": { "$ref": "#/$defs/identifier" },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "value": {
+              "anyOf": [
+                { "type": "string", "maxLength": 256 },
+                { "type": "boolean" },
+                { "type": "number", "maximum": 2147483647, "minimum": -2147483648 },
+                { "type": "null" }
+              ]
+            },
+            "args": { "type": "array", "maxItems": 32, "items": { "type": "string", "maxLength": 256 } }
+          }
+        }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "reversible", "reasonCode"],
+      "properties": {
+        "scope": { "enum": ["local-config", "local-authentication", "local-file"] },
+        "reversible": { "type": "boolean" },
+        "reasonCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+      }
+    }
+  }
+}

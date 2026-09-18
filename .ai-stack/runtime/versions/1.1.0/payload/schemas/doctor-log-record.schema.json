@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-development-stack.local/schemas/doctor-log-record.schema.json",
+  "title": "AI Development Stack Doctor Log Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "occurredAt", "operation", "tasks", "capability", "surface", "resultCode"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "operation": { "enum": ["diagnosis", "repair"] },
+    "tasks": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+    "capability": { "$ref": "#/$defs/identifier" },
+    "surface": { "enum": ["claude-code", "codex-cli", "codex-app", "gemini-cli", "antigravity-ide", "antigravity-desktop"] },
+    "previousState": { "enum": ["available", "degraded", "unavailable", "unknown"] },
+    "resultingState": { "enum": ["available", "degraded", "unavailable", "unknown"] },
+    "repairId": { "$ref": "#/$defs/identifier" },
+    "operations": { "type": "array", "items": { "$ref": "#/$defs/operationResult" } },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supported", "attempted", "result"],
+      "properties": {
+        "supported": { "type": "boolean" },
+        "attempted": { "type": "boolean" },
+        "result": { "enum": ["not-needed", "succeeded", "failed", "not-supported"] }
+      }
+    },
+    "resultCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "operationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "targetId", "result"],
+      "properties": {
+        "type": { "enum": ["write-allowlisted-config", "delete-allowlisted-config", "run-allowlisted-executable"] },
+        "targetId": { "$ref": "#/$defs/identifier" },
+        "result": { "enum": ["completed", "failed"] },
+        "reasonCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+      }
+    }
+  }
+}

@@ -1,3 +1,7 @@
+---
+name: home-studio-3d
+description: Home Studio 3D project guidance for canonical context and task routing.
+---
 # Home Studio 3D Project Skill
 
 Use this project skill as stable routing guidance for Home Studio 3D work.
